@@ -1,0 +1,53 @@
+import React from "react";
+import { motion } from "motion/react";
+
+interface ProgressBarProps {
+  value: number;
+  max?: number;
+  color?: "cyan" | "violet" | "emerald" | "amber" | "rose";
+  showLabel?: boolean;
+  height?: "sm" | "md" | "lg";
+}
+
+export const ProgressBar: React.FC<ProgressBarProps> = ({
+  value,
+  max = 100,
+  color = "cyan",
+  showLabel = false,
+  height = "md",
+}) => {
+  const percentage = Math.min(100, Math.max(0, Math.round((value / max) * 100)));
+
+  const colorGradients = {
+    cyan: "from-[#00D9FF] to-blue-500 shadow-[0_0_8px_rgba(0,217,255,0.6)]",
+    violet: "from-[#6D5DFC] to-[#5548eb] shadow-[0_0_8px_rgba(109,93,252,0.6)]",
+    emerald: "from-[#20E3A2] to-emerald-600 shadow-[0_0_8px_rgba(32,227,162,0.6)]",
+    amber: "from-amber-400 to-orange-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]",
+    rose: "from-[#FF4D8D] to-pink-600 shadow-[0_0_8px_rgba(255,77,141,0.6)]",
+  };
+
+  const heightClasses = {
+    sm: "h-1.5",
+    md: "h-2.5",
+    lg: "h-4",
+  };
+
+  return (
+    <div className="w-full">
+      <div className={`w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-800/80 ${heightClasses[height]}`}>
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${percentage}%` }}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          className={`h-full rounded-full bg-gradient-to-r ${colorGradients[color]}`}
+        />
+      </div>
+      {showLabel && (
+        <div className="mt-1 flex justify-between text-xs text-slate-500 dark:text-slate-400">
+          <span>{percentage}% terminé</span>
+          <span>{value} / {max}</span>
+        </div>
+      )}
+    </div>
+  );
+};
