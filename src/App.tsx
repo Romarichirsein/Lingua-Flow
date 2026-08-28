@@ -18,7 +18,11 @@ import {
 import {
   getStoredData,
   saveStoredData,
-} from "./lib/initialData";
+} from "./lib/mockData";
+import {
+  buildSuperAdminWhatsAppUrl,
+  buildStudentSchoolWhatsAppUrl,
+} from "./lib/syncEngine";
 import {
   parseCurrentRoute,
   navigateTo,
@@ -39,8 +43,8 @@ export default function App() {
   // Persistence initialization
   const [data, setData] = useState(() => getStoredData());
 
-  // App Lifecycle States: Splash -> Login -> Dashboard
-  const [showSplash, setShowSplash] = useState(true);
+  // App Lifecycle States: Direct instant render -> Login / Dashboard
+  const [showSplash, setShowSplash] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     const route = parseCurrentRoute();
     return route.type !== "login" && route.type !== "splash";
@@ -49,7 +53,26 @@ export default function App() {
 
   const [role, setRole] = useState<UserRole>("student");
   const [locale, setLocale] = useState<UILocale>("fr");
-  const [theme, setTheme] = useState<ThemeMode>("dark");
+  const [theme, setTheme] = useState<ThemeMode>(() => {
+    try {
+      const saved = localStorage.getItem("linguaflow_theme_preference") as ThemeMode;
+      if (saved === "light" || saved === "dark" || saved === "system") {
+        return saved;
+      }
+    } catch {
+      // fallback
+    }
+    return "dark";
+  });
+
+  const handleThemeChange = useCallback((newTheme: ThemeMode) => {
+    setTheme(newTheme);
+    try {
+      localStorage.setItem("linguaflow_theme_preference", newTheme);
+    } catch {
+      // ignore
+    }
+  }, []);
 
   // Selected School & Student for testing isolation
   const [selectedSchoolId, setSelectedSchoolId] = useState<string>(
@@ -65,17 +88,32 @@ export default function App() {
   // Sync theme to DOM <html> class
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === "dark") {
-      root.classList.add("dark");
-    } else if (theme === "light") {
-      root.classList.remove("dark");
-    } else {
-      const isSystemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      if (isSystemDark) {
+    const applyTheme = (current: ThemeMode) => {
+      if (current === "dark") {
         root.classList.add("dark");
-      } else {
+        root.style.colorScheme = "dark";
+      } else if (current === "light") {
         root.classList.remove("dark");
+        root.style.colorScheme = "light";
+      } else {
+        const isSystemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        if (isSystemDark) {
+          root.classList.add("dark");
+          root.style.colorScheme = "dark";
+        } else {
+          root.classList.remove("dark");
+          root.style.colorScheme = "light";
+        }
       }
+    };
+
+    applyTheme(theme);
+
+    if (theme === "system") {
+      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+      const listener = () => applyTheme("system");
+      mediaQuery.addEventListener("change", listener);
+      return () => mediaQuery.removeEventListener("change", listener);
     }
   }, [theme]);
 
@@ -232,15 +270,20 @@ export default function App() {
     data.students.find((s) => s.id === selectedStudentId) || data.students[0];
 
   // Dynamic WhatsApp routing:
+  // - Super Admin: No floating WhatsApp widget
+  // - School Admin: Direct WhatsApp contact to Super Admin
+  // - Student: School WhatsApp Promo / Community Group link
   const activeWhatsappUrl =
     role === "student"
-      ? currentSchool?.whatsappSupportUrl || "https://wa.me/491512345678"
-      : data.config.superAdminWhatsapp;
+      ? currentSchool?.whatsappSupportUrl || "https://chat.whatsapp.com/LinguaFlowPromo2025"
+      : role === "school_admin"
+      ? buildSuperAdminWhatsAppUrl(data.config, currentSchool, locale)
+      : "";
 
   const recipientName =
     role === "student"
-      ? `${currentSchool?.name || "École"} (Groupe de Promotion)`
-      : "Support Super Admin LinguaFlow";
+      ? `${currentSchool?.name || "École"} (Groupe WhatsApp de la Promotion)`
+      : "Support Technique Super Admin LinguaFlow";
 
   return (
     <AnimatePresence mode="wait">
@@ -261,7 +304,7 @@ export default function App() {
             locale={locale}
             onLocaleChange={setLocale}
             theme={theme}
-            onThemeChange={setTheme}
+            onThemeChange={handleThemeChange}
             schools={data.schools}
             students={data.students}
             onLoginSuccess={handleLoginSuccess}
@@ -284,7 +327,7 @@ export default function App() {
             locale={locale}
             onLocaleChange={setLocale}
             theme={theme}
-            onThemeChange={setTheme}
+            onThemeChange={handleThemeChange}
             currentSchool={currentSchool}
             currentStudent={currentStudent}
             availableSchools={data.schools}
@@ -339,7 +382,7 @@ export default function App() {
                     onUpdateAnnouncements={(announcements) => updateData({ announcements })}
                     onUpdateTemplates={(templates) => updateData({ templates })}
                     onUpdateLocale={setLocale}
-                    onUpdateTheme={setTheme}
+                    onUpdateTheme={handleThemeChange}
                     onAddLog={handleAddLog}
                     onSelectSchoolTab={(schoolId) => {
                       setSelectedSchoolId(schoolId);
@@ -363,7 +406,8 @@ export default function App() {
                     students={data.students}
                     programs={data.programs}
                     auditLogs={data.logs}
-                    submissions={data.submissions || []}
+                    submissions={data.aiSubmissions || []}
+                    announcements={data.announcements || []}
                     activeSubpath={currentRoute.subpath || "dashboard"}
                     config={data.config}
                     onUpdateStudents={(students) => updateData({ students })}
@@ -394,10 +438,13 @@ export default function App() {
                 >
                   <StudentPortal
                     locale={locale}
+                    theme={theme}
+                    onUpdateTheme={handleThemeChange}
                     student={currentStudent}
                     school={currentSchool}
                     programs={data.programs}
                     submissions={data.aiSubmissions || []}
+                    announcements={data.announcements || []}
                     activeSubpath={currentRoute.subpath || "dashboard"}
                     onUpdateStudent={(updatedStudent) =>
                       updateData({

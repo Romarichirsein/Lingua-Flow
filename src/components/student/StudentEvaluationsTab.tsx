@@ -39,7 +39,9 @@ export const StudentEvaluationsTab: React.FC<StudentEvaluationsTabProps> = ({
   const t = translations[locale];
 
   // Lessons with quizzes
-  const lessonsWithQuiz = allLessons.filter((l) => l.quiz && l.quiz.length > 0);
+  const safeLessons = allLessons || [];
+  const studentCompleted = student.completedLessons || [];
+  const lessonsWithQuiz = safeLessons.filter((l) => l.quiz && l.quiz.length > 0);
 
   // Active quiz runner modal
   const [activeQuizLesson, setActiveQuizLesson] = useState<Lesson | null>(null);
@@ -51,7 +53,7 @@ export const StudentEvaluationsTab: React.FC<StudentEvaluationsTabProps> = ({
   const [filter, setFilter] = useState<"all" | "passed" | "pending">("all");
 
   const passedQuizzesCount = lessonsWithQuiz.filter((l) =>
-    student.completedLessons.includes(l.id)
+    studentCompleted.includes(l.id)
   ).length;
 
   const handleStartQuiz = (lesson: Lesson) => {
@@ -70,7 +72,7 @@ export const StudentEvaluationsTab: React.FC<StudentEvaluationsTabProps> = ({
   };
 
   const handleSubmitQuiz = () => {
-    if (!activeQuizLesson || activeQuizLesson.quiz.length === 0) return;
+    if (!activeQuizLesson || !activeQuizLesson.quiz || activeQuizLesson.quiz.length === 0) return;
     let correctCount = 0;
     activeQuizLesson.quiz.forEach((q, idx) => {
       if (selectedAnswers[idx] === q.correctIndex) {
@@ -78,7 +80,8 @@ export const StudentEvaluationsTab: React.FC<StudentEvaluationsTabProps> = ({
       }
     });
 
-    const scorePercent = Math.round((correctCount / activeQuizLesson.quiz.length) * 100);
+    const quizLen = activeQuizLesson.quiz.length || 1;
+    const scorePercent = Math.round((correctCount / quizLen) * 100);
     setQuizScore(scorePercent);
     setQuizSubmitted(true);
 
@@ -88,7 +91,7 @@ export const StudentEvaluationsTab: React.FC<StudentEvaluationsTabProps> = ({
   };
 
   const filteredLessons = lessonsWithQuiz.filter((l) => {
-    const isDone = student.completedLessons.includes(l.id);
+    const isDone = studentCompleted.includes(l.id);
     if (filter === "passed") return isDone;
     if (filter === "pending") return !isDone;
     return true;
@@ -151,8 +154,8 @@ export const StudentEvaluationsTab: React.FC<StudentEvaluationsTabProps> = ({
       {/* Grid of Quizzes */}
       <div className="grid gap-4 md:grid-cols-2">
         {filteredLessons.map((les) => {
-          const isPassed = student.completedLessons.includes(les.id);
-          const totalQuestions = les.quiz.length;
+          const isPassed = studentCompleted.includes(les.id);
+          const totalQuestions = les.quiz?.length || 0;
 
           return (
             <div
@@ -350,7 +353,7 @@ export const StudentEvaluationsTab: React.FC<StudentEvaluationsTabProps> = ({
                     size="sm"
                     onClick={handleSubmitQuiz}
                     disabled={
-                      Object.keys(selectedAnswers).length < activeQuizLesson.quiz.length
+                      Object.keys(selectedAnswers).length < (activeQuizLesson?.quiz?.length || 0)
                     }
                   >
                     {t.student.submitQuiz}

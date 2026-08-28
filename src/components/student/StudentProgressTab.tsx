@@ -35,9 +35,11 @@ export const StudentProgressTab: React.FC<StudentProgressTabProps> = ({
   const t = translations[locale];
   const certificateRef = useRef<HTMLDivElement>(null);
 
-  const isCertified = student.progressPercent >= 100;
-  const completedLessonsCount = student.completedLessons.length;
-  const totalLessonsCount = Math.max(1, allLessons.length);
+  const isCertified = (student.progressPercent || 0) >= 100;
+  const completedLessons = student.completedLessons || [];
+  const safeLessons = allLessons || [];
+  const completedLessonsCount = completedLessons.length;
+  const totalLessonsCount = Math.max(1, safeLessons.length);
 
   // Skill competencies breakdown
   const skills = [

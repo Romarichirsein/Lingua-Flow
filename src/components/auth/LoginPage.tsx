@@ -116,7 +116,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
       // Check if matches Super Admin
       if (
-        cleanUser === "adminlinguaflow@gmail.com" ||
         cleanUser === "admin@linguaflow.io" ||
         cleanUser === "admin" ||
         cleanUser === "superadmin"
@@ -124,7 +123,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         onLoginSuccess({
           role: "super_admin",
           userName: "Super Admin",
-          userEmail: "adminlinguaflow@gmail.com",
+          userEmail: "admin@linguaflow.io",
         });
         return;
       }
@@ -195,22 +194,28 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-[#070A12] text-white flex flex-col relative overflow-x-hidden">
+    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-[#070A12] dark:text-white flex flex-col relative overflow-x-hidden transition-colors duration-300">
       {/* Background decorations */}
       <div className="absolute top-0 left-1/4 w-96 h-96 rounded-full bg-[#6D5DFC]/10 blur-[130px] pointer-events-none" />
       <div className="absolute bottom-0 right-1/4 w-96 h-96 rounded-full bg-[#00D9FF]/10 blur-[130px] pointer-events-none" />
-      <div className="absolute inset-0 bg-[radial-gradient(#ffffff05_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(#00000008_1px,transparent_1px)] dark:bg-[radial-gradient(#ffffff05_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none" />
 
       {/* Top Navbar */}
-      <header className="relative z-20 w-full border-b border-white/5 bg-[#070A12]/80 backdrop-blur-md">
+      <header className="relative z-20 w-full border-b border-slate-200/80 dark:border-white/5 bg-white/80 dark:bg-[#070A12]/80 backdrop-blur-md">
         <div className="max-w-7xl mx-auto flex items-center justify-between px-3 sm:px-6 py-2.5 sm:py-4 gap-2">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <LinguaFlowLogo size="sm" showBadge={false} className="shrink-0" />
+            <img
+              src="/logo.png"
+              alt="Lingua Flow"
+              className="h-8 sm:h-10 w-auto object-contain shrink-0 drop-shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
+            />
             <div className="min-w-0">
-              <span className="hidden sm:inline-flex rounded-md bg-[#6D5DFC]/20 px-2 py-0.5 text-[9px] sm:text-[10px] font-bold text-[#00D9FF] border border-[#00D9FF]/30 uppercase tracking-widest whitespace-nowrap">
-                {locale === "en" ? "Auth Portal" : "Authentification"}
-              </span>
-              <p className="text-[10px] sm:text-[11px] text-white/50 hidden md:block font-medium truncate">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="hidden sm:inline-flex rounded-md bg-[#6D5DFC]/10 dark:bg-[#6D5DFC]/20 px-2 py-0.5 text-[9px] sm:text-[10px] font-bold text-[#6D5DFC] dark:text-[#00D9FF] border border-[#6D5DFC]/30 dark:border-[#00D9FF]/30 uppercase tracking-widest whitespace-nowrap">
+                  {locale === "en" ? "Auth Portal" : "Authentification"}
+                </span>
+              </div>
+              <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-white/40 hidden md:block font-medium truncate">
                 {locale === "en" ? "Multi-School E-Learning • German 🇩🇪 & Italian 🇮🇹" : "E-Learning Multi-Écoles • Allemand 🇩🇪 & Italien 🇮🇹"}
               </p>
             </div>
@@ -229,14 +234,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           {/* Left Column: Platform Presentation & Features */}
           <div className="lg:col-span-6 space-y-5 sm:space-y-6">
             <div>
-              <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 rounded-full bg-[#6D5DFC]/10 border border-[#6D5DFC]/30 text-[#a399ff] text-[11px] sm:text-xs font-semibold mb-2 sm:mb-3">
-                <Sparkles size={13} className="text-[#00D9FF] shrink-0" />
+              <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 rounded-full bg-[#6D5DFC]/10 border border-[#6D5DFC]/30 text-[#6D5DFC] dark:text-[#a399ff] text-[11px] sm:text-xs font-semibold mb-2 sm:mb-3">
+                <Sparkles size={13} className="text-[#6D5DFC] dark:text-[#00D9FF] shrink-0" />
                 <span className="truncate">{locale === "en" ? "Dedicated Multi-Tenant SaaS Platform" : "Plateforme SaaS Multi-Tenant Dédiée"}</span>
               </div>
-              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white leading-tight">
+              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 dark:text-white leading-tight">
                 {locale === "en" ? "Log in to your learning space" : "Connexion à votre espace d'apprentissage"}
               </h1>
-              <p className="text-xs sm:text-sm lg:text-base text-white/60 mt-2 sm:mt-3 leading-relaxed">
+              <p className="text-xs sm:text-sm lg:text-base text-slate-600 dark:text-white/60 mt-2 sm:mt-3 leading-relaxed">
                 {locale === "en"
                   ? "Every user role (Super Admin, School Director, Learner) benefits from an isolated workspace tailored to their exact curriculum."
                   : "Chaque utilisateur (Super Admin, Responsable d'école, Élève) dispose d'un tableau de bord sur-mesure avec ses données et son environnement linguistique isolés."}
@@ -248,17 +253,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               {platformFeatures.map((feat, index) => (
                 <div
                   key={index}
-                  className="flex flex-col p-4 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2 hover:border-white/10 transition-colors"
+                  className="flex flex-col p-4 rounded-2xl bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 space-y-2 hover:border-indigo-300 dark:hover:border-white/10 transition-colors shadow-xs"
                 >
                   <div className="flex items-center gap-2.5">
-                    <div className="p-2 rounded-xl bg-white/5 border border-white/5 shrink-0">
+                    <div className="p-2 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5 shrink-0">
                       {feat.icon}
                     </div>
-                    <h3 className="text-xs font-bold text-white tracking-tight leading-snug">
+                    <h3 className="text-xs font-bold text-slate-900 dark:text-white tracking-tight leading-snug">
                       {feat.title}
                     </h3>
                   </div>
-                  <p className="text-[11px] text-white/50 leading-relaxed">
+                  <p className="text-[11px] text-slate-500 dark:text-white/50 leading-relaxed">
                     {feat.desc}
                   </p>
                 </div>
@@ -272,10 +277,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
-              className="w-full max-w-md bg-[#0D1220] border border-white/10 rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl relative"
+              className="w-full max-w-md bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-xl dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl relative"
             >
               {/* Role Selection Tabs */}
-              <div className="flex p-1 bg-white/5 rounded-xl border border-white/5 mb-4 sm:mb-6">
+              <div className="flex p-1 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/5 mb-4 sm:mb-6">
                 <button
                   type="button"
                   onClick={() => {
@@ -285,8 +290,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   }}
                   className={`flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2 px-1 rounded-lg text-[11px] sm:text-xs font-semibold transition cursor-pointer ${
                     selectedRoleTab === "student"
-                      ? "bg-[#6D5DFC] text-white shadow-[0_0_15px_rgba(109,93,252,0.4)]"
-                      : "text-white/50 hover:text-white"
+                      ? "bg-[#6D5DFC] text-white shadow-md shadow-[#6D5DFC]/30"
+                      : "text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"
                   }`}
                 >
                   <GraduationCap size={13} className="shrink-0" />
@@ -301,8 +306,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   }}
                   className={`flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2 px-1 rounded-lg text-[11px] sm:text-xs font-semibold transition cursor-pointer ${
                     selectedRoleTab === "school_admin"
-                      ? "bg-[#6D5DFC] text-white shadow-[0_0_15px_rgba(109,93,252,0.4)]"
-                      : "text-white/50 hover:text-white"
+                      ? "bg-[#6D5DFC] text-white shadow-md shadow-[#6D5DFC]/30"
+                      : "text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"
                   }`}
                 >
                   <Building2 size={13} className="shrink-0" />
@@ -312,13 +317,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   type="button"
                   onClick={() => {
                     setSelectedRoleTab("super_admin");
-                    setUsername("adminlinguaflow@gmail.com");
-                    setPassword("qlac485!");
+                    setUsername("admin@linguaflow.io");
+                    setPassword("admin123");
                   }}
                   className={`flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2 px-1 rounded-lg text-[11px] sm:text-xs font-semibold transition cursor-pointer ${
                     selectedRoleTab === "super_admin"
-                      ? "bg-[#6D5DFC] text-white shadow-[0_0_15px_rgba(109,93,252,0.4)]"
-                      : "text-white/50 hover:text-white"
+                      ? "bg-[#6D5DFC] text-white shadow-md shadow-[#6D5DFC]/30"
+                      : "text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"
                   }`}
                 >
                   <Shield size={13} className="shrink-0" />
@@ -327,14 +332,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               </div>
 
               <div className="mb-6">
-                <h2 className="text-xl font-bold text-white">
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">
                   {selectedRoleTab === "super_admin"
                     ? (locale === "en" ? "Super Admin Portal Login" : "Connexion Super Administrateur")
                     : selectedRoleTab === "school_admin"
                     ? (locale === "en" ? "School Director Portal Login" : "Connexion Espace Directeur d'École")
                     : (locale === "en" ? "Learner Portal Login" : "Connexion Espace Apprenant")}
                 </h2>
-                <p className="text-xs text-white/50 mt-1">
+                <p className="text-xs text-slate-500 dark:text-white/50 mt-1">
                   {locale === "en"
                     ? "Enter your credentials to access your personal dashboard."
                     : "Saisissez vos identifiants pour ouvrir votre tableau de bord personnel."}
@@ -355,14 +360,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 <div className="space-y-1.5">
                   <label
                     htmlFor="username-input"
-                    className="block text-xs font-semibold text-white/70"
+                    className="block text-xs font-semibold text-slate-700 dark:text-white/70"
                   >
                     {t.login.emailLabel}
                   </label>
                   <div className="relative">
                     <Mail
                       size={16}
-                      className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40"
+                      className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/40"
                     />
                     <input
                       id="username-input"
@@ -371,7 +376,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       onChange={(e) => setUsername(e.target.value)}
                       placeholder="votre.nom@ecole.com"
                       required
-                      className="w-full h-11 rounded-xl border border-white/10 bg-white/5 pl-10 pr-3 text-sm text-white placeholder:text-white/30 outline-none transition focus:border-[#6D5DFC] focus:bg-white/10"
+                      className="w-full h-11 rounded-xl border border-slate-300 dark:border-white/10 bg-slate-50 dark:bg-white/5 pl-10 pr-3 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/30 outline-none transition focus:border-[#6D5DFC] focus:bg-white dark:focus:bg-white/10"
                     />
                   </div>
                 </div>
@@ -381,18 +386,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   <div className="flex items-center justify-between">
                     <label
                       htmlFor="password-input"
-                      className="block text-xs font-semibold text-white/70"
+                      className="block text-xs font-semibold text-slate-700 dark:text-white/70"
                     >
                       {t.login.passwordLabel}
                     </label>
-                    <span className="text-[11px] text-[#00D9FF] hover:underline cursor-pointer">
+                    <span className="text-[11px] text-[#6D5DFC] dark:text-[#00D9FF] hover:underline cursor-pointer">
                       {locale === "en" ? "Forgot password?" : "Mot de passe oublié ?"}
                     </span>
                   </div>
                   <div className="relative">
                     <Lock
                       size={16}
-                      className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40"
+                      className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/40"
                     />
                     <input
                       id="password-input"
@@ -401,12 +406,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
                       required
-                      className="w-full h-11 rounded-xl border border-white/10 bg-white/5 pl-10 pr-10 text-sm text-white placeholder:text-white/30 outline-none transition focus:border-[#6D5DFC] focus:bg-white/10 font-mono"
+                      className="w-full h-11 rounded-xl border border-slate-300 dark:border-white/10 bg-slate-50 dark:bg-white/5 pl-10 pr-10 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/30 outline-none transition focus:border-[#6D5DFC] focus:bg-white dark:focus:bg-white/10 font-mono"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition cursor-pointer p-1"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/40 hover:text-slate-700 dark:hover:text-white transition cursor-pointer p-1"
                       title={showPassword ? (locale === "en" ? "Hide password" : "Masquer le mot de passe") : (locale === "en" ? "Show password" : "Afficher le mot de passe")}
                     >
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -416,17 +421,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
                 {/* Remember me & security badge */}
                 <div className="flex items-center justify-between py-1">
-                  <label className="flex items-center gap-2 text-xs text-white/60 cursor-pointer">
+                  <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-white/60 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={rememberMe}
                       onChange={(e) => setRememberMe(e.target.checked)}
-                      className="rounded border-white/20 bg-white/5 text-[#6D5DFC] focus:ring-0 cursor-pointer"
+                      className="rounded border-slate-300 dark:border-white/20 bg-slate-100 dark:bg-white/5 text-[#6D5DFC] focus:ring-0 cursor-pointer"
                     />
                     <span>{locale === "en" ? "Remember me" : "Se souvenir de moi"}</span>
                   </label>
 
-                  <span className="flex items-center gap-1 text-[11px] text-[#20E3A2]">
+                  <span className="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-[#20E3A2]">
                     <CheckCircle2 size={12} />
                     <span>{locale === "en" ? "Active SSL Isolation" : "Isolation SSL Active"}</span>
                   </span>
@@ -458,7 +463,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 py-6 border-t border-white/5 text-center text-xs text-white/40">
+      <footer className="relative z-10 py-6 border-t border-slate-200 dark:border-white/5 text-center text-xs text-slate-500 dark:text-white/40">
         <p>
           {locale === "en"
             ? "LinguaFlow SaaS v2.4 • Secure multi-school platform for German & Italian"

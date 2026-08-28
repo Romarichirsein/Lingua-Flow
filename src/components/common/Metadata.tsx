@@ -12,7 +12,7 @@ export const Metadata: React.FC<MetadataProps> = ({
   title = "LinguaFlow • Plateforme SaaS E-Learning Multi-Écoles",
   description = "Solution SaaS multi-tenant pour écoles de langues Allemand & Italien. Gestion de cohortes, vidéos protégées, IA pédagogique et conformité CECRL.",
   keywords = "LinguaFlow, e-learning, allemand, italien, CECRL, SaaS multi-tenant, écoles de langues",
-  ogImage = "/logo.svg",
+  ogImage = "/logo.png",
 }) => {
   const fullTitle = title.includes("LinguaFlow") ? title : `${title} | LinguaFlow`;
 

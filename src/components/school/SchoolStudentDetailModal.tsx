@@ -318,6 +318,22 @@ export const SchoolStudentDetailModal: React.FC<SchoolStudentDetailModalProps> =
                       {isEn ? "Block" : "Bloquer"}
                     </button>
                   )}
+
+                  {onResetProgress && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm ? window.confirm(isEn ? "Reset all progress for this student?" : "Réinitialiser toute la progression de cet élève ?") : true) {
+                          onResetProgress(student);
+                        }
+                      }}
+                      className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-white/80 border border-slate-200 dark:border-white/10 text-xs font-bold transition flex items-center gap-1 cursor-pointer min-h-[38px]"
+                      title="Remettre la progression à zéro"
+                    >
+                      <RefreshCw size={13} />
+                      <span>{isEn ? "Reset Progress" : "Remise à zéro"}</span>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

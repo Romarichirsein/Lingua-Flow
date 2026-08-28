@@ -778,13 +778,13 @@ export const SchoolCourseBuilderTab: React.FC<SchoolCourseBuilderTabProps> = ({
             <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center justify-between">
               <span>{isEn ? "Vocabulary Lexicon Items" : "Lexique & Vocabulaire de la Leçon"}</span>
               <span className="text-[10px] font-mono text-slate-400">
-                {lessonForm.vocabulary.length} {isEn ? "items" : "mots"}
+                {(lessonForm.vocabulary || []).length} {isEn ? "items" : "mots"}
               </span>
             </h4>
 
-            {lessonForm.vocabulary.length > 0 && (
+            {(lessonForm.vocabulary || []).length > 0 && (
               <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
-                {lessonForm.vocabulary.map((item) => (
+                {(lessonForm.vocabulary || []).map((item) => (
                   <div
                     key={item.id}
                     className="p-2 rounded-xl bg-white dark:bg-black/30 border border-slate-200 dark:border-white/5 text-xs flex items-center justify-between"
@@ -886,16 +886,16 @@ export const SchoolCourseBuilderTab: React.FC<SchoolCourseBuilderTabProps> = ({
       >
         {previewingLesson && (
           <div className="space-y-5">
-            {/* Secure Video Player with Dynamic Session Watermark */}
+            {/* Video Player Simulator with Dynamic Watermark */}
             <div className="relative aspect-video w-full rounded-2xl overflow-hidden bg-black shadow-lg">
               <video
                 src={previewingLesson.videoUrl}
                 controls
                 className="w-full h-full object-contain"
               />
-              {/* Dynamic Watermark Overlay */}
+              {/* Dynamic Watermark Overlay Simulator */}
               <div className="absolute top-4 right-4 pointer-events-none opacity-40 bg-black/60 px-3 py-1 rounded-lg text-[11px] font-mono text-white select-none border border-white/10">
-                <span>{school.managerName || "Directeur"} • {school.name} • {school.language === "both" ? "DE / IT" : school.language.toUpperCase()}</span>
+                <span>Directeur • {school.name} • {school.language.toUpperCase()}</span>
               </div>
             </div>
 

@@ -1,13 +1,15 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #f6f8fc;
+  --background: #f8fafc;
   --surface: #ffffff;
   --surface-soft: #f1f5f9;
   --surface-elevated: #ffffff;
-  --text-primary: #111827;
-  --text-secondary: #475569;
-  --border: rgba(15, 23, 42, 0.14);
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --border: rgba(15, 23, 42, 0.12);
 
   --bg: var(--background);
   --text-main: var(--text-primary);
@@ -23,13 +25,13 @@
 }
 
 .dark {
-  --background: #070a12;
-  --surface: #0c1220;
-  --surface-soft: #121829;
-  --surface-elevated: #161d30;
+  --background: #070a13;
+  --surface: #0f172a;
+  --surface-soft: #1e293b;
+  --surface-elevated: #1e293b;
   --text-primary: #f8fafc;
   --text-secondary: #cbd5e1;
-  --border: rgba(203, 213, 225, 0.18);
+  --border: rgba(255, 255, 255, 0.12);
 
   --bg: var(--background);
   --text-main: var(--text-primary);

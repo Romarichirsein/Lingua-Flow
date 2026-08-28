@@ -34,7 +34,7 @@ export const SuperAdminProfileTab: React.FC<SuperAdminProfileTabProps> = ({
   onAddLog,
 }) => {
   const [name, setName] = useState(profile?.name || "Directeur Général Super Admin");
-  const [email, setEmail] = useState(profile?.email || "adminlinguaflow@gmail.com");
+  const [email, setEmail] = useState(profile?.email || "admin@linguaflow.io");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");

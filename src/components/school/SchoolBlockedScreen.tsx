@@ -96,11 +96,7 @@ export const SchoolBlockedScreen: React.FC<SchoolBlockedScreenProps> = ({
           <div className="flex justify-between py-1 border-b border-slate-200 dark:border-white/5">
             <span className="text-slate-500 dark:text-slate-400">{isEn ? "Taught Language:" : "Langue enseignée :"}</span>
             <span className="font-bold text-slate-900 dark:text-white">
-              {school.language === "both"
-                ? (isEn ? "German & Italian 🇩🇪🇮🇹" : "Allemand & Italien 🇩🇪🇮🇹")
-                : school.language === "german"
-                ? (isEn ? "German 🇩🇪" : "Allemand 🇩🇪")
-                : (isEn ? "Italian 🇮🇹" : "Italien 🇮🇹")}
+              {school.language === "german" ? (isEn ? "German 🇩🇪" : "Allemand 🇩🇪") : (isEn ? "Italian 🇮🇹" : "Italien 🇮🇹")}
             </span>
           </div>
           <div className="flex justify-between py-1">

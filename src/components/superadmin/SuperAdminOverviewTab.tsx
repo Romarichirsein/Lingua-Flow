@@ -16,6 +16,7 @@ import {
   MessageCircle,
   Plus,
   Sparkles,
+  Activity,
 } from "lucide-react";
 
 interface SuperAdminOverviewTabProps {
@@ -27,6 +28,7 @@ interface SuperAdminOverviewTabProps {
   locale: UILocale;
   onNavigateToTab: (tab: any) => void;
   onOpenCreateSchool: () => void;
+  onOpenDiagnostic?: () => void;
 }
 
 export const SuperAdminOverviewTab: React.FC<SuperAdminOverviewTabProps> = ({
@@ -38,6 +40,7 @@ export const SuperAdminOverviewTab: React.FC<SuperAdminOverviewTabProps> = ({
   locale,
   onNavigateToTab,
   onOpenCreateSchool,
+  onOpenDiagnostic,
 }) => {
   const isEn = locale === "en";
 
@@ -47,22 +50,14 @@ export const SuperAdminOverviewTab: React.FC<SuperAdminOverviewTabProps> = ({
   const totalStudents = students.length;
   const activeStudents = students.filter((s) => s.status === "active").length;
 
-  const germanSchools = schools.filter((s) => s.language === "german" || s.language === "both");
-  const italianSchools = schools.filter((s) => s.language === "italian" || s.language === "both");
+  const germanSchools = schools.filter((s) => s.language === "german");
+  const italianSchools = schools.filter((s) => s.language === "italian");
 
-  const germanStudents = students.filter((st) => {
-    const prog = programs.find((p) => p.id === st.enrolledProgramId);
-    if (prog) return prog.language === "german";
-    const sch = schools.find((s) => s.id === st.schoolId);
-    return sch?.language === "german" || sch?.language === "both";
-  }).length;
+  const germanSchoolIds = new Set(germanSchools.map((s) => s.id));
+  const italianSchoolIds = new Set(italianSchools.map((s) => s.id));
 
-  const italianStudents = students.filter((st) => {
-    const prog = programs.find((p) => p.id === st.enrolledProgramId);
-    if (prog) return prog.language === "italian";
-    const sch = schools.find((s) => s.id === st.schoolId);
-    return sch?.language === "italian";
-  }).length;
+  const germanStudents = students.filter((st) => germanSchoolIds.has(st.schoolId)).length;
+  const italianStudents = students.filter((st) => italianSchoolIds.has(st.schoolId)).length;
 
   const publishedPrograms = programs.filter((p) => p.isPublished).length;
 
@@ -270,7 +265,7 @@ export const SuperAdminOverviewTab: React.FC<SuperAdminOverviewTabProps> = ({
               })}
             </div>
 
-            <div className="pt-2 flex items-center justify-between">
+            <div className="pt-2 flex items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={onOpenCreateSchool}
@@ -279,6 +274,17 @@ export const SuperAdminOverviewTab: React.FC<SuperAdminOverviewTabProps> = ({
                 <Plus size={16} />
                 <span>{isEn ? "Create New School Tenant" : "Créer une nouvelle école"}</span>
               </button>
+
+              {onOpenDiagnostic && (
+                <button
+                  type="button"
+                  onClick={onOpenDiagnostic}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#6D5DFC]/10 to-[#00D9FF]/10 hover:from-[#6D5DFC]/20 hover:to-[#00D9FF]/20 text-[#00D9FF] text-xs font-bold border border-[#00D9FF]/30 transition min-h-[40px] cursor-pointer shadow-sm"
+                >
+                  <Activity size={15} className="animate-pulse text-[#00D9FF]" />
+                  <span>{isEn ? "Run State Diagnostic" : "Lancer Diagnostic Flux"}</span>
+                </button>
+              )}
             </div>
           </div>
 

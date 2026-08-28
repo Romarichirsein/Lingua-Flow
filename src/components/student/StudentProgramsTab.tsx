@@ -64,9 +64,10 @@ export const StudentProgramsTab: React.FC<StudentProgramsTabProps> = ({
             prog.id === student.enrolledProgramId ||
             (displayPrograms.length === 1 && !student.enrolledProgramId);
 
-          const progLessons: Lesson[] = prog.modules.flatMap((m) => m.lessons);
+          const studentCompleted = student.completedLessons || [];
+          const progLessons: Lesson[] = (prog.modules || []).flatMap((m) => m.lessons || []);
           const completedCount = progLessons.filter((l) =>
-            student.completedLessons.includes(l.id)
+            studentCompleted.includes(l.id)
           ).length;
 
           const progProgress =
@@ -128,10 +129,10 @@ export const StudentProgramsTab: React.FC<StudentProgramsTabProps> = ({
                 {/* Module breakdown pills */}
                 <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-white/5">
                   <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block">
-                    {prog.modules.length} {locale === "en" ? "thematic modules:" : "modules thématiques :"}
+                    {(prog.modules || []).length} {locale === "en" ? "thematic modules:" : "modules thématiques :"}
                   </span>
                   <div className="space-y-1 max-h-32 overflow-y-auto pr-1">
-                    {prog.modules.map((m, idx) => (
+                    {(prog.modules || []).map((m, idx) => (
                       <div
                         key={m.id}
                         className="flex items-center justify-between text-xs py-1 px-2 rounded-xl bg-slate-50 dark:bg-white/[0.02]"
@@ -140,7 +141,7 @@ export const StudentProgramsTab: React.FC<StudentProgramsTabProps> = ({
                           {idx + 1}. {m.title}
                         </span>
                         <span className="text-[10px] text-slate-400 shrink-0 ml-2">
-                          {m.lessons.length} {locale === "en" ? "lessons" : "leçons"}
+                          {(m.lessons || []).length} {locale === "en" ? "lessons" : "leçons"}
                         </span>
                       </div>
                     ))}

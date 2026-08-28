@@ -8,6 +8,8 @@ import {
   CourseModule,
   AIWritingSubmission,
   UILocale,
+  Announcement,
+  ThemeMode,
 } from "../../types";
 import { translations } from "../../lib/translations";
 import { StudentLayout, StudentTab } from "../layouts/StudentLayout";
@@ -53,6 +55,9 @@ interface StudentPortalProps {
   programs: Program[];
   activeSubpath?: string;
   submissions?: AIWritingSubmission[];
+  announcements?: Announcement[];
+  theme?: ThemeMode;
+  onUpdateTheme?: (theme: ThemeMode) => void;
   onUpdateStudent: (student: Student) => void;
   onUpdateLocale?: (locale: UILocale) => void;
   onAddLog: (action: string, details: string, status?: "success" | "warning" | "error") => void;
@@ -66,6 +71,9 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
   programs,
   activeSubpath = "dashboard",
   submissions = [],
+  announcements = [],
+  theme = "dark",
+  onUpdateTheme,
   onUpdateStudent,
   onUpdateLocale = () => {},
   onAddLog,
@@ -106,7 +114,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
 
   // Flatten all lessons in program
   const allLessons: Lesson[] = activeProgram
-    ? activeProgram.modules.flatMap((m) => m.lessons)
+    ? (activeProgram.modules || []).flatMap((m) => m.lessons || [])
     : [];
 
   // Active selected lesson for courses tab
@@ -169,16 +177,17 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
 
     // If a module was newly completed, display celebration modal
     if (result.isModuleCompleted && result.completedModule) {
-      const currentModIndex = activeProgram.modules.findIndex(
+      const activeMods = activeProgram.modules || [];
+      const currentModIndex = activeMods.findIndex(
         (m) => m.id === result.completedModule?.id
       );
-      if (currentModIndex !== -1 && currentModIndex < activeProgram.modules.length - 1) {
-        const nextMod = activeProgram.modules[currentModIndex + 1];
+      if (currentModIndex !== -1 && currentModIndex < activeMods.length - 1) {
+        const nextMod = activeMods[currentModIndex + 1];
         setUnlockedModuleModal({
           isOpen: true,
           moduleTitle: nextMod.title,
           moduleOrder: currentModIndex + 2,
-          totalLessons: nextMod.lessons.length,
+          totalLessons: (nextMod.lessons || []).length,
         });
       }
     }
@@ -229,7 +238,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
         school={school}
         activeTab={activeTab}
         onTabChange={switchTab}
-        completedLessonsCount={student.completedLessons.length}
+        completedLessonsCount={(student.completedLessons || []).length}
         totalLessonsCount={allLessons.length}
         locale={locale}
       >
@@ -241,6 +250,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
             program={activeProgram}
             allLessons={allLessons}
             locale={locale}
+            announcements={announcements}
             onResumeCourse={(lessonId) => {
               if (lessonId) setSelectedLessonId(lessonId);
               switchTab("courses");
@@ -286,12 +296,14 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                 </div>
 
                 <div className="space-y-4 max-h-[600px] overflow-y-auto pr-1">
-                  {activeProgram?.modules.map((mod, mIdx) => {
-                    const isModCompleted = mod.lessons.every((l) =>
-                      student.completedLessons.includes(l.id)
-                    );
-                    const completedCountInMod = mod.lessons.filter((l) =>
-                      student.completedLessons.includes(l.id)
+                  {(activeProgram?.modules || []).map((mod, mIdx) => {
+                    const studentCompleted = student.completedLessons || [];
+                    const modLessons = mod.lessons || [];
+                    const isModCompleted =
+                      modLessons.length > 0 &&
+                      modLessons.every((l) => studentCompleted.includes(l.id));
+                    const completedCountInMod = modLessons.filter((l) =>
+                      studentCompleted.includes(l.id)
                     ).length;
 
                     return (
@@ -313,15 +325,15 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                             </span>
                           ) : (
                             <span className="text-[10px] font-medium text-slate-400">
-                              {completedCountInMod}/{mod.lessons.length}
+                              {completedCountInMod}/{modLessons.length}
                             </span>
                           )}
                         </div>
 
                         <div className="space-y-1.5">
-                          {mod.lessons.map((les) => {
+                          {modLessons.map((les) => {
                             const isSelected = selectedLessonId === les.id;
-                            const isDone = student.completedLessons.includes(les.id);
+                            const isDone = studentCompleted.includes(les.id);
 
                             return (
                               <motion.button
@@ -383,7 +395,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                   onCompleteLesson={handleCompleteLesson}
                   onNextLesson={handleNextLesson}
                   onPrevLesson={handlePrevLesson}
-                  isAlreadyCompleted={student.completedLessons.includes(currentLesson.id)}
+                  isAlreadyCompleted={(student.completedLessons || []).includes(currentLesson.id)}
                   hasPrevLesson={hasPrevLesson}
                   hasNextLesson={hasNextLesson}
                 />
@@ -442,6 +454,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
             student={student}
             school={school}
             locale={locale}
+            announcements={announcements}
             onNavigateTab={(tab) => switchTab(tab)}
           />
         )}
@@ -453,6 +466,8 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
             school={school}
             program={activeProgram}
             locale={locale}
+            theme={theme}
+            onUpdateTheme={onUpdateTheme}
             onUpdateLocale={onUpdateLocale}
             onUpdateStudent={onUpdateStudent}
             onAddLog={onAddLog}

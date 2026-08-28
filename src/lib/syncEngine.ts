@@ -6,7 +6,6 @@ import {
   UserRole,
   EntityStatus,
   SupportedLanguage,
-  SchoolLanguageConfig,
   UILocale,
   GlobalPlatformConfig,
   Notification,
@@ -46,15 +45,13 @@ export function getEffectiveStatus(entity: {
 
 /**
  * Validates language consistency between School and Program.
- * An Italian school can create Italian programs.
- * A German school can create German programs.
- * A dual-language school ("both") can create German AND Italian programs.
+ * An Italian school can ONLY create and assign Italian programs.
+ * A German school can ONLY create and assign German programs.
  */
 export function validateLanguageMatch(
-  schoolLanguage: SchoolLanguageConfig,
+  schoolLanguage: SupportedLanguage,
   programLanguage: SupportedLanguage
 ): boolean {
-  if (schoolLanguage === "both") return true;
   return schoolLanguage === programLanguage;
 }
 
@@ -185,16 +182,19 @@ export function buildSuperAdminWhatsAppUrl(
 }
 
 /**
- * Generates formatted WhatsApp link for Student -> School Support.
+ * Generates formatted WhatsApp link for Student -> School Support / Community Group.
  */
 export function buildStudentSchoolWhatsAppUrl(
   school: School,
   student: Student,
   locale: UILocale = "fr"
 ): string {
-  const fallbackUrl = school.whatsappSupportUrl || "https://wa.me/491512345678";
-  if (fallbackUrl.includes("?text=")) return fallbackUrl;
+  const url = school.whatsappSupportUrl?.trim();
+  if (url && (url.includes("chat.whatsapp.com") || url.includes("wa.me") || url.startsWith("http"))) {
+    return url;
+  }
 
+  const fallbackUrl = school.phone || school.managerPhone || school.whatsappSupportUrl || "491512345678";
   const baseNum = fallbackUrl.replace(/[^0-9+]/g, "");
   const cleanNum = baseNum.startsWith("+") ? baseNum.substring(1) : baseNum;
 

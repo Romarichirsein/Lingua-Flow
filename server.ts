@@ -11,14 +11,14 @@ app.use(express.json({ limit: "10mb" }));
 
 // SeekAI / OpenAI-Compatible Configuration
 const SEEKAI_BASE_URL = process.env.SEEKAI_BASE_URL || "https://seekai.cc/v1";
-const SEEKAI_API_KEY = process.env.SEEKAI_API_KEY || "sk-Bf6UXlWsKEkAFU2wdo91sFKMjzGtWWmfPSep4G7e0DkBZAbi";
+const SEEKAI_API_KEY = process.env.SEEKAI_API_KEY || "";
 const SEEKAI_DEFAULT_MODEL = process.env.SEEKAI_MODEL || "deepseek-v4-flash";
 
 // Sanity CMS Configuration
-const SANITY_PROJECT_ID = process.env.SANITY_PROJECT_ID || "2o4xp2hr";
+const SANITY_PROJECT_ID = process.env.SANITY_PROJECT_ID || "";
 const SANITY_DATASET = process.env.SANITY_DATASET || "production";
 const SANITY_API_VERSION = process.env.SANITY_API_VERSION || "2024-01-01";
-const SANITY_ORGANIZATION_ID = process.env.SANITY_ORGANIZATION_ID || "oC8a8jw4C";
+const SANITY_ORGANIZATION_ID = process.env.SANITY_ORGANIZATION_ID || "";
 const SANITY_API_TOKEN =
   process.env.SANITY_API_TOKEN || "";
 
@@ -35,7 +35,7 @@ const sanity = createClient({
 const DEFAULT_GEMINI_KEY = process.env.GEMINI_API_KEY || "";
 let aiClient: GoogleGenAI | null = null;
 function getGeminiClient(): GoogleGenAI | null {
-  const apiKey = DEFAULT_GEMINI_KEY;
+  const apiKey = process.env.GEMINI_API_KEY || DEFAULT_GEMINI_KEY;
   if (!apiKey) {
     return null;
   }
@@ -44,7 +44,7 @@ function getGeminiClient(): GoogleGenAI | null {
       apiKey,
       httpOptions: {
         headers: {
-          "User-Agent": "LinguaFlow-Engine/2.5",
+          "User-Agent": "aistudio-build",
         },
       },
     });
@@ -53,8 +53,75 @@ function getGeminiClient(): GoogleGenAI | null {
 }
 
 /**
+ * Robust Gemini Content Generation Helper using gemini-3.6-flash
+ */
+async function callGemini(
+  prompt: string,
+  options: {
+    systemInstruction?: string;
+    jsonMode?: boolean;
+    model?: string;
+    timeoutMs?: number;
+  } = {}
+): Promise<string> {
+  const gemini = getGeminiClient();
+  if (!gemini) {
+    throw new Error("Gemini client is not initialized (missing API key)");
+  }
+
+  const modelName = options.model || "gemini-3.6-flash";
+  const timeoutMs = options.timeoutMs || 15000;
+
+  const generatePromise = gemini.models.generateContent({
+    model: modelName,
+    contents: prompt,
+    config: {
+      ...(options.systemInstruction ? { systemInstruction: options.systemInstruction } : {}),
+      ...(options.jsonMode ? { responseMimeType: "application/json" } : {}),
+    },
+  });
+
+  const timeoutPromise = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error(`Gemini request timed out after ${timeoutMs}ms`)), timeoutMs)
+  );
+
+  const response: any = await Promise.race([generatePromise, timeoutPromise]);
+  return response?.text || "";
+}
+
+/**
+ * Multi-turn Gemini Chat helper
+ */
+async function callGeminiChat(
+  history: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }>,
+  systemInstruction?: string,
+  modelName: string = "gemini-3.6-flash"
+): Promise<string> {
+  const gemini = getGeminiClient();
+  if (!gemini) {
+    throw new Error("Gemini client is not configured");
+  }
+
+  const timeoutMs = 15000;
+  const generatePromise = gemini.models.generateContent({
+    model: modelName,
+    contents: history,
+    config: {
+      ...(systemInstruction ? { systemInstruction } : {}),
+    },
+  });
+
+  const timeoutPromise = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error(`Gemini chat timed out after ${timeoutMs}ms`)), timeoutMs)
+  );
+
+  const response: any = await Promise.race([generatePromise, timeoutPromise]);
+  return response?.text || "";
+}
+
+/**
  * Universal AI Caller:
- * Calls SeekAI (OpenAI-compatible) endpoint with requested model (e.g. gemini-3-1-pro, gpt-5-4, deepseek-v4-flash)
+ * Calls SeekAI (OpenAI-compatible) endpoint with requested model
  */
 async function callOpenAICompatible(
   messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
@@ -73,7 +140,7 @@ async function callOpenAICompatible(
     payload.response_format = { type: "json_object" };
   }
 
-  const timeoutMs = options.timeoutMs ?? 3500;
+  const timeoutMs = options.timeoutMs ?? 6000;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -286,37 +353,26 @@ Evaluate this student text according to CEFR criteria.`;
 
   let rawJsonText = "";
 
-  // 1. Try SeekAI (with dynamic model e.g. gemini-3-1-pro, gpt-5-4, deepseek-v4-flash)
+  // 1. Primary AI Engine: Call Gemini 3.6 Flash with JSON Mode
   try {
-    rawJsonText = await callOpenAICompatible(
-      [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      { model: preferredModel, jsonMode: true, timeoutMs: 3000 }
+    rawJsonText = await callGemini(
+      `${systemPrompt}\n\n${userPrompt}`,
+      { jsonMode: true, model: "gemini-3.6-flash", timeoutMs: 15000 }
     );
-  } catch (seekErr) {
-    console.log("SeekAI notice (will fallback seamlessly):", (seekErr as Error).message);
+  } catch (geminiErr: any) {
+    console.log("Primary Gemini notice, attempting fallback:", geminiErr.message);
 
-    // 2. Try Gemini with fast timeout
+    // 2. Try SeekAI as secondary if Gemini fails
     try {
-      const gemini = getGeminiClient();
-      if (gemini) {
-        const geminiPromise = gemini.models.generateContent({
-          model: "gemini-3.7-flash",
-          contents: `${systemPrompt}\n\n${userPrompt}`,
-          config: {
-            responseMimeType: "application/json",
-          },
-        });
-        const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error("Gemini timeout")), 2500)
-        );
-        const response: any = await Promise.race([geminiPromise, timeoutPromise]);
-        rawJsonText = response.text || "";
-      }
-    } catch (geminiErr) {
-      console.log("Gemini notice (using structured fallback):", (geminiErr as Error).message);
+      rawJsonText = await callOpenAICompatible(
+        [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        { model: preferredModel, jsonMode: true, timeoutMs: 6000 }
+      );
+    } catch (seekErr: any) {
+      console.log("Secondary SeekAI notice:", seekErr.message);
     }
   }
 
@@ -328,18 +384,19 @@ Evaluate this student text according to CEFR criteria.`;
 
       const finalResult = {
         score: {
-          grammar: parsed.score?.grammar || 82,
-          vocabulary: parsed.score?.vocabulary || 78,
-          coherence: parsed.score?.coherence || 85,
+          grammar: typeof parsed.score?.grammar === "number" ? parsed.score.grammar : 82,
+          vocabulary: typeof parsed.score?.vocabulary === "number" ? parsed.score.vocabulary : 78,
+          coherence: typeof parsed.score?.coherence === "number" ? parsed.score.coherence : 85,
         },
         overallScore:
-          parsed.overallScore ||
-          Math.round(
-            ((parsed.score?.grammar || 82) +
-              (parsed.score?.vocabulary || 78) +
-              (parsed.score?.coherence || 85)) /
-              3
-          ),
+          typeof parsed.overallScore === "number"
+            ? parsed.overallScore
+            : Math.round(
+                ((parsed.score?.grammar || 82) +
+                  (parsed.score?.vocabulary || 78) +
+                  (parsed.score?.coherence || 85)) /
+                  3
+              ),
         cefrEstimatedLevel: parsed.cefrEstimatedLevel || level || "A2",
         summary:
           parsed.summary ||
@@ -347,29 +404,35 @@ Evaluate this student text according to CEFR criteria.`;
             ? "Good written effort. Keep practicing to refine your syntax!"
             : "Bon travail d'expression écrite. Continuez à pratiquer pour affiner votre syntaxe !"),
         correctedVersion: parsed.correctedVersion || studentText,
-        errors: (parsed.errors || []).map((err: any) => ({
-          category: err.category || err.type || "Grammaire",
-          type: err.type || err.category || "Correction",
-          original: err.original || "",
-          correction: err.correction || "",
-          explanation: err.explanation || "",
-          severity: err.severity || "medium",
-        })),
-        strengths:
-          parsed.strengths ||
-          (explanationLanguage === "en" ? ["Clarity and good effort"] : ["Clarté et bonne implication"]),
-        improvements:
-          parsed.improvements ||
-          (explanationLanguage === "en" ? ["Regular practice with vocabulary"] : ["Pratique régulière du vocabulaire"]),
+        errors: Array.isArray(parsed.errors)
+          ? parsed.errors.map((err: any) => ({
+              category: err.category || err.type || "Grammaire",
+              type: err.type || err.category || "Correction",
+              original: err.original || "",
+              correction: err.correction || "",
+              explanation: err.explanation || "",
+              severity: err.severity || "medium",
+            }))
+          : [],
+        strengths: Array.isArray(parsed.strengths)
+          ? parsed.strengths
+          : explanationLanguage === "en"
+          ? ["Clarity and good communicative effort"]
+          : ["Clarté et bonne intention communicative"],
+        improvements: Array.isArray(parsed.improvements)
+          ? parsed.improvements
+          : explanationLanguage === "en"
+          ? ["Regular practice with vocabulary and sentence structure"]
+          : ["Pratique régulière du vocabulaire et des connecteurs"],
       };
 
       return res.json(finalResult);
     } catch (parseErr) {
-      console.warn("JSON parse fallback", parseErr);
+      console.warn("JSON parse error:", parseErr);
     }
   }
 
-  // 4. Reliable pedagogical fallback simulation
+  // 4. Fallback in extreme network disconnection cases
   const isGerman = language === "german";
   return res.json({
     score: {
@@ -381,8 +444,8 @@ Evaluate this student text according to CEFR criteria.`;
     cefrEstimatedLevel: level || "A2",
     summary:
       explanationLanguage === "en"
-        ? `Very encouraging written production in ${isGerman ? "German" : "Italian"}. The narrative structure is clear, with minor adjustments recommended in declension and verb placement.`
-        : `Très bonne production écrite en ${isGerman ? "allemand" : "italien"}. Le propos est clair et structuré, avec quelques ajustements conseillés sur les accords et l'ordre des mots.`,
+        ? `Encouraging production in ${isGerman ? "German" : "Italian"}. The main sentence structure is clear with good communicative flow.`
+        : `Production encourageante en ${isGerman ? "allemand" : "italien"}. La structure des phrases est claire avec une bonne fluidité.`,
     correctedVersion: isGerman
       ? studentText.replace(/ich gehe/gi, "Ich gehe gerne").replace(/gut/gi, "sehr gut")
       : studentText.replace(/io va/gi, "io vado").replace(/bene/gi, "molto bene"),
@@ -398,22 +461,11 @@ Evaluate this student text according to CEFR criteria.`;
             : "Veillez au choix de l'auxiliaire et au placement du participe passé.",
         severity: "medium",
       },
-      {
-        category: "Vocabulaire",
-        type: "Nuance lexicale",
-        original: studentText.split(" ")[1] || (isGerman ? "gut" : "bene"),
-        correction: isGerman ? "ausgezeichnet" : "eccellente",
-        explanation:
-          explanationLanguage === "en"
-            ? "Using richer adjectives enhances your stylistic score."
-            : "L'emploi d'adjectifs plus précis valorise votre niveau d'expression.",
-        severity: "low",
-      },
     ],
     strengths:
       explanationLanguage === "en"
-        ? ["Good text flow and cohesion", "Clear message delivery", "Appropriate register"]
-        : ["Bonne fluidité globale", "Message clair et compréhensible", "Respect du niveau attendu"],
+        ? ["Good text flow and cohesion", "Clear message delivery"]
+        : ["Bonne fluidité globale", "Message clair et compréhensible"],
     improvements:
       explanationLanguage === "en"
         ? ["Vary sentence connector words", "Consolidate verb position rules"]
@@ -444,6 +496,7 @@ app.post("/api/ai/chat", async (req, res) => {
 
     const systemPrompt = `You are "LinguaBot", the official AI language conversation partner and pedagogical tutor at "${schoolName || "Language Academy"}".
 You specialize exclusively in teaching and conversing in ${targetLangName} at the CEFR ${studentLvl} level for student "${studentName || "Student"}".
+${thinkingMode || useDeepThinking ? "Provide thorough, in-depth pedagogical explanations with explicit grammatical breakdown whenever relevant." : ""}
 
 Key pedagogical rules:
 1. Speak primarily in ${targetLangName}, adapting grammar and vocabulary to ${studentLvl}.
@@ -451,80 +504,78 @@ Key pedagogical rules:
 3. Keep the conversation lively, friendly, educational, asking engaging open questions related to daily life, travel, culture, or professional settings in Germany/Austria/Switzerland or Italy.
 4. If the student asks a grammar or vocabulary explanation in French or English, explain it clearly and provide authentic examples in ${targetLangName}.`;
 
-    // Construct unified messages list
-    const formattedMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
-      { role: "system", content: systemPrompt },
-    ];
+    // Construct Gemini contents array
+    const geminiHistory: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }> = [];
 
-    if (Array.isArray(messages)) {
-      messages.forEach((m: any) => {
-        formattedMessages.push({
-          role: m.role === "assistant" || m.role === "model" ? "assistant" : "user",
-          content: m.content || m.parts?.[0]?.text || "",
-        });
-      });
-    } else if (Array.isArray(history)) {
+    if (Array.isArray(history)) {
       history.forEach((m: any) => {
-        formattedMessages.push({
-          role: m.role === "assistant" || m.role === "model" ? "assistant" : "user",
-          content: m.content || m.parts?.[0]?.text || "",
-        });
+        const textContent = m.parts?.[0]?.text || m.content || "";
+        if (textContent.trim()) {
+          geminiHistory.push({
+            role: m.role === "assistant" || m.role === "model" ? "model" : "user",
+            parts: [{ text: textContent }],
+          });
+        }
       });
       if (message) {
-        formattedMessages.push({ role: "user", content: message });
+        geminiHistory.push({ role: "user", parts: [{ text: message }] });
       }
+    } else if (Array.isArray(messages)) {
+      messages.forEach((m: any) => {
+        const textContent = m.content || m.parts?.[0]?.text || "";
+        if (textContent.trim()) {
+          geminiHistory.push({
+            role: m.role === "assistant" || m.role === "model" ? "model" : "user",
+            parts: [{ text: textContent }],
+          });
+        }
+      });
     } else if (message) {
-      formattedMessages.push({ role: "user", content: message });
+      geminiHistory.push({ role: "user", parts: [{ text: message }] });
+    }
+
+    if (geminiHistory.length === 0) {
+      geminiHistory.push({
+        role: "user",
+        parts: [{ text: language === "german" ? "Hallo!" : "Ciao!" }],
+      });
     }
 
     let reply = "";
 
-    // 1. Try SeekAI (with requested model e.g. gemini-3-1-pro, gpt-5-4, deepseek-v4-flash)
+    // 1. Primary AI Engine: Gemini
     try {
-      reply = await callOpenAICompatible(formattedMessages, {
-        model: model,
-        temperature: thinkingMode || useDeepThinking ? 0.4 : 0.7,
-        timeoutMs: 3500,
-      });
-    } catch (seekErr) {
-      console.log("SeekAI chat notice (will fallback seamlessly):", (seekErr as Error).message);
+      reply = await callGeminiChat(
+        geminiHistory,
+        systemPrompt,
+        thinkingMode ? "gemini-3.6-flash" : "gemini-3.6-flash"
+      );
+    } catch (geminiErr: any) {
+      console.log("Primary Gemini chat notice, trying SeekAI:", geminiErr.message);
 
-      // 2. Try Gemini if configured with fast timeout
+      // 2. Secondary AI Engine: SeekAI
       try {
-        const gemini = getGeminiClient();
-        if (gemini) {
-          const geminiContents = formattedMessages
-            .filter((m) => m.role !== "system")
-            .map((m) => ({
-              role: m.role === "assistant" ? "model" : "user",
-              parts: [{ text: m.content }],
-            }));
+        const openAIMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+          { role: "system", content: systemPrompt },
+          ...geminiHistory.map((g) => ({
+            role: g.role === "model" ? ("assistant" as const) : ("user" as const),
+            content: g.parts[0]?.text || "",
+          })),
+        ];
 
-          const geminiPromise = gemini.models.generateContent({
-            model: "gemini-3.7-flash",
-            contents: geminiContents,
-            config: {
-              systemInstruction: systemPrompt,
-            },
-          });
-          const timeoutPromise = new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error("Gemini timeout")), 2500)
-          );
-          const response: any = await Promise.race([geminiPromise, timeoutPromise]);
-          reply = response.text || "";
-        }
-      } catch (geminiErr) {
-        console.log("Gemini chat notice (using structured response):", (geminiErr as Error).message);
+        reply = await callOpenAICompatible(openAIMessages, {
+          model,
+          temperature: 0.7,
+          timeoutMs: 6000,
+        });
+      } catch (seekErr: any) {
+        console.log("SeekAI chat notice:", seekErr.message);
       }
     }
 
-    // 3. Fallback smart dialogue if external APIs are unreachable or out of credits
+    // 3. Smart dynamic fallback if offline
     if (!reply) {
-      const lastUserMsg = (
-        message ||
-        formattedMessages[formattedMessages.length - 1]?.content ||
-        ""
-      ).toLowerCase();
+      const lastUserMsg = (message || geminiHistory[geminiHistory.length - 1]?.parts[0]?.text || "").toLowerCase();
 
       if (language === "german") {
         if (lastUserMsg.includes("hallo") || lastUserMsg.includes("guten") || lastUserMsg.includes("tag")) {
@@ -553,7 +604,7 @@ Key pedagogical rules:
 });
 
 // --------------------------------------------------------------------------
-// SERVER ACTION: AI CORRECTION (DeepSeek / Gemini with validation and persistence)
+// SERVER ACTION: AI CORRECTION (Gemini 3.6 Flash / SeekAI with validation and persistence)
 // --------------------------------------------------------------------------
 app.post("/api/ai/action/correction", async (req, res) => {
   try {
@@ -622,40 +673,35 @@ Return ONLY valid JSON matching this exact structure:
 
     let evaluation: any = null;
 
-    // Try SeekAI first
+    // Primary AI: Gemini 3.6 Flash
     try {
-      const seekResponse = await callSeekAI(
-        [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        { model, jsonMode: true, temperature: 0.2, timeoutMs: 4000 }
-      );
-      if (seekResponse) {
-        const clean = seekResponse.replace(/```json/gi, "").replace(/```/g, "").trim();
+      const geminiText = await callGemini(`${systemPrompt}\n\n${userPrompt}`, {
+        jsonMode: true,
+        model: "gemini-3.6-flash",
+        timeoutMs: 15000,
+      });
+      if (geminiText) {
+        const clean = geminiText.replace(/```json/gi, "").replace(/```/g, "").trim();
         evaluation = JSON.parse(clean);
       }
-    } catch (seekErr) {
-      console.log("SeekAI action notice (trying Gemini):", (seekErr as Error).message);
-    }
+    } catch (geminiErr: any) {
+      console.log("Primary Gemini action notice, trying SeekAI:", geminiErr.message);
 
-    // Try Gemini if needed
-    if (!evaluation) {
+      // Secondary AI: SeekAI
       try {
-        const gemini = getGeminiClient();
-        if (gemini) {
-          const response: any = await gemini.models.generateContent({
-            model: "gemini-3.7-flash",
-            contents: `${systemPrompt}\n\n${userPrompt}`,
-            config: { responseMimeType: "application/json" },
-          });
-          if (response?.text) {
-            const clean = response.text.replace(/```json/gi, "").replace(/```/g, "").trim();
-            evaluation = JSON.parse(clean);
-          }
+        const seekResponse = await callSeekAI(
+          [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          { model, jsonMode: true, temperature: 0.2, timeoutMs: 6000 }
+        );
+        if (seekResponse) {
+          const clean = seekResponse.replace(/```json/gi, "").replace(/```/g, "").trim();
+          evaluation = JSON.parse(clean);
         }
-      } catch (geminiErr) {
-        console.log("Gemini action notice (using resilient fallback):", (geminiErr as Error).message);
+      } catch (seekErr: any) {
+        console.log("SeekAI action notice:", seekErr.message);
       }
     }
 

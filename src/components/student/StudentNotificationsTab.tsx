@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { Student, School, UILocale } from "../../types";
+import { Student, School, UILocale, Announcement } from "../../types";
 import { translations } from "../../lib/translations";
+import { computeDaysRemaining } from "../../lib/syncEngine";
 import {
   Bell,
   CheckCircle2,
@@ -27,6 +28,7 @@ interface StudentNotificationsTabProps {
   student: Student;
   school: School;
   locale: UILocale;
+  announcements: Announcement[];
   onNavigateTab: (tab: "courses" | "writing" | "chat" | "profile") => void;
 }
 
@@ -34,24 +36,40 @@ export const StudentNotificationsTab: React.FC<StudentNotificationsTabProps> = (
   student,
   school,
   locale,
+  announcements,
   onNavigateTab,
 }) => {
   const t = translations[locale];
 
-  // Calculate remaining days for dynamic notification
-  const today = new Date();
-  const endDate = new Date(student.accessEndDate);
-  const diffTime = endDate.getTime() - today.getTime();
-  const daysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+  // Calculate remaining days for dynamic notification safely
+  const daysRemaining = computeDaysRemaining(student.endDate);
+
+  const relevantAnnouncements = announcements.filter(
+    (a) => a.target === "all" || a.target === "students" || a.targetSchoolId === school.id
+  );
+
+  const mappedAnnouncements: NotificationItem[] = relevantAnnouncements.map((ann) => ({
+    id: `ann-${ann.id}`,
+    type: "school",
+    title: ann.title,
+    message: ann.content,
+    date: new Date(ann.createdAt).toLocaleDateString(locale === "en" ? "en-US" : "fr-FR", {
+      month: "short",
+      day: "numeric",
+      year: "numeric"
+    }),
+    read: false,
+  }));
 
   const initialNotifications: NotificationItem[] = [
+    ...mappedAnnouncements,
     {
       id: "notif-1",
       type: "access",
       title: locale === "en" ? "Student Access Validity" : "Validité de votre accès élève",
       message: locale === "en"
-        ? `Your training at ${school.name} is active until ${student.accessEndDate} (${daysRemaining} days remaining).`
-        : `Votre formation chez ${school.name} est active jusqu'au ${student.accessEndDate} (${daysRemaining} jours restants).`,
+        ? `Your training at ${school.name} is active until ${student.endDate} (${daysRemaining} days remaining).`
+        : `Votre formation chez ${school.name} est active jusqu'au ${student.endDate} (${daysRemaining} jours restants).`,
       date: locale === "en" ? "Today" : "Aujourd'hui",
       read: false,
       actionTab: "profile",

@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { motion } from "motion/react";
+import React, { useState, useRef } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import {
   School,
   AuditLog,
@@ -24,6 +24,12 @@ import {
   UserPlus,
   Trash2,
   Eye,
+  ExternalLink,
+  ImageIcon,
+  Sparkles,
+  MessageCircle,
+  HelpCircle,
+  Award,
 } from "lucide-react";
 import { NeonButton } from "../common/NeonButton";
 import { Modal } from "../common/Modal";
@@ -36,6 +42,30 @@ interface SchoolSettingsTabProps {
   onAddLog: (action: string, details: string, status?: "success" | "warning" | "error") => void;
 }
 
+// Pre-curated educational academy logos
+const PRESET_LOGOS = [
+  {
+    name: "Académie Germanique",
+    url: "https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=150&auto=format&fit=crop&q=80",
+    lang: "german",
+  },
+  {
+    name: "Institut Linguistique Européen",
+    url: "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=150&auto=format&fit=crop&q=80",
+    lang: "all",
+  },
+  {
+    name: "Centro Studio Dante",
+    url: "https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?w=150&auto=format&fit=crop&q=80",
+    lang: "italian",
+  },
+  {
+    name: "Excellence Polyglotte",
+    url: "https://images.unsplash.com/photo-1509062522246-3755977927d7?w=150&auto=format&fit=crop&q=80",
+    lang: "all",
+  },
+];
+
 export const SchoolSettingsTab: React.FC<SchoolSettingsTabProps> = ({
   locale,
   school,
@@ -45,9 +75,11 @@ export const SchoolSettingsTab: React.FC<SchoolSettingsTabProps> = ({
 }) => {
   const t = translations[locale];
   const isEn = locale === "en";
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Sub-sections
   const [activeSection, setActiveSection] = useState<"branding" | "whatsapp" | "team" | "audit">("branding");
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   // School General & Branding Form State
   const [formData, setFormData] = useState({
@@ -58,11 +90,32 @@ export const SchoolSettingsTab: React.FC<SchoolSettingsTabProps> = ({
     contactPhone: school.contactPhone || "",
     address: school.address || "",
     website: school.website || "",
+    whatsappSupportUrl: school.whatsappSupportUrl || "https://chat.whatsapp.com/LinguaFlowPromo2025",
     whatsappNumber: school.whatsappNumber || "",
     whatsappWelcomeTemplate:
       school.whatsappWelcomeTemplate ||
       `Bonjour {student_name} ! Bienvenue sur l'espace d'apprentissage de ${school.name}. Vos identifiants de connexion ont été activés.`,
   });
+
+  // Handle Logo File Upload (FileReader Base64)
+  const handleLogoFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      alert(isEn ? "Image file is too large. Maximum size is 2MB." : "Le fichier est trop volumineux. Taille maximale : 2 Mo.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      if (result) {
+        setFormData((prev) => ({ ...prev, logo: result }));
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Team collaborators (Local state for the school)
   const [teamMembers, setTeamMembers] = useState<
@@ -102,6 +155,7 @@ export const SchoolSettingsTab: React.FC<SchoolSettingsTabProps> = ({
       contactPhone: formData.contactPhone.trim(),
       address: formData.address.trim(),
       website: formData.website.trim(),
+      whatsappSupportUrl: formData.whatsappSupportUrl.trim(),
       whatsappNumber: formData.whatsappNumber.trim(),
       whatsappWelcomeTemplate: formData.whatsappWelcomeTemplate.trim(),
     };
@@ -109,9 +163,12 @@ export const SchoolSettingsTab: React.FC<SchoolSettingsTabProps> = ({
     onUpdateSchool(updated);
     onAddLog(
       "Mise à jour des paramètres",
-      `Paramètres et identité de l'école ${updated.name} mis à jour.`,
+      `Paramètres, logo et configuration WhatsApp de l'école '${updated.name}' enregistrés et synchronisés.`,
       "success"
     );
+
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 3500);
   };
 
   const handleAddMember = (e: React.FormEvent) => {
@@ -153,21 +210,18 @@ export const SchoolSettingsTab: React.FC<SchoolSettingsTabProps> = ({
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">
-              {isEn ? "School Settings & Customization" : "Paramètres, Branding & Sécurité"}
+              {isEn ? "School Configuration & Branding" : "Configuration de l'École, Logo & WhatsApp"}
             </h2>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#6D5DFC]/10 text-[#6D5DFC] dark:text-[#a399ff]">
-              {school.name}
-            </span>
           </div>
-          <p className="text-xs text-slate-500 dark:text-white/60 mt-0.5">
+          <p className="text-xs text-slate-500 dark:text-white/50 mt-1">
             {isEn
-              ? "Configure white-label branding, automated WhatsApp templates, collaborators and security audit logs."
-              : "Personnalisez votre charte graphique en marque blanche, configurez WhatsApp et gérez vos accès pédagogiques."}
+              ? "Customize your white-label portal, upload your official logo, configure student WhatsApp groups, and manage team permissions."
+              : "Personnalisez votre portail en marque blanche, configurez votre logo officiel, paramétrez le groupe WhatsApp des élèves et gérez les accès de votre équipe."}
           </p>
         </div>
 
-        {/* Section Navigation Buttons */}
-        <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10">
+        {/* Sub-tab Navigation */}
+        <div className="flex flex-wrap items-center gap-1.5 p-1.5 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5">
           <button
             type="button"
             onClick={() => setActiveSection("branding")}
@@ -177,8 +231,8 @@ export const SchoolSettingsTab: React.FC<SchoolSettingsTabProps> = ({
                 : "text-slate-500 dark:text-white/60 hover:text-slate-900 dark:hover:text-white"
             }`}
           >
-            <Palette size={13} />
-            <span>{isEn ? "Branding" : "Branding"}</span>
+            <Palette size={13} className="text-[#6D5DFC]" />
+            <span>{isEn ? "Logo & Branding" : "Logo & Identité"}</span>
           </button>
           <button
             type="button"
@@ -189,8 +243,8 @@ export const SchoolSettingsTab: React.FC<SchoolSettingsTabProps> = ({
                 : "text-slate-500 dark:text-white/60 hover:text-slate-900 dark:hover:text-white"
             }`}
           >
-            <MessageSquare size={13} />
-            <span>WhatsApp</span>
+            <MessageSquare size={13} className="text-emerald-500" />
+            <span>{isEn ? "WhatsApp Group" : "Groupe WhatsApp"}</span>
           </button>
           <button
             type="button"
@@ -219,162 +273,352 @@ export const SchoolSettingsTab: React.FC<SchoolSettingsTabProps> = ({
         </div>
       </div>
 
-      {/* 1. BRANDING & IDENTITY */}
+      {/* Save Success Alert Notification */}
+      <AnimatePresence>
+        {saveSuccess && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between text-xs text-emerald-600 dark:text-emerald-400 font-bold shadow-md"
+          >
+            <div className="flex items-center gap-2">
+              <CheckCircle2 size={18} className="text-emerald-500" />
+              <span>
+                {isEn
+                  ? "Changes successfully saved and synchronized across all student portals!"
+                  : "Modifications enregistrées et synchronisées en direct sur les espaces élèves et l'administration !"}
+              </span>
+            </div>
+            <span className="text-[10px] font-mono opacity-70">SYNCED</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 1. BRANDING & LOGO */}
       {activeSection === "branding" && (
         <form onSubmit={handleSaveSettings} className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Form Column */}
-            <div className="lg:col-span-2 space-y-4 p-5 rounded-3xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10">
-              <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                <Palette size={16} className="text-[#6D5DFC]" />
-                <span>{isEn ? "White-label & Visual Identity" : "Identité Visuelle & Marque Blanche"}</span>
-              </h3>
-
-              {/* Language Lock Alert */}
-              <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-2.5 text-xs text-amber-500 dark:text-amber-300">
-                <Lock size={15} className="shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-bold block">
-                    {isEn ? "Language is locked to:" : "Langue d'enseignement verrouillée :"}
-                  </span>
-                  <span>
-                    {school.language === "german" ? "Allemand 🇩🇪" : "Italien 🇮🇹"} (Attribuée exclusivement par le Super Admin Lingua Flow).
+            <div className="lg:col-span-2 space-y-5">
+              {/* Logo Upload & Customization Card */}
+              <div className="p-5 rounded-3xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                    <ImageIcon size={16} className="text-[#00D9FF]" />
+                    <span>{isEn ? "Official School Logo" : "Logo Officiel de l'École"}</span>
+                  </h3>
+                  <span className="text-[11px] text-slate-400 font-medium">
+                    PNG, JPG, SVG, WebP (Max 2 Mo)
                   </span>
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-white/80 mb-1">
-                  {isEn ? "School Name *" : "Nom de l'École *"}
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-[#00D9FF]"
-                />
-              </div>
+                {/* Logo Upload & Preview Interactive Box */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
+                  {/* Current Logo Display */}
+                  <div className="sm:col-span-1 flex flex-col items-center justify-center p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 min-h-[120px] text-center">
+                    {formData.logo ? (
+                      formData.logo.startsWith("http") || formData.logo.startsWith("data:") ? (
+                        <img
+                          src={formData.logo}
+                          alt="Logo École"
+                          className="max-h-20 max-w-full object-contain rounded-xl shadow-xs"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <span className="text-4xl">{formData.logo}</span>
+                      )
+                    ) : (
+                      <div className="flex flex-col items-center text-slate-400">
+                        <ImageIcon size={32} className="opacity-40 mb-1" />
+                        <span className="text-[10px]">{isEn ? "No logo uploaded" : "Aucun logo"}</span>
+                      </div>
+                    )}
+                    {formData.logo && (
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, logo: "" })}
+                        className="mt-2 text-[10px] text-rose-500 hover:underline flex items-center gap-1 font-medium cursor-pointer"
+                      >
+                        <Trash2 size={10} />
+                        <span>{isEn ? "Remove logo" : "Supprimer"}</span>
+                      </button>
+                    )}
+                  </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-white/80 mb-1">
-                    {isEn ? "Logo URL" : "URL du Logo"}
-                  </label>
-                  <input
-                    type="url"
-                    value={formData.logo}
-                    onChange={(e) => setFormData({ ...formData, logo: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-none"
-                  />
+                  {/* Upload Controls */}
+                  <div className="sm:col-span-2 space-y-3">
+                    {/* Hidden file input */}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                      onChange={handleLogoFileUpload}
+                      className="hidden"
+                    />
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#6D5DFC] to-[#00D9FF] hover:opacity-90 text-white text-xs font-bold transition flex items-center gap-2 cursor-pointer shadow-sm"
+                      >
+                        <Upload size={14} />
+                        <span>{isEn ? "Upload Logo Image" : "Téléverser une image"}</span>
+                      </button>
+
+                      <span className="text-xs text-slate-400">{isEn ? "or direct URL" : "ou URL directe"}</span>
+                    </div>
+
+                    {/* URL Input */}
+                    <div>
+                      <input
+                        type="url"
+                        value={formData.logo.startsWith("data:") ? "" : formData.logo}
+                        onChange={(e) => setFormData({ ...formData, logo: e.target.value })}
+                        placeholder="https://mon-ecole.com/logo.png"
+                        className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-[#00D9FF]"
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-white/80 mb-1">
-                    {isEn ? "Primary Brand Color" : "Couleur Primaire"}
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={formData.primaryColor}
-                      onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
-                      className="w-10 h-9 rounded-lg border border-slate-200 cursor-pointer"
-                    />
-                    <input
-                      type="text"
-                      value={formData.primaryColor}
-                      onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
-                      className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs font-mono text-slate-900 dark:text-white focus:outline-none"
-                    />
+                {/* Preset Educational Logos for instant setup */}
+                <div className="pt-2 border-t border-slate-100 dark:border-white/5 space-y-2">
+                  <span className="text-[11px] font-bold text-slate-500 dark:text-white/60 flex items-center gap-1.5">
+                    <Sparkles size={12} className="text-amber-500" />
+                    <span>{isEn ? "Choose from pre-made academy emblems:" : "Exemples de badges et logos pré-définis :"}</span>
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {PRESET_LOGOS.map((preset, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, logo: preset.url })}
+                        className={`p-2 rounded-xl border text-left text-[11px] font-medium transition flex items-center gap-2 cursor-pointer ${
+                          formData.logo === preset.url
+                            ? "bg-indigo-500/10 border-indigo-500 text-indigo-600 dark:text-indigo-400"
+                            : "bg-slate-50 dark:bg-white/[0.02] border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/20 text-slate-700 dark:text-white/80"
+                        }`}
+                      >
+                        <img
+                          src={preset.url}
+                          alt={preset.name}
+                          className="w-6 h-6 rounded-md object-cover shrink-0"
+                          referrerPolicy="no-referrer"
+                        />
+                        <span className="truncate">{preset.name}</span>
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-white/80 mb-1">
-                    {isEn ? "Contact Email" : "Email de Contact"}
-                  </label>
-                  <input
-                    type="email"
-                    value={formData.contactEmail}
-                    onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-none"
-                  />
+              {/* School Identity & Brand Color Card */}
+              <div className="p-5 rounded-3xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 space-y-4">
+                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Palette size={16} className="text-[#6D5DFC]" />
+                  <span>{isEn ? "School Identity & Visual Theme" : "Informations Générales & Thème Visuel"}</span>
+                </h3>
+
+                {/* Language Lock Alert */}
+                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-2.5 text-xs text-amber-600 dark:text-amber-300">
+                  <Lock size={15} className="shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold block">
+                      {isEn ? "Language is assigned & locked to:" : "Langue d'enseignement verrouillée :"}
+                    </span>
+                    <span>
+                      {school.language === "german" ? "Allemand 🇩🇪" : "Italien 🇮🇹"} (Configurée exclusivement par le Super Admin Lingua Flow).
+                    </span>
+                  </div>
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-white/80 mb-1">
-                    {isEn ? "Phone Number" : "Téléphone Public"}
+                    {isEn ? "School Name *" : "Nom de l'École / Établissement *"}
                   </label>
                   <input
                     type="text"
-                    value={formData.contactPhone}
-                    onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
+                    required
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-[#00D9FF]"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-white/80 mb-1">
+                      {isEn ? "Primary Brand Color" : "Couleur Principale de l'École"}
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={formData.primaryColor}
+                        onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
+                        className="w-10 h-9 rounded-lg border border-slate-200 cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={formData.primaryColor}
+                        onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
+                        className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs font-mono text-slate-900 dark:text-white focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-white/80 mb-1">
+                      {isEn ? "Website URL" : "Site Web Officiel"}
+                    </label>
+                    <input
+                      type="url"
+                      value={formData.website}
+                      onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                      placeholder="https://mon-ecole.com"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-white/80 mb-1">
+                      {isEn ? "Contact Email" : "Email Public / Secrétariat"}
+                    </label>
+                    <input
+                      type="email"
+                      value={formData.contactEmail}
+                      onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-white/80 mb-1">
+                      {isEn ? "Phone Number" : "Téléphone Public"}
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.contactPhone}
+                      onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-white/80 mb-1">
+                    {isEn ? "Campus Address" : "Adresse Physique de l'École"}
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    placeholder="12 Avenue des Langues, 75008 Paris"
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-none"
                   />
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-white/80 mb-1">
-                  {isEn ? "Website URL" : "Site Web Officiel"}
-                </label>
-                <input
-                  type="url"
-                  value={formData.website}
-                  onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-                  placeholder="https://mon-ecole-langues.com"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-none"
-                />
-              </div>
-
-              <div className="pt-3 flex justify-end">
-                <NeonButton variant="cyan" size="sm" type="submit" icon={<Save size={14} />}>
-                  {isEn ? "Save Branding" : "Enregistrer les modifications"}
-                </NeonButton>
+                <div className="pt-3 flex justify-end">
+                  <NeonButton variant="cyan" size="md" type="submit" icon={<Save size={16} />}>
+                    {isEn ? "Save Visual Identity & Logo" : "Enregistrer l'Identité & le Logo"}
+                  </NeonButton>
+                </div>
               </div>
             </div>
 
             {/* Live Student Portal Preview Card */}
-            <div className="space-y-4 p-5 rounded-3xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10">
-              <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                <Eye size={16} className="text-[#00D9FF]" />
-                <span>{isEn ? "Student Portal Live Preview" : "Aperçu de la Marque Blanche"}</span>
-              </h3>
+            <div className="space-y-6">
+              {/* Preview Card 1: School Header */}
+              <div className="p-5 rounded-3xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 space-y-3 shadow-sm">
+                <h4 className="text-xs font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5 uppercase tracking-wider">
+                  <Eye size={14} className="text-[#6D5DFC]" />
+                  <span>{isEn ? "1. School Admin Header Preview" : "1. Aperçu En-tête Administration"}</span>
+                </h4>
 
-              <div className="p-4 rounded-2xl bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 space-y-4">
-                {/* Student Header Live Preview */}
+                <div className="p-3.5 rounded-2xl bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 space-y-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 flex items-center justify-center overflow-hidden shrink-0 shadow-xs">
+                      {formData.logo ? (
+                        formData.logo.startsWith("http") || formData.logo.startsWith("data:") ? (
+                          <img src={formData.logo} alt="Logo" className="w-8 h-8 object-contain rounded" referrerPolicy="no-referrer" />
+                        ) : (
+                          <span className="text-xl">{formData.logo}</span>
+                        )
+                      ) : (
+                        <span className="text-xl">{school.language === "german" ? "🇩🇪" : "🇮🇹"}</span>
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-extrabold text-xs text-slate-900 dark:text-white leading-tight">
+                        {formData.name || "Nom de l'École"}
+                      </p>
+                      <span className="text-[10px] text-slate-400 font-mono">
+                        /ecole/{school.slug}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Preview Card 2: Student Portal Header */}
+              <div className="p-5 rounded-3xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 space-y-3 shadow-sm">
+                <h4 className="text-xs font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5 uppercase tracking-wider">
+                  <Eye size={14} className="text-[#00D9FF]" />
+                  <span>{isEn ? "2. Student Portal Header Preview" : "2. Aperçu Espace Élève"}</span>
+                </h4>
+
                 <div
-                  className="p-3.5 rounded-xl text-white flex items-center justify-between shadow-md"
+                  className="p-3.5 rounded-2xl text-white shadow-md space-y-2 transition"
                   style={{ backgroundColor: formData.primaryColor }}
                 >
-                  <div className="flex items-center gap-2.5">
-                    {formData.logo ? (
-                      <img
-                        src={formData.logo}
-                        alt="Logo"
-                        className="w-6 h-6 rounded-md object-contain bg-white p-0.5"
-                      />
-                    ) : (
-                      <div className="w-6 h-6 rounded-md bg-white/20 flex items-center justify-center font-black text-xs">
-                        {formData.name.slice(0, 1)}
-                      </div>
-                    )}
-                    <span className="font-extrabold text-xs tracking-tight">
-                      {formData.name}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {formData.logo ? (
+                        formData.logo.startsWith("http") || formData.logo.startsWith("data:") ? (
+                          <img src={formData.logo} alt="Logo" className="w-6 h-6 object-contain rounded bg-white p-0.5" referrerPolicy="no-referrer" />
+                        ) : (
+                          <span className="text-sm">{formData.logo}</span>
+                        )
+                      ) : (
+                        <span className="text-sm">{school.language === "german" ? "🇩🇪" : "🇮🇹"}</span>
+                      )}
+                      <span className="font-extrabold text-xs tracking-tight">
+                        {formData.name || "Nom de l'École"}
+                      </span>
+                    </div>
+                    <span className="text-[9px] px-2 py-0.5 rounded bg-black/40 backdrop-blur-sm font-mono">
+                      Élève Connecté
                     </span>
                   </div>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-black/30 backdrop-blur-sm font-mono">
-                    Espace Apprenant
-                  </span>
+                  <p className="text-[10px] text-white/80">
+                    Vos élèves apprennent sous les couleurs exclusives et le logo de votre école.
+                  </p>
                 </div>
+              </div>
 
-                <p className="text-[11px] text-slate-500 dark:text-white/50 leading-relaxed">
-                  {isEn
-                    ? "Your students will see this personalized header with your school's official color palette and custom logo."
-                    : "Vos élèves verront ce bandeau personnalisé et votre logo lors de leur connexion sur leur espace dédié."}
-                </p>
+              {/* Preview Card 3: Certificate Preview */}
+              <div className="p-5 rounded-3xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 space-y-3 shadow-sm">
+                <h4 className="text-xs font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5 uppercase tracking-wider">
+                  <Award size={14} className="text-amber-500" />
+                  <span>{isEn ? "3. Official Certificate Header" : "3. Sur l'Attestation Officielle"}</span>
+                </h4>
+
+                <div className="p-3.5 rounded-2xl bg-amber-500/5 border border-amber-500/20 text-center space-y-1.5">
+                  {formData.logo && (formData.logo.startsWith("http") || formData.logo.startsWith("data:")) ? (
+                    <img src={formData.logo} alt="Logo" className="h-8 mx-auto object-contain" referrerPolicy="no-referrer" />
+                  ) : (
+                    <span className="text-2xl block">{formData.logo || "🎓"}</span>
+                  )}
+                  <p className="text-[10px] font-mono text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider">
+                    ATTESTATION OFFICIELLE CECRL
+                  </p>
+                  <p className="text-[11px] font-bold text-slate-900 dark:text-white">
+                    Délivrée par {formData.name}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -384,45 +628,154 @@ export const SchoolSettingsTab: React.FC<SchoolSettingsTabProps> = ({
       {/* 2. WHATSAPP & AUTOMATIONS */}
       {activeSection === "whatsapp" && (
         <form onSubmit={handleSaveSettings} className="space-y-6">
-          <div className="p-5 rounded-3xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 space-y-4 max-w-2xl">
-            <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-              <MessageSquare size={16} className="text-emerald-500" />
-              <span>{isEn ? "WhatsApp Automation & Direct Messaging" : "Configuration WhatsApp & Messages Automatisés"}</span>
-            </h3>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Main WhatsApp form */}
+            <div className="lg:col-span-2 p-6 rounded-3xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 space-y-5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                  <MessageSquare size={18} className="text-emerald-500" />
+                  <span>{isEn ? "WhatsApp Promo Community & Support Setup" : "Configuration du Groupe WhatsApp des Élèves"}</span>
+                </h3>
+                <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                  {isEn ? "Live Student Sync" : "Synchronisation en Direct"}
+                </span>
+              </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-white/80 mb-1">
-                {isEn ? "Official WhatsApp Support Number *" : "Numéro WhatsApp Support de l'École *"}
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.whatsappNumber}
-                onChange={(e) => setFormData({ ...formData, whatsappNumber: e.target.value })}
-                placeholder="+33 6 12 34 56 78"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-[#00D9FF]"
-              />
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                {isEn
+                  ? "Configure your school's official WhatsApp community link. This link is automatically wired to the floating WhatsApp widget and banner on every student dashboard belonging to your school."
+                  : "Renseignez ici le lien de votre groupe WhatsApp de promotion ou d'entraide. Ce lien sera automatiquement lié au bouton flottant WhatsApp et au bandeau de communauté dans l'espace de tous vos élèves."}
+              </p>
+
+              {/* Primary: School Students WhatsApp Group Link */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-emerald-500/5 border-2 border-emerald-500/30 space-y-3">
+                <label className="block text-xs font-bold text-slate-900 dark:text-white flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <MessageCircle size={14} className="text-emerald-500" />
+                    <span>{isEn ? "School Students WhatsApp Group Link *" : "Lien d'Invitation du Groupe WhatsApp Élèves *"}</span>
+                  </span>
+                  <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400">
+                    {isEn ? "Auto-synced to student portal" : "Relié au bouton flottant de vos élèves"}
+                  </span>
+                </label>
+
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                  <input
+                    type="url"
+                    required
+                    value={formData.whatsappSupportUrl}
+                    onChange={(e) => setFormData({ ...formData, whatsappSupportUrl: e.target.value })}
+                    placeholder="https://chat.whatsapp.com/..."
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-black/30 border border-slate-200 dark:border-white/10 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                  {formData.whatsappSupportUrl && (
+                    <button
+                      type="button"
+                      onClick={() => window.open(formData.whatsappSupportUrl, "_blank", "noopener,noreferrer")}
+                      className="px-4 py-2.5 rounded-xl bg-emerald-500 text-white text-xs font-bold hover:bg-emerald-600 transition flex items-center justify-center gap-1.5 shrink-0 shadow-sm cursor-pointer"
+                    >
+                      <ExternalLink size={14} />
+                      <span>{isEn ? "Test Link" : "Tester le lien"}</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+                  <CheckCircle2 size={13} className="text-emerald-500 shrink-0" />
+                  <span>
+                    Exemple : <code className="font-mono text-emerald-600 dark:text-emerald-400">https://chat.whatsapp.com/ABC123XYZ</code> ou <code className="font-mono text-emerald-600 dark:text-emerald-400">https://wa.me/33612345678</code>
+                  </span>
+                </div>
+              </div>
+
+              {/* School 1-on-1 Direct Phone / WhatsApp */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-white/80 mb-1">
+                  {isEn ? "Direct School Administration WhatsApp / Phone Number *" : "Numéro WhatsApp / Téléphone de Contact Direct de l'École *"}
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.whatsappNumber}
+                  onChange={(e) => setFormData({ ...formData, whatsappNumber: e.target.value })}
+                  placeholder="+33 6 12 34 56 78"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-[#00D9FF]"
+                />
+              </div>
+
+              {/* Canned Welcome Message Template */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-white/80 mb-1">
+                  {isEn ? "Automated Welcome WhatsApp Template" : "Modèle de Message de Bienvenue WhatsApp Automatisé"}
+                </label>
+                <textarea
+                  rows={3}
+                  value={formData.whatsappWelcomeTemplate}
+                  onChange={(e) => setFormData({ ...formData, whatsappWelcomeTemplate: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-none"
+                />
+                <span className="text-[10px] text-slate-400 dark:text-white/40 block mt-1">
+                  Balises disponibles : <code className="text-[#00D9FF]">{"{student_name}"}</code>, <code className="text-[#00D9FF]">{"{whatsapp_group_link}"}</code>
+                </span>
+              </div>
+
+              {/* Reminder on Super Admin Help button */}
+              <div className="p-3.5 rounded-2xl bg-indigo-500/5 border border-indigo-500/20 flex items-start gap-3 text-xs text-slate-600 dark:text-slate-300">
+                <HelpCircle size={16} className="text-indigo-500 shrink-0 mt-0.5" />
+                <p className="leading-relaxed">
+                  {isEn
+                    ? "In your School Dashboard, the floating WhatsApp widget connects you directly with the Super Admin technical support."
+                    : "Dans votre tableau de bord École, le bouton flottant WhatsApp vous met directement en relation avec le support technique du Super Admin."}
+                </p>
+              </div>
+
+              <div className="pt-3 flex justify-end">
+                <NeonButton variant="emerald" size="md" type="submit" icon={<Save size={16} />}>
+                  {isEn ? "Save WhatsApp Group Link" : "Enregistrer le Groupe WhatsApp"}
+                </NeonButton>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-white/80 mb-1">
-                {isEn ? "Automated Welcome Message Template" : "Modèle de Message de Bienvenue WhatsApp"}
-              </label>
-              <textarea
-                rows={4}
-                value={formData.whatsappWelcomeTemplate}
-                onChange={(e) => setFormData({ ...formData, whatsappWelcomeTemplate: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-none"
-              />
-              <span className="text-[10px] text-slate-400 dark:text-white/40 block mt-1">
-                Variables disponibles : <code className="text-[#00D9FF]">{"{student_name}"}</code>, <code className="text-[#00D9FF]">{"{student_email}"}</code>
-              </span>
-            </div>
+            {/* Right column: Explanatory & Architecture card */}
+            <div className="space-y-6">
+              <div className="p-5 rounded-3xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 space-y-4 shadow-sm">
+                <h4 className="text-xs font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5 uppercase tracking-wider">
+                  <MessageCircle size={14} className="text-emerald-500" />
+                  <span>{isEn ? "How it works for your students" : "Fonctionnement pour vos Élèves"}</span>
+                </h4>
 
-            <div className="pt-3 flex justify-end">
-              <NeonButton variant="cyan" size="sm" type="submit" icon={<Save size={14} />}>
-                {isEn ? "Save WhatsApp Config" : "Enregistrer la configuration"}
-              </NeonButton>
+                <div className="space-y-3 text-xs text-slate-600 dark:text-slate-300">
+                  <div className="p-3 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 space-y-1">
+                    <p className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px]">1</span>
+                      <span>Bouton Flottant Élève</span>
+                    </p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Un bouton WhatsApp flottant en bas à droite de leur écran ouvre instantanément l'invitation à votre groupe de promo.
+                    </p>
+                  </div>
+
+                  <div className="p-3 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 space-y-1">
+                    <p className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px]">2</span>
+                      <span>En-tête & Tableau de Bord</span>
+                    </p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Le bouton vert "Groupe WhatsApp Promo" dans l'en-tête de leur portail redirige également vers ce lien.
+                    </p>
+                  </div>
+
+                  <div className="p-3 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 space-y-1">
+                    <p className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px]">3</span>
+                      <span>Synchronisation Immédiate</span>
+                    </p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Chaque modification enregistrée s'applique instantanément à tous les comptes élèves de votre école sans rechargement nécessaire.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </form>

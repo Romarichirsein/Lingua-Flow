@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { Student, School, Program, UILocale } from "../../types";
+import { Student, School, Program, UILocale, ThemeMode } from "../../types";
 import { translations } from "../../lib/translations";
+import { computeDaysRemaining } from "../../lib/syncEngine";
 import { NeonButton } from "../common/NeonButton";
 import {
   User,
@@ -9,6 +10,7 @@ import {
   Globe,
   Sun,
   Moon,
+  Monitor,
   Bell,
   MessageCircle,
   Mail,
@@ -24,6 +26,8 @@ interface StudentProfileTabProps {
   school: School;
   program: Program | undefined;
   locale: UILocale;
+  theme?: ThemeMode;
+  onUpdateTheme?: (theme: ThemeMode) => void;
   onUpdateLocale: (locale: UILocale) => void;
   onUpdateStudent: (student: Student) => void;
   onAddLog: (action: string, details: string) => void;
@@ -34,17 +38,16 @@ export const StudentProfileTab: React.FC<StudentProfileTabProps> = ({
   school,
   program,
   locale,
+  theme = "dark",
+  onUpdateTheme,
   onUpdateLocale,
   onUpdateStudent,
   onAddLog,
 }) => {
   const t = translations[locale];
 
-  // Calculate days remaining
-  const today = new Date();
-  const endDate = new Date(student.accessEndDate);
-  const diffTime = endDate.getTime() - today.getTime();
-  const daysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+  // Calculate days remaining safely
+  const daysRemaining = computeDaysRemaining(student.endDate);
 
   // Password update form state
   const [currentPassword, setCurrentPassword] = useState("");
@@ -184,7 +187,7 @@ export const StudentProfileTab: React.FC<StudentProfileTabProps> = ({
               <div className="flex justify-between border-t border-slate-200/60 dark:border-white/5 pt-2">
                 <span className="text-slate-500">{t.student.contractExpires} :</span>
                 <span className="font-bold text-slate-900 dark:text-white">
-                  {student.accessEndDate}
+                  {student.endDate}
                 </span>
               </div>
 
@@ -285,7 +288,7 @@ export const StudentProfileTab: React.FC<StudentProfileTabProps> = ({
                 className={`flex items-center justify-center gap-2 p-2.5 rounded-xl border text-xs font-bold transition cursor-pointer ${
                   locale === "fr"
                     ? "border-indigo-500 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
-                    : "border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300"
+                    : "border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5"
                 }`}
               >
                 <span>🇫🇷 Français</span>
@@ -297,12 +300,63 @@ export const StudentProfileTab: React.FC<StudentProfileTabProps> = ({
                 className={`flex items-center justify-center gap-2 p-2.5 rounded-xl border text-xs font-bold transition cursor-pointer ${
                   locale === "en"
                     ? "border-indigo-500 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
-                    : "border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300"
+                    : "border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5"
                 }`}
               >
                 <span>🇬🇧 English</span>
               </button>
             </div>
+
+            {/* Theme Mode Switcher */}
+            {onUpdateTheme && (
+              <div className="pt-3 border-t border-slate-100 dark:border-white/5 space-y-2">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <Sun size={15} className="text-amber-500" />
+                  {locale === "en" ? "Appearance & Theme:" : "Apparence & Thème d'affichage :"}
+                </span>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onUpdateTheme("light")}
+                    className={`flex flex-col items-center justify-center gap-1 p-2 rounded-xl border text-[11px] font-bold transition cursor-pointer ${
+                      theme === "light"
+                        ? "border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400 shadow-xs"
+                        : "border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5"
+                    }`}
+                  >
+                    <Sun size={14} className="text-amber-500" />
+                    <span>{locale === "en" ? "Light" : "Clair"}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => onUpdateTheme("dark")}
+                    className={`flex flex-col items-center justify-center gap-1 p-2 rounded-xl border text-[11px] font-bold transition cursor-pointer ${
+                      theme === "dark"
+                        ? "border-indigo-500 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 shadow-xs"
+                        : "border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5"
+                    }`}
+                  >
+                    <Moon size={14} className="text-violet-400" />
+                    <span>{locale === "en" ? "Dark" : "Sombre"}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => onUpdateTheme("system")}
+                    className={`flex flex-col items-center justify-center gap-1 p-2 rounded-xl border text-[11px] font-bold transition cursor-pointer ${
+                      theme === "system"
+                        ? "border-cyan-500 bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 shadow-xs"
+                        : "border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5"
+                    }`}
+                  >
+                    <Monitor size={14} className="text-cyan-400" />
+                    <span>{locale === "en" ? "Auto" : "Système"}</span>
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Notification checkboxes */}
             <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-white/5">

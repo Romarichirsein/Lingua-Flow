@@ -33,10 +33,7 @@ export const AIChatTutor: React.FC<AIChatTutorProps> = ({
   locale,
 }) => {
   const t = translations[locale];
-  const language: SupportedLanguage =
-    student.enrolledProgramId?.includes("it") || student.enrolledProgramId?.includes("italian") || school.language === "italian"
-      ? "italian"
-      : "german";
+  const language: SupportedLanguage = school.language;
 
   // Multi-turn messages state
   const [messages, setMessages] = useState<ChatMessage[]>([

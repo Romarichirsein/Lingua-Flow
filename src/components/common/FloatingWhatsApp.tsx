@@ -24,15 +24,18 @@ export const FloatingWhatsApp: React.FC<FloatingWhatsAppProps> = ({
 
   const t = translations[locale];
 
+  // Super Admin is the platform owner/creator: NEVER show floating WhatsApp button
+  if (role === "super_admin" || (role as string) === "superadmin") {
+    return null;
+  }
+
   // Validate and sanitize WhatsApp link
-  const cleanUrl = whatsappUrl?.trim() || "https://wa.me/33612345678";
+  const cleanUrl = whatsappUrl?.trim() || "https://chat.whatsapp.com/LinguaFlowCommunity";
   
   const defaultLabel =
     role === "student"
-      ? t.student.whatsappFloating
-      : role === "school_admin"
-      ? t.superAdmin.whatsappSupportTitle
-      : t.nav.whatsapp;
+      ? (locale === "en" ? "Join School WhatsApp Group" : "Rejoindre le Groupe WhatsApp de l'École")
+      : (locale === "en" ? "Contact Super Admin on WhatsApp" : "Contacter le Super Admin sur WhatsApp");
 
   const label = customLabel || defaultLabel;
 

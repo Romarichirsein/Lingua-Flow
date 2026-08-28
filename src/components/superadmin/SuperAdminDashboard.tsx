@@ -21,6 +21,7 @@ import { SuperAdminWhatsAppTab } from "./SuperAdminWhatsAppTab";
 import { SuperAdminSettingsTab } from "./SuperAdminSettingsTab";
 import { SuperAdminLogsTab } from "./SuperAdminLogsTab";
 import { SuperAdminProfileTab } from "./SuperAdminProfileTab";
+import { SuperAdminDiagnosticModal } from "./SuperAdminDiagnosticModal";
 import { navigateTo } from "../../lib/router";
 
 interface SuperAdminDashboardProps {
@@ -94,6 +95,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
   };
 
   const [activeTab, setActiveTab] = useState<SuperAdminTab>(getInitialTab);
+  const [isDiagnosticModalOpen, setIsDiagnosticModalOpen] = useState(false);
 
   useEffect(() => {
     if (validTabs.includes(activeSubpath as SuperAdminTab) && activeSubpath !== activeTab) {
@@ -108,117 +110,131 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
   };
 
   return (
-    <SuperAdminLayout
-      activeTab={activeTab}
-      onTabChange={handleTabChange}
-      schoolCount={schools.length}
-      studentCount={students.length}
-      programsCount={programs.length}
-      activeAnnouncementsCount={announcements.filter((a) => a.isActive).length}
-      locale={locale}
-    >
-      {activeTab === "dashboard" && (
-        <SuperAdminOverviewTab
-          schools={schools}
-          students={students}
-          programs={programs}
-          logs={logs}
-          announcements={announcements}
-          locale={locale}
-          onNavigateToTab={handleTabChange}
-          onOpenCreateSchool={() => handleTabChange("schools")}
-        />
-      )}
+    <>
+      <SuperAdminLayout
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        schoolCount={schools.length}
+        studentCount={students.length}
+        programsCount={programs.length}
+        activeAnnouncementsCount={announcements.filter((a) => a.isActive).length}
+        locale={locale}
+      >
+        {activeTab === "dashboard" && (
+          <SuperAdminOverviewTab
+            schools={schools}
+            students={students}
+            programs={programs}
+            logs={logs}
+            announcements={announcements}
+            locale={locale}
+            onNavigateToTab={handleTabChange}
+            onOpenCreateSchool={() => handleTabChange("schools")}
+            onOpenDiagnostic={() => setIsDiagnosticModalOpen(true)}
+          />
+        )}
 
-      {activeTab === "schools" && (
-        <SuperAdminSchoolsTab
-          schools={schools}
-          students={students}
-          programs={programs}
-          logs={logs}
-          locale={locale}
-          onUpdateSchools={onUpdateSchools}
-          onAddLog={onAddLog}
-          onSelectSchoolTab={onSelectSchoolTab}
-        />
-      )}
+        {activeTab === "schools" && (
+          <SuperAdminSchoolsTab
+            schools={schools}
+            students={students}
+            programs={programs}
+            logs={logs}
+            locale={locale}
+            onUpdateSchools={onUpdateSchools}
+            onAddLog={onAddLog}
+            onSelectSchoolTab={onSelectSchoolTab}
+            onOpenDiagnostic={() => setIsDiagnosticModalOpen(true)}
+          />
+        )}
 
-      {activeTab === "students" && (
-        <SuperAdminStudentsTab
-          students={students}
-          schools={schools}
-          locale={locale}
-          onUpdateStudents={onUpdateStudents}
-          onAddLog={onAddLog}
-        />
-      )}
+        {activeTab === "students" && (
+          <SuperAdminStudentsTab
+            students={students}
+            schools={schools}
+            locale={locale}
+            onUpdateStudents={onUpdateStudents}
+            onAddLog={onAddLog}
+          />
+        )}
 
-      {activeTab === "programs" && (
-        <SuperAdminProgramsTab
-          programs={programs}
-          schools={schools}
-          locale={locale}
-          onUpdatePrograms={onUpdatePrograms}
-          onAddLog={onAddLog}
-        />
-      )}
+        {activeTab === "programs" && (
+          <SuperAdminProgramsTab
+            programs={programs}
+            schools={schools}
+            locale={locale}
+            onUpdatePrograms={onUpdatePrograms}
+            onAddLog={onAddLog}
+          />
+        )}
 
-      {activeTab === "reports" && (
-        <SuperAdminReportsTab
-          schools={schools}
-          students={students}
-          programs={programs}
-          logs={logs}
-          locale={locale}
-          onAddLog={onAddLog}
-        />
-      )}
+        {activeTab === "reports" && (
+          <SuperAdminReportsTab
+            schools={schools}
+            students={students}
+            programs={programs}
+            logs={logs}
+            locale={locale}
+            onAddLog={onAddLog}
+          />
+        )}
 
-      {activeTab === "announcements" && (
-        <SuperAdminAnnouncementsTab
-          announcements={announcements}
-          schools={schools}
-          locale={locale}
-          onUpdateAnnouncements={onUpdateAnnouncements}
-          onAddLog={onAddLog}
-        />
-      )}
+        {activeTab === "announcements" && (
+          <SuperAdminAnnouncementsTab
+            announcements={announcements}
+            schools={schools}
+            locale={locale}
+            onUpdateAnnouncements={onUpdateAnnouncements}
+            onAddLog={onAddLog}
+          />
+        )}
 
-      {activeTab === "whatsapp" && (
-        <SuperAdminWhatsAppTab
-          config={config}
-          locale={locale}
-          onUpdateConfig={onUpdateConfig}
-          onAddLog={onAddLog}
-        />
-      )}
+        {activeTab === "whatsapp" && (
+          <SuperAdminWhatsAppTab
+            config={config}
+            locale={locale}
+            onUpdateConfig={onUpdateConfig}
+            onAddLog={onAddLog}
+          />
+        )}
 
-      {activeTab === "platform" && (
-        <SuperAdminSettingsTab
-          config={config}
-          locale={locale}
-          onUpdateConfig={onUpdateConfig}
-          onAddLog={onAddLog}
-        />
-      )}
+        {activeTab === "platform" && (
+          <SuperAdminSettingsTab
+            config={config}
+            locale={locale}
+            onUpdateConfig={onUpdateConfig}
+            onAddLog={onAddLog}
+          />
+        )}
 
-      {activeTab === "security-logs" && (
-        <SuperAdminLogsTab
-          logs={logs}
-          locale={locale}
-          onAddLog={onAddLog}
-        />
-      )}
+        {activeTab === "security-logs" && (
+          <SuperAdminLogsTab
+            logs={logs}
+            locale={locale}
+            onAddLog={onAddLog}
+          />
+        )}
 
-      {activeTab === "profile" && (
-        <SuperAdminProfileTab
-          locale={locale}
-          theme={theme}
-          onUpdateLocale={onUpdateLocale}
-          onUpdateTheme={onUpdateTheme}
-          onAddLog={onAddLog}
-        />
-      )}
-    </SuperAdminLayout>
+        {activeTab === "profile" && (
+          <SuperAdminProfileTab
+            locale={locale}
+            theme={theme}
+            onUpdateLocale={onUpdateLocale}
+            onUpdateTheme={onUpdateTheme}
+            onAddLog={onAddLog}
+          />
+        )}
+      </SuperAdminLayout>
+
+      {/* Super Admin Management Flow Diagnostic Modal */}
+      <SuperAdminDiagnosticModal
+        isOpen={isDiagnosticModalOpen}
+        onClose={() => setIsDiagnosticModalOpen(false)}
+        locale={locale}
+        schools={schools}
+        students={students}
+        onAddLog={onAddLog}
+      />
+    </>
   );
 };

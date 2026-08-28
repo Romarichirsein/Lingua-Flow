@@ -64,11 +64,7 @@ export const StudentBlockedScreen: React.FC<StudentBlockedScreenProps> = ({
           <div className="flex justify-between py-1 border-b border-slate-200 dark:border-white/5">
             <span className="text-slate-500 dark:text-slate-400">{locale === "en" ? "Language taught:" : "Langue enseignée :"}</span>
             <span className="font-bold text-slate-900 dark:text-white">
-              {school.language === "both"
-                ? (locale === "en" ? "German & Italian 🇩🇪🇮🇹" : "Allemand & Italien 🇩🇪🇮🇹")
-                : school.language === "german"
-                ? t.common.german
-                : t.common.italian}
+              {school.language === "german" ? t.common.german : t.common.italian}
             </span>
           </div>
           <div className="flex justify-between py-1">
@@ -96,23 +92,23 @@ export const StudentBlockedScreen: React.FC<StudentBlockedScreenProps> = ({
               </a>
             )}
 
-            {school.professionalEmail && (
+            {school.contactEmail && (
               <a
-                href={`mailto:${school.professionalEmail}?subject=Demande de réactivation d'accès - ${student.name}`}
+                href={`mailto:${school.contactEmail}?subject=Demande de réactivation d'accès - ${student.name}`}
                 className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 text-slate-700 dark:text-slate-200 text-xs font-semibold transition"
               >
                 <Mail size={16} />
-                <span>{school.professionalEmail}</span>
+                <span>{school.contactEmail}</span>
               </a>
             )}
 
-            {school.phone && (
+            {school.contactPhone && (
               <a
-                href={`tel:${school.phone}`}
+                href={`tel:${school.contactPhone}`}
                 className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 text-slate-700 dark:text-slate-200 text-xs font-semibold transition"
               >
                 <Phone size={16} />
-                <span>{school.phone}</span>
+                <span>{school.contactPhone}</span>
               </a>
             )}
           </div>
@@ -127,7 +123,7 @@ export const StudentBlockedScreen: React.FC<StudentBlockedScreenProps> = ({
               className="flex items-center gap-2 text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer"
             >
               <ArrowLeft size={14} />
-              <span>{t.common.logout}</span>
+              <span>{t.auth.logout}</span>
             </button>
           </div>
         )}

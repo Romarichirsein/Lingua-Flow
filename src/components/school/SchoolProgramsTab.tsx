@@ -6,7 +6,6 @@ import {
   Student,
   UILocale,
   CEFRLevel,
-  SupportedLanguage,
 } from "../../types";
 import { translations } from "../../lib/translations";
 import {
@@ -69,9 +68,6 @@ export const SchoolProgramsTab: React.FC<SchoolProgramsTabProps> = ({
   const [deletingProgram, setDeletingProgram] = useState<Program | null>(null);
 
   // Form State
-  const [programLanguage, setProgramLanguage] = useState<SupportedLanguage>(
-    school.language === "italian" ? "italian" : "german"
-  );
   const [formData, setFormData] = useState({
     title: "",
     level: "A1" as CEFRLevel,
@@ -99,15 +95,13 @@ export const SchoolProgramsTab: React.FC<SchoolProgramsTabProps> = ({
     e.preventDefault();
     if (!formData.title.trim()) return;
 
-    const targetLang: SupportedLanguage = school.language === "both" ? programLanguage : school.language;
-
     const newProgram: Program = {
       id: `prog_${school.slug}_${Date.now()}`,
       schoolId: school.id,
-      language: targetLang,
+      language: school.language, // Strictly locked to school's authorized language
       title: formData.title.trim(),
       level: formData.level,
-      description: formData.description.trim() || `Programme officiel de langue ${targetLang === "german" ? "Allemand" : "Italien"} - Niveau ${formData.level}.`,
+      description: formData.description.trim() || `Programme officiel de langue ${school.language === "german" ? "Allemand" : "Italien"} - Niveau ${formData.level}.`,
       thumbnail: formData.thumbnail,
       startDate: formData.startDate,
       endDate: formData.endDate,
@@ -509,21 +503,10 @@ export const SchoolProgramsTab: React.FC<SchoolProgramsTabProps> = ({
       >
         <form onSubmit={handleCreateProgram} className="space-y-4">
           <div className="p-3 rounded-2xl bg-[#6D5DFC]/10 border border-[#6D5DFC]/20 text-xs text-slate-700 dark:text-white/80 flex items-center justify-between">
-            <span>{isEn ? "Instruction Language :" : "Langue d'enseignement :"}</span>
-            {school.language === "both" ? (
-              <select
-                value={programLanguage}
-                onChange={(e) => setProgramLanguage(e.target.value as SupportedLanguage)}
-                className="px-2.5 py-1 rounded-lg bg-white dark:bg-[#0D1220] border border-[#6D5DFC]/40 font-bold text-xs text-[#6D5DFC] dark:text-[#a399ff] focus:outline-none cursor-pointer"
-              >
-                <option value="german">Allemand 🇩🇪</option>
-                <option value="italian">Italien 🇮🇹</option>
-              </select>
-            ) : (
-              <span className="font-bold text-[#6D5DFC] dark:text-[#a399ff]">
-                {school.language === "german" ? "Allemand 🇩🇪" : "Italien 🇮🇹"} ({isEn ? "Inherited from school" : "Héritée de l'école"})
-              </span>
-            )}
+            <span>Langue d'enseignement :</span>
+            <span className="font-bold text-[#6D5DFC] dark:text-[#a399ff]">
+              {school.language === "german" ? "Allemand 🇩🇪" : "Italien 🇮🇹"} (Héritée de l'école)
+            </span>
           </div>
 
           <div>

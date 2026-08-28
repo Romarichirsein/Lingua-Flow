@@ -155,12 +155,32 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({
             </div>
           </div>
 
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-            {t.student.welcome}, {student.name} !
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-white/50 mt-1">
-            {locale === "en" ? "School" : "École"} : {school.name} ({school.language === "german" ? t.common.german : t.common.italian})
-          </p>
+          <div className="flex items-center gap-3">
+            {school.logo && (
+              <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/10 border border-slate-200 dark:border-white/10 flex items-center justify-center overflow-hidden shrink-0 shadow-xs">
+                {school.logo.startsWith("http") || school.logo.startsWith("data:") ? (
+                  <img
+                    src={school.logo}
+                    alt={school.name}
+                    className="w-8 h-8 object-contain rounded"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <span className="text-xl">{school.logo}</span>
+                )}
+              </div>
+            )}
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                {t.student.welcome}, {student.name} !
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-white/50 mt-1 flex items-center gap-1.5">
+                <span className="font-semibold text-slate-700 dark:text-slate-300">{school.name}</span>
+                <span>•</span>
+                <span>{school.language === "german" ? "Allemand 🇩🇪" : "Italien 🇮🇹"}</span>
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Global Progress Pill & WhatsApp Support */}

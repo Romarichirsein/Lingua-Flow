@@ -179,19 +179,19 @@ export const SuperAdminWhatsAppTab: React.FC<SuperAdminWhatsAppTabProps> = ({
           </div>
         </form>
 
-        {/* Right 1 col: Live Preview Card */}
+        {/* Right 1 col: Live Simulator Card */}
         <div className="space-y-6">
           <div className="bg-white/90 dark:bg-[#0D1220]/90 backdrop-blur-md p-5 sm:p-6 rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm space-y-4">
             <h4 className="font-bold text-sm text-slate-900 dark:text-white">
-              Aperçu en Direct du Bouton Flottant
+              Simulateur Bouton Flottant
             </h4>
             <p className="text-xs text-slate-500 dark:text-white/50">
-              Rendu visuel du déclencheur d'assistance affiché dans les espaces des écoles
+              Aperçu du déclencheur d'assistance affiché dans les consoles des écoles
             </p>
 
             <div className="relative h-48 rounded-2xl bg-slate-100 dark:bg-[#080B14] border border-slate-200 dark:border-white/10 flex flex-col justify-end p-4 overflow-hidden">
               <div className="text-[10px] text-slate-400 text-center mb-auto pt-2">
-                Aperçu de l'espace école
+                Interface console de l'école (simulation)
               </div>
 
               {/* Floating WhatsApp Bubble */}

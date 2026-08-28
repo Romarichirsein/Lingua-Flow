@@ -44,6 +44,7 @@ interface SchoolStudentsTabProps {
   school: School;
   students: Student[];
   programs: Program[];
+  submissions?: any[];
   onUpdateStudents: (students: Student[]) => void;
   onAddLog: (action: string, details: string, status?: "success" | "warning" | "error") => void;
   onSelectStudentTab?: (studentId: string) => void;
@@ -54,6 +55,7 @@ export const SchoolStudentsTab: React.FC<SchoolStudentsTabProps> = ({
   school,
   students,
   programs,
+  submissions = [],
   onUpdateStudents,
   onAddLog,
   onSelectStudentTab,
@@ -133,13 +135,19 @@ export const SchoolStudentsTab: React.FC<SchoolStudentsTabProps> = ({
     Math.round((schoolStudents.length / Math.max(1, school.studentQuota)) * 100)
   );
 
+  const [addStudentError, setAddStudentError] = useState<string | null>(null);
+
   // Add Student Handler
   const handleCreateStudent = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name.trim() || !formData.email.trim()) return;
+    setAddStudentError(null);
+    if (!formData.name.trim() || !formData.email.trim()) {
+      setAddStudentError(isEn ? "Name and Email are required." : "Le nom et l'email sont obligatoires.");
+      return;
+    }
 
     if (isQuotaReached) {
-      alert(
+      setAddStudentError(
         isEn
           ? "Student quota reached for this school. Please contact Super Admin to increase your quota."
           : "Quota d'élèves atteint pour cette école. Contactez le Super Admin pour augmenter votre quota."
@@ -749,8 +757,23 @@ export const SchoolStudentsTab: React.FC<SchoolStudentsTabProps> = ({
         student={selectedStudentForDetail}
         school={school}
         programs={programs}
+        submissions={submissions}
         onToggleStatus={handleToggleStatus}
         onExtendAccess={handleExtendAccess}
+        onResetProgress={(student) => {
+          const updatedList = students.map((s) =>
+            s.id === student.id ? { ...s, progressPercent: 0, completedLessons: [] } : s
+          );
+          onUpdateStudents(updatedList);
+          if (selectedStudentForDetail?.id === student.id) {
+            setSelectedStudentForDetail({ ...selectedStudentForDetail, progressPercent: 0, completedLessons: [] });
+          }
+          onAddLog(
+            "Réinitialisation progression",
+            `Progression de l'élève ${student.name} remise à zéro.`,
+            "warning"
+          );
+        }}
         onSelectStudentTab={onSelectStudentTab}
       />
 
@@ -762,6 +785,13 @@ export const SchoolStudentsTab: React.FC<SchoolStudentsTabProps> = ({
         size="lg"
       >
         <form onSubmit={handleCreateStudent} className="space-y-4">
+          {addStudentError && (
+            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-bold flex items-center gap-2">
+              <AlertTriangle size={14} className="shrink-0" />
+              <span>{addStudentError}</span>
+            </div>
+          )}
+
           <div className="p-3 rounded-2xl bg-[#6D5DFC]/10 border border-[#6D5DFC]/20 text-xs text-slate-700 dark:text-white/80 flex items-center justify-between">
             <span>Langue enseignée autorisée :</span>
             <span className="font-bold text-[#6D5DFC] dark:text-[#a399ff]">

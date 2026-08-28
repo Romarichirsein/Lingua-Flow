@@ -123,19 +123,23 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Brand & Multi-Tenant Info */}
         <div className="flex items-center gap-2 sm:gap-4 min-w-0">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <LinguaFlowLogo size="sm" showBadge={false} className="shrink-0 sm:hidden" />
-            <LinguaFlowLogo size="md" showBadge={false} className="shrink-0 hidden sm:flex" />
+            <img
+              src="/logo.png"
+              alt="Lingua Flow"
+              className="h-8 sm:h-10 w-auto object-contain shrink-0 drop-shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
+            />
             <div className="min-w-0">
-              <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-white/50 font-medium truncate max-w-[200px] md:max-w-none">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="rounded-md bg-[#6D5DFC]/10 px-1.5 py-0.5 text-[9px] sm:text-[10px] font-bold text-[#6D5DFC] dark:text-[#a399ff] border border-[#6D5DFC]/20 uppercase tracking-wider shrink-0">
+                  SaaS B2B
+                </span>
+              </div>
+              <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-white/40 hidden sm:block font-medium truncate max-w-[200px] md:max-w-none">
                 {currentRole === "super_admin"
                   ? t.common.centralPlatform
                   : currentSchool
                   ? `${currentSchool.name} • ${
-                      currentSchool.language === "both"
-                        ? (locale === "en" ? "German & Italian" : "Allemand & Italien")
-                        : currentSchool.language === "german"
-                        ? t.common.german
-                        : t.common.italian
+                      currentSchool.language === "german" ? t.common.german : t.common.italian
                     }`
                   : t.common.languageCentre}
               </p>
@@ -152,9 +156,9 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
 
-        {/* DESKTOP Controls: Role Switcher, Workspace Selector, Language & Theme */}
+        {/* DESKTOP Controls: Role Switcher, Tenant Selector, Language & Theme */}
         <div className="hidden md:flex items-center gap-2 sm:gap-3 lg:gap-4">
-          {/* Active School Workspace Selector */}
+          {/* Active Tenant / Student Quick Switcher for Testing */}
           {currentRole === "school_admin" && (
             <div className="hidden lg:flex items-center gap-1.5 rounded-xl bg-slate-100 dark:bg-white/5 p-1 border border-slate-200 dark:border-white/10 text-xs">
               <Building2 size={14} className="text-slate-400 dark:text-white/40 ml-1.5" />
@@ -166,7 +170,7 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 {availableSchools.map((school) => (
                   <option key={school.id} value={school.id} className="dark:bg-[#0D1220]">
-                    {school.name} ({school.language === "both" ? "DE/IT" : school.language === "german" ? "DE" : "IT"})
+                    {school.name} ({school.language === "german" ? "DE" : "IT"})
                   </option>
                 ))}
               </select>

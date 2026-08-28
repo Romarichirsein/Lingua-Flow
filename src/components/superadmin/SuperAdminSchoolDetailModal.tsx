@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { School, Student, Program, ActivityLog, EntityStatus, UILocale } from "../../types";
 import { Modal } from "../common/Modal";
 import { ProgressBar } from "../common/ProgressBar";
-import { computeDaysRemaining } from "../../lib/syncEngine";
 import {
   Building2,
   Users,
@@ -62,8 +61,11 @@ export const SuperAdminSchoolDetailModal: React.FC<SuperAdminSchoolDetailModalPr
 
   const quotaPercent = Math.min(100, Math.round((schoolStudents.length / Math.max(1, school.studentQuota)) * 100));
 
-  // Compute dynamic days remaining
-  const daysRemaining = computeDaysRemaining(school.endDate);
+  // Compute days remaining
+  const now = new Date();
+  const endDate = new Date(school.endDate);
+  const diffTime = endDate.getTime() - now.getTime();
+  const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
   return (
     <Modal
@@ -77,7 +79,7 @@ export const SuperAdminSchoolDetailModal: React.FC<SuperAdminSchoolDetailModalPr
         <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-slate-100 to-slate-200/50 dark:from-white/[0.04] dark:to-white/[0.02] border border-slate-200 dark:border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
             <div className="text-3xl p-3 rounded-2xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 shrink-0">
-              {school.logo || (school.language === "both" ? "🇪🇺" : school.language === "german" ? "🇩🇪" : "🇮🇹")}
+              {school.logo || (school.language === "german" ? "🇩🇪" : "🇮🇹")}
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
@@ -85,7 +87,7 @@ export const SuperAdminSchoolDetailModal: React.FC<SuperAdminSchoolDetailModalPr
                   {school.name}
                 </h3>
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#6D5DFC]/10 text-[#6D5DFC] dark:text-[#a399ff] border border-[#6D5DFC]/30">
-                  {school.language === "both" ? "Allemand & Italien 🇩🇪🇮🇹" : school.language === "german" ? "Allemand 🇩🇪" : "Italien 🇮🇹"}
+                  {school.language === "german" ? "Allemand 🇩🇪" : "Italien 🇮🇹"}
                 </span>
                 <span
                   className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${

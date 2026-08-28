@@ -1,7 +1,8 @@
 import React from "react";
 import { motion } from "motion/react";
-import { Student, School, Program, Lesson, UILocale } from "../../types";
+import { Student, School, Program, Lesson, UILocale, Announcement } from "../../types";
 import { translations } from "../../lib/translations";
+import { computeDaysRemaining } from "../../lib/syncEngine";
 import { ProgressBar } from "../common/ProgressBar";
 import { NeonButton } from "../common/NeonButton";
 import {
@@ -29,6 +30,7 @@ interface StudentDashboardTabProps {
   program: Program | undefined;
   allLessons: Lesson[];
   locale: UILocale;
+  announcements: Announcement[];
   onResumeCourse: (lessonId?: string) => void;
   onOpenPrograms: () => void;
   onOpenWriting: () => void;
@@ -41,6 +43,7 @@ export const StudentDashboardTab: React.FC<StudentDashboardTabProps> = ({
   program,
   allLessons,
   locale,
+  announcements,
   onResumeCourse,
   onOpenPrograms,
   onOpenWriting,
@@ -48,54 +51,36 @@ export const StudentDashboardTab: React.FC<StudentDashboardTabProps> = ({
 }) => {
   const t = translations[locale];
 
-  // Calculate remaining days
-  const today = new Date();
-  const endDate = new Date(student.accessEndDate);
-  const diffTime = endDate.getTime() - today.getTime();
-  const daysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+  // Calculate remaining days safely
+  const daysRemaining = computeDaysRemaining(student.endDate);
   const isExpiringSoon = daysRemaining <= 7 && daysRemaining > 0;
+
+  const completedLessons = student.completedLessons || [];
+  const safeLessons = allLessons || [];
 
   // Active or Next Lesson
   const lastActiveLesson =
-    allLessons.find((l) => l.id === student.lastActiveLessonId) ||
-    allLessons.find((l) => !student.completedLessons.includes(l.id)) ||
-    allLessons[0];
+    safeLessons.find((l) => l.id === student.lastActiveLessonId) ||
+    safeLessons.find((l) => !completedLessons.includes(l.id)) ||
+    safeLessons[0];
 
   // Calculate completed modules
-  const completedModulesCount = program?.modules.filter((m) =>
-    m.lessons.every((l) => student.completedLessons.includes(l.id))
+  const completedModulesCount = (program?.modules || []).filter((m) =>
+    (m.lessons || []).every((l) => completedLessons.includes(l.id))
   ).length || 0;
 
-  const totalModulesCount = program?.modules.length || 0;
+  const totalModulesCount = (program?.modules || []).length || 0;
 
-  // School announcements
-  const progLangLabel = (program?.language || (school.language === "italian" ? "italian" : "german")) === "german" ? "Allemand 🇩🇪" : "Italien 🇮🇹";
-  const progLangLabelEn = (program?.language || (school.language === "italian" ? "italian" : "german")) === "german" ? "German 🇩🇪" : "Italian 🇮🇹";
-
-  const announcements = [
-    {
-      id: "ann-1",
-      date: locale === "en" ? "Today" : "Aujourd'hui",
-      title: locale === "en"
-        ? `Welcome to the intensive ${progLangLabelEn} session!`
-        : `Bienvenue à la session intensive ${progLangLabel} !`,
-      content: locale === "en"
-        ? "Remember to practice 15 minutes a day with the LinguaBot conversation tutor and writing assistant."
-        : "Pensez à pratiquer 15 minutes par jour avec le tuteur conversationnel LinguaBot et l'assistant rédaction.",
-      important: true,
-    },
-    {
-      id: "ann-2",
-      date: locale === "en" ? "3 days ago" : "Il y a 3 jours",
-      title: locale === "en"
-        ? "New interactive vocabulary cards unlocked"
-        : "Nouvelles fiches de vocabulaire interactives débloquées",
-      content: locale === "en"
-        ? "Modules 1 and 2 now feature flashcards with native voice audio synthesis."
-        : "Les modules 1 et 2 disposent désormais de cartes mémoires avec synthèse vocale native.",
-      important: false,
-    },
-  ];
+  // Filter actual school announcements for this student
+  const relevantAnnouncements = (announcements || [])
+    .filter(
+      (a) =>
+        a.target === "all" ||
+        a.target === "students" ||
+        a.targetSchoolId === school.id
+    )
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 3); // show latest 3
 
   return (
     <div className="space-y-6">
@@ -129,7 +114,7 @@ export const StudentDashboardTab: React.FC<StudentDashboardTabProps> = ({
               <Calendar size={14} className="text-cyan-400" />
               <span>
                 {locale === "en" ? "Access valid until " : "Accès valide jusqu'au "}
-                <strong>{student.accessEndDate}</strong> ({daysRemaining} {locale === "en" ? "days left" : "jours restants"})
+                <strong>{student.endDate}</strong> ({daysRemaining} {locale === "en" ? "days left" : "jours restants"})
               </span>
             </div>
           </div>
@@ -196,12 +181,12 @@ export const StudentDashboardTab: React.FC<StudentDashboardTabProps> = ({
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
-              {student.completedLessons.length}
+              {completedLessons.length}
             </span>
-            <span className="text-xs text-slate-400">/ {allLessons.length} {locale === "en" ? "lessons" : "leçons"}</span>
+            <span className="text-xs text-slate-400">/ {safeLessons.length} {locale === "en" ? "lessons" : "leçons"}</span>
           </div>
           <p className="text-[11px] text-slate-500 dark:text-slate-400">
-            {allLessons.length - student.completedLessons.length} {locale === "en" ? "lessons left" : "leçons restantes"}
+            {Math.max(0, safeLessons.length - completedLessons.length)} {locale === "en" ? "lessons left" : "leçons restantes"}
           </p>
         </div>
 
@@ -291,13 +276,14 @@ export const StudentDashboardTab: React.FC<StudentDashboardTabProps> = ({
             </span>
 
             <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-              {program?.modules.map((mod, idx) => {
-                const modCompleted = mod.lessons.every((l) =>
-                  student.completedLessons.includes(l.id)
+              {(program?.modules || []).map((mod, idx) => {
+                const modLessons = mod.lessons || [];
+                const modCompleted = modLessons.length > 0 && modLessons.every((l) =>
+                  completedLessons.includes(l.id)
                 );
                 const modInProgress =
                   !modCompleted &&
-                  mod.lessons.some((l) => student.completedLessons.includes(l.id));
+                  modLessons.some((l) => completedLessons.includes(l.id));
 
                 return (
                   <div
@@ -317,7 +303,7 @@ export const StudentDashboardTab: React.FC<StudentDashboardTabProps> = ({
                           {t.student.module} {idx + 1} : {mod.title}
                         </p>
                         <p className="text-[11px] text-slate-400">
-                          {mod.lessons.length} {locale === "en" ? "lessons" : "leçons"}
+                          {modLessons.length} {locale === "en" ? "lessons" : "leçons"}
                         </p>
                       </div>
                     </div>
@@ -352,7 +338,7 @@ export const StudentDashboardTab: React.FC<StudentDashboardTabProps> = ({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-indigo-500">
                   <Sparkles size={18} />
-                  <span className="font-bold text-xs">{t.student.tabs.writing}</span>
+                  <span className="font-bold text-xs">{t.student.tabs.writing.label}</span>
                 </div>
                 <ArrowRight size={14} className="text-indigo-400 group-hover:translate-x-1 transition" />
               </div>
@@ -371,7 +357,7 @@ export const StudentDashboardTab: React.FC<StudentDashboardTabProps> = ({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-cyan-500">
                   <MessageCircle size={18} />
-                  <span className="font-bold text-xs">{t.student.tabs.chat}</span>
+                  <span className="font-bold text-xs">{t.student.tabs.chat.label}</span>
                 </div>
                 <ArrowRight size={14} className="text-cyan-400 group-hover:translate-x-1 transition" />
               </div>
@@ -394,26 +380,37 @@ export const StudentDashboardTab: React.FC<StudentDashboardTabProps> = ({
             </div>
 
             <div className="space-y-2.5">
-              {announcements.map((ann) => (
-                <div
-                  key={ann.id}
-                  className={`p-3 rounded-2xl text-xs space-y-1 ${
-                    ann.important
-                      ? "bg-indigo-500/5 border border-indigo-500/20"
-                      : "bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <p className="font-bold text-slate-900 dark:text-white text-[11px]">
-                      {ann.title}
-                    </p>
-                    <span className="text-[9px] text-slate-400">{ann.date}</span>
-                  </div>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                    {ann.content}
-                  </p>
+              {relevantAnnouncements.length === 0 ? (
+                <div className="text-center text-xs text-slate-400 py-4">
+                  {locale === "en" ? "No new announcements" : "Aucune nouvelle annonce"}
                 </div>
-              ))}
+              ) : (
+                relevantAnnouncements.map((ann) => (
+                  <div
+                    key={ann.id}
+                    className={`p-3 rounded-2xl text-xs space-y-1 ${
+                      ann.priority === "high"
+                        ? "bg-indigo-500/5 border border-indigo-500/20"
+                        : "bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-bold text-slate-900 dark:text-white text-[11px] truncate">
+                        {ann.title}
+                      </p>
+                      <span className="text-[9px] text-slate-400 shrink-0">
+                        {new Date(ann.createdAt).toLocaleDateString(locale === "en" ? "en-US" : "fr-FR", {
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                      {ann.content}
+                    </p>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>

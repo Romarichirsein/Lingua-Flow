@@ -299,13 +299,13 @@ export const SuperAdminStudentsTab: React.FC<SuperAdminStudentsTabProps> = ({
                         <div className="space-y-1 w-28">
                           <div className="flex justify-between text-[11px] font-bold">
                             <span className="text-slate-700 dark:text-white">
-                              {student.progressPercent}%
+                              {student.progressPercent || 0}%
                             </span>
                             <span className="text-slate-400">
-                              {student.completedLessonIds.length} {isEn ? "lessons" : "cours"}
+                              {(student.completedLessons || []).length} {isEn ? "lessons" : "cours"}
                             </span>
                           </div>
-                          <ProgressBar value={student.progressPercent} color="cyan" height="sm" />
+                          <ProgressBar value={student.progressPercent || 0} color="cyan" height="sm" />
                         </div>
                       </td>
 
@@ -528,17 +528,17 @@ export const SuperAdminStudentsTab: React.FC<SuperAdminStudentsTabProps> = ({
             <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 space-y-2">
               <div className="flex justify-between font-bold">
                 <span className="text-slate-600 dark:text-white/80">{isEn ? "Overall progress" : "Progression globale"}</span>
-                <span className="text-[#00D9FF]">{selectedStudent.progressPercent}%</span>
+                <span className="text-[#00D9FF]">{selectedStudent.progressPercent || 0}%</span>
               </div>
-              <ProgressBar value={selectedStudent.progressPercent} color="cyan" height="md" />
+              <ProgressBar value={selectedStudent.progressPercent || 0} color="cyan" height="md" />
               <p className="text-[11px] text-slate-400">
-                {selectedStudent.completedLessonIds.length} {isEn ? "lessons completed successfully" : "cours terminés avec succès"}
+                {(selectedStudent.completedLessons || []).length} {isEn ? "lessons completed successfully" : "cours terminés avec succès"}
               </p>
             </div>
 
             <div className="flex items-center justify-between text-slate-500 text-[11px] font-mono px-1">
-              <span>{isEn ? "Enrolled on:" : "Inscrit le :"} {selectedStudent.enrolledAt}</span>
-              <span>{isEn ? "Expires on:" : "Échéance :"} {selectedStudent.expiresAt}</span>
+              <span>{isEn ? "Enrolled on:" : "Inscrit le :"} {selectedStudent.startDate || selectedStudent.createdAt || "2025-01-01"}</span>
+              <span>{isEn ? "Expires on:" : "Échéance :"} {selectedStudent.endDate || "2025-12-31"}</span>
             </div>
 
             <div className="pt-3 border-t border-slate-200 dark:border-white/10 flex items-center justify-end gap-2">

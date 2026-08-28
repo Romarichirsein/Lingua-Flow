@@ -5,6 +5,7 @@ import {
   Student,
   Program,
   UILocale,
+  Announcement,
 } from "../../types";
 import { translations } from "../../lib/translations";
 import {
@@ -33,6 +34,7 @@ interface SchoolOverviewTabProps {
   school: School;
   students: Student[];
   programs: Program[];
+  announcements?: Announcement[];
   onNavigateTab: (tab: any) => void;
   onOpenAddStudent: () => void;
   onOpenCreateProgram: () => void;
@@ -43,6 +45,7 @@ export const SchoolOverviewTab: React.FC<SchoolOverviewTabProps> = ({
   school,
   students,
   programs,
+  announcements = [],
   onNavigateTab,
   onOpenAddStudent,
   onOpenCreateProgram,
@@ -141,6 +144,17 @@ export const SchoolOverviewTab: React.FC<SchoolOverviewTabProps> = ({
     Math.round((schoolStudents.length / Math.max(1, school.studentQuota)) * 100)
   );
 
+  // Filter actual school announcements for this school admin
+  const relevantAnnouncements = announcements
+    .filter(
+      (a) =>
+        a.target === "all" ||
+        a.target === "schools" ||
+        a.targetSchoolId === school.id
+    )
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 3); // show latest 3
+
   return (
     <div className="space-y-6">
       {/* 1. School Access License Banner */}
@@ -195,9 +209,10 @@ export const SchoolOverviewTab: React.FC<SchoolOverviewTabProps> = ({
         </div>
       </div>
 
-      {/* 2. Critical Alert Banners (if any) */}
-      {(expiringSoonStudents.length > 0 || inactiveStudents.length > 0) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* 2. Critical Alert Banners (if any) & Platform Announcements */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Alerts Column */}
+        <div className="space-y-4">
           {expiringSoonStudents.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 8 }}
@@ -255,8 +270,61 @@ export const SchoolOverviewTab: React.FC<SchoolOverviewTabProps> = ({
               </div>
             </motion.div>
           )}
+
+          {expiringSoonStudents.length === 0 && inactiveStudents.length === 0 && (
+            <div className="p-4 rounded-2xl bg-[#20E3A2]/10 border border-[#20E3A2]/30 flex items-center justify-center text-center h-full min-h-[100px]">
+              <div className="text-xs text-[#20E3A2] flex flex-col items-center gap-2">
+                <CheckCircle2 size={24} />
+                <span>{isEn ? "All students are active and on track." : "Tous vos élèves sont actifs et à jour."}</span>
+              </div>
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Announcements Column */}
+        <div className="bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 rounded-3xl p-5 shadow-sm space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-2">
+              <MessageCircle size={14} className="text-indigo-500" />
+              {isEn ? "Platform Announcements" : "Annonces de la plateforme"}
+            </h4>
+          </div>
+
+          <div className="space-y-2.5 h-[150px] overflow-y-auto pr-2">
+            {relevantAnnouncements.length === 0 ? (
+              <div className="text-center text-xs text-slate-400 py-4 h-full flex items-center justify-center">
+                {isEn ? "No new announcements" : "Aucune nouvelle annonce"}
+              </div>
+            ) : (
+              relevantAnnouncements.map((ann) => (
+                <div
+                  key={ann.id}
+                  className={`p-3 rounded-2xl text-xs space-y-1 ${
+                    ann.priority === "high"
+                      ? "bg-indigo-500/5 border border-indigo-500/20"
+                      : "bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-bold text-slate-900 dark:text-white text-[11px] truncate">
+                      {ann.title}
+                    </p>
+                    <span className="text-[9px] text-slate-400 shrink-0">
+                      {new Date(ann.createdAt).toLocaleDateString(locale === "en" ? "en-US" : "fr-FR", {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                    {ann.content}
+                  </p>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* 3. Primary KPI Cards Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">

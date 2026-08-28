@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { School, Student, Program, ActivityLog, EntityStatus, SupportedLanguage, SchoolLanguageConfig, UILocale } from "../../types";
+import { School, Student, Program, ActivityLog, EntityStatus, SupportedLanguage, UILocale } from "../../types";
 import { Modal } from "../common/Modal";
 import { ProgressBar } from "../common/ProgressBar";
 import { SuperAdminSchoolDetailModal } from "./SuperAdminSchoolDetailModal";
@@ -26,6 +26,7 @@ import {
   Filter,
   Check,
   Globe,
+  Activity,
 } from "lucide-react";
 
 interface SuperAdminSchoolsTabProps {
@@ -37,6 +38,7 @@ interface SuperAdminSchoolsTabProps {
   onUpdateSchools: (schools: School[]) => void;
   onAddLog: (action: string, details: string, status?: "success" | "warning" | "error") => void;
   onSelectSchoolTab?: (schoolId: string) => void;
+  onOpenDiagnostic?: () => void;
 }
 
 export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
@@ -48,6 +50,7 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
   onUpdateSchools,
   onAddLog,
   onSelectSchoolTab,
+  onOpenDiagnostic,
 }) => {
   const isEn = locale === "en";
   // Search, Filters & Sorting
@@ -78,7 +81,7 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
   const [formData, setFormData] = useState({
     name: "",
     slug: "",
-    language: "german" as SchoolLanguageConfig,
+    language: "german" as SupportedLanguage,
     logo: "🇩🇪",
     primaryColor: "#6D5DFC",
     secondaryColor: "#00D9FF",
@@ -410,7 +413,6 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
             <option value="all">{isEn ? "All languages" : "Toutes langues"}</option>
             <option value="german">{isEn ? "German 🇩🇪" : "Allemand 🇩🇪"}</option>
             <option value="italian">{isEn ? "Italian 🇮🇹" : "Italien 🇮🇹"}</option>
-            <option value="both">{isEn ? "German & Italian 🇩🇪🇮🇹" : "Allemand & Italien 🇩🇪🇮🇹"}</option>
           </select>
 
           {/* Status Filter */}
@@ -429,6 +431,19 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
             <option value="expired">{isEn ? "Expired" : "Expirées"}</option>
             <option value="archived">{isEn ? "Archived" : "Archivées"}</option>
           </select>
+
+          {/* Diagnostic Sync Flow Button */}
+          {onOpenDiagnostic && (
+            <button
+              type="button"
+              onClick={onOpenDiagnostic}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-cyan-600 dark:text-[#00D9FF] border border-cyan-500/20 text-xs font-bold transition min-h-[40px] cursor-pointer"
+              title={isEn ? "Run state synchronization diagnostic" : "Lancer le diagnostic de synchronisation d'état"}
+            >
+              <Activity size={14} className="animate-pulse" />
+              <span className="hidden md:inline">{isEn ? "Sync Diagnostic" : "Diagnostic Flux"}</span>
+            </button>
+          )}
 
           {/* Export CSV Button */}
           <button
@@ -518,7 +533,7 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3">
                           <div className="text-2xl p-2 rounded-xl bg-slate-100 dark:bg-white/5 shrink-0">
-                            {school.logo || (school.language === "both" ? "🇪🇺" : school.language === "german" ? "🇩🇪" : "🇮🇹")}
+                            {school.logo || (school.language === "german" ? "🇩🇪" : "🇮🇹")}
                           </div>
                           <div>
                             <button
@@ -530,11 +545,7 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
                             </button>
                             <div className="flex items-center gap-2 mt-0.5">
                               <span className="text-[11px] font-bold text-[#6D5DFC] dark:text-[#a399ff]">
-                                {school.language === "both"
-                                  ? (isEn ? "German & Italian 🇩🇪🇮🇹" : "Allemand & Italien 🇩🇪🇮🇹")
-                                  : school.language === "german"
-                                  ? (isEn ? "German 🇩🇪" : "Allemand 🇩🇪")
-                                  : (isEn ? "Italian 🇮🇹" : "Italien 🇮🇹")}
+                                {school.language === "german" ? (isEn ? "German 🇩🇪" : "Allemand 🇩🇪") : (isEn ? "Italian 🇮🇹" : "Italien 🇮🇹")}
                               </span>
                               <span className="text-[10px] text-slate-400 font-mono">
                                 /{school.slug}
@@ -864,20 +875,17 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
               </label>
               <select
                 value={formData.language}
-                onChange={(e) => {
-                  const val = e.target.value as SchoolLanguageConfig;
+                onChange={(e) =>
                   setFormData({
                     ...formData,
-                    language: val,
-                    logo: val === "both" ? "🇪🇺" : val === "german" ? "🇩🇪" : "🇮🇹",
-                    country: val === "both" ? "France / International" : val === "german" ? "Allemagne" : "Italie",
-                  });
-                }}
+                    language: e.target.value as SupportedLanguage,
+                    logo: e.target.value === "german" ? "🇩🇪" : "🇮🇹",
+                  })
+                }
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white font-bold focus:outline-none focus:ring-2 focus:ring-[#00D9FF]"
               >
-                <option value="german">{isEn ? "German 🇩🇪" : "Allemand 🇩🇪"}</option>
-                <option value="italian">{isEn ? "Italian 🇮🇹" : "Italien 🇮🇹"}</option>
-                <option value="both">{isEn ? "German & Italian 🇩🇪🇮🇹 (Dual)" : "Allemand & Italien 🇩🇪🇮🇹 (Bilingue)"}</option>
+                <option value="german">Allemand 🇩🇪</option>
+                <option value="italian">Italien 🇮🇹</option>
               </select>
             </div>
           </div>

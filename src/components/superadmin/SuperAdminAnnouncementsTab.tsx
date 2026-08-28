@@ -388,7 +388,7 @@ export const SuperAdminAnnouncementsTab: React.FC<SuperAdminAnnouncementsTabProp
       <Modal
         isOpen={!!previewAnnouncement}
         onClose={() => setPreviewAnnouncement(null)}
-        title="Aperçu Réel de l'Annonce"
+        title="Simulateur d'Aperçu Utilisateur"
         maxWidth="max-w-md"
       >
         {previewAnnouncement && (
@@ -417,7 +417,7 @@ export const SuperAdminAnnouncementsTab: React.FC<SuperAdminAnnouncementsTabProp
               </div>
             </div>
 
-            {/* Live Banner Preview */}
+            {/* Simulated Banner */}
             <div
               className={`p-4 rounded-2xl border ${
                 previewAnnouncement.priority === "urgent"

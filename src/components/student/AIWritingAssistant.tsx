@@ -56,10 +56,7 @@ export const AIWritingAssistant: React.FC<AIWritingAssistantProps> = ({
   onSaveSubmission,
 }) => {
   const t = translations[locale];
-  const language: SupportedLanguage =
-    student.enrolledProgramId?.includes("it") || student.enrolledProgramId?.includes("italian") || school.language === "italian"
-      ? "italian"
-      : "german";
+  const language: SupportedLanguage = school.language;
   const isGerman = language === "german";
 
   // Main active view: 'editor' | 'history'
@@ -219,7 +216,7 @@ export const AIWritingAssistant: React.FC<AIWritingAssistantProps> = ({
     setErrorMsg(null);
     setLoadingStep(1);
 
-    // Progressive analysis steps for interactive feedback
+    // Simulated progress steps for smooth UX
     const stepTimer1 = setTimeout(() => setLoadingStep(2), 700);
     const stepTimer2 = setTimeout(() => setLoadingStep(3), 1400);
 
@@ -427,9 +424,9 @@ export const AIWritingAssistant: React.FC<AIWritingAssistantProps> = ({
           {/* Left Column: Topic, Starter Phrases & Writing Pad */}
           <div className="space-y-4 lg:col-span-7">
             {/* Level & Topic Selector */}
-            <div className="neon-card rounded-3xl p-5 space-y-4">
+            <div className="neon-card rounded-3xl p-5 space-y-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <span className="text-xs font-bold text-slate-900 dark:text-white">
+                <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
                   {locale === "en" ? "1. Choose targeted CEFR level:" : "1. Choisissez le niveau CECRL ciblé :"}
                 </span>
                 <div className="flex items-center gap-1.5">
@@ -441,7 +438,7 @@ export const AIWritingAssistant: React.FC<AIWritingAssistantProps> = ({
                       className={`px-3 py-1 rounded-xl text-xs font-bold transition cursor-pointer ${
                         level === lvl
                           ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20"
-                          : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
+                          : "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                       }`}
                     >
                       {lvl}
@@ -452,7 +449,7 @@ export const AIWritingAssistant: React.FC<AIWritingAssistantProps> = ({
 
               {/* Topics Catalog */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                <label className="block text-xs font-bold text-slate-900 dark:text-slate-100 mb-2">
                   {locale === "en" ? "2. Select a topic or type custom prompt:" : "2. Sélectionnez un sujet ou écrivez votre consigne :"}
                 </label>
 
@@ -461,10 +458,10 @@ export const AIWritingAssistant: React.FC<AIWritingAssistantProps> = ({
                   <button
                     type="button"
                     onClick={() => setSelectedCategory("all")}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
                       selectedCategory === "all"
-                        ? "bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30"
-                        : "bg-slate-50 dark:bg-slate-800/60 text-slate-500 hover:bg-slate-100"
+                        ? "bg-indigo-600 text-white shadow-xs"
+                        : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700"
                     }`}
                   >
                     {locale === "en" ? "All themes" : "Tous les thèmes"}
@@ -474,10 +471,10 @@ export const AIWritingAssistant: React.FC<AIWritingAssistantProps> = ({
                       key={cat.category}
                       type="button"
                       onClick={() => setSelectedCategory(cat.category)}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition cursor-pointer ${
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
                         selectedCategory === cat.category
-                          ? "bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30"
-                          : "bg-slate-50 dark:bg-slate-800/60 text-slate-500 hover:bg-slate-100"
+                          ? "bg-indigo-600 text-white shadow-xs"
+                          : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700"
                       }`}
                     >
                       {cat.catLabel}
@@ -485,7 +482,7 @@ export const AIWritingAssistant: React.FC<AIWritingAssistantProps> = ({
                   ))}
                 </div>
 
-                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
                   {topicCatalog
                     .filter((c) => selectedCategory === "all" || c.category === selectedCategory)
                     .flatMap((c) => c.topics)
@@ -498,14 +495,14 @@ export const AIWritingAssistant: React.FC<AIWritingAssistantProps> = ({
                           key={idx}
                           type="button"
                           onClick={() => setSelectedPromptIndex(globalIdx)}
-                          className={`w-full text-left p-2.5 rounded-xl border text-xs transition cursor-pointer flex items-start gap-2 ${
+                          className={`w-full text-left p-3 rounded-xl border text-xs leading-relaxed transition cursor-pointer flex items-start gap-2.5 ${
                             isSelected
-                              ? "border-indigo-500 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-semibold"
-                              : "border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                              ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-200 font-semibold shadow-xs"
+                              : "border-slate-200 dark:border-slate-700/80 bg-white/90 dark:bg-slate-800/80 text-slate-800 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600"
                           }`}
                         >
-                          <span className="shrink-0 mt-0.5">•</span>
-                          <span>{promptText}</span>
+                          <span className="shrink-0 mt-0.5 text-indigo-500 font-bold">•</span>
+                          <span className="text-slate-800 dark:text-slate-100">{promptText}</span>
                         </button>
                       );
                     })}
@@ -513,14 +510,16 @@ export const AIWritingAssistant: React.FC<AIWritingAssistantProps> = ({
                   <button
                     type="button"
                     onClick={() => setSelectedPromptIndex(-1)}
-                    className={`w-full text-left p-2.5 rounded-xl border text-xs transition cursor-pointer flex items-center gap-2 ${
+                    className={`w-full text-left p-3 rounded-xl border text-xs transition cursor-pointer flex items-center gap-2.5 ${
                       selectedPromptIndex === -1
-                        ? "border-indigo-500 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-semibold"
-                        : "border-slate-200 dark:border-slate-800 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                        ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-200 font-semibold"
+                        : "border-slate-200 dark:border-slate-700/80 bg-white/90 dark:bg-slate-800/80 text-slate-800 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800"
                     }`}
                   >
                     <span>✏️</span>
-                    <span>{locale === "en" ? "Custom prompt / Free topic..." : "Consigne personnalisée / Thème libre..."}</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-100">
+                      {locale === "en" ? "Custom prompt / Free topic..." : "Consigne personnalisée / Thème libre..."}
+                    </span>
                   </button>
 
                   {selectedPromptIndex === -1 && (
@@ -529,24 +528,24 @@ export const AIWritingAssistant: React.FC<AIWritingAssistantProps> = ({
                       value={customPrompt}
                       onChange={(e) => setCustomPrompt(e.target.value)}
                       placeholder={locale === "en" ? "E.g. Describing a job interview in Frankfurt / Milan..." : "Ex: Raconter un entretien d'embauche à Francfort / Milan..."}
-                      className="w-full h-10 rounded-xl border border-indigo-300 bg-white px-3 text-xs dark:border-indigo-500/40 dark:bg-slate-900 text-slate-900 dark:text-white outline-none"
+                      className="w-full h-11 rounded-xl border border-indigo-400 bg-white px-3.5 text-xs dark:border-indigo-500/60 dark:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:ring-2 focus:ring-indigo-500/20"
                     />
                   )}
                 </div>
               </div>
 
               {/* Starter Phrases Helper */}
-              <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block mb-1.5">
+              <div className="pt-3 border-t border-slate-200 dark:border-slate-800">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-2">
                   {locale === "en" ? "💡 Useful starter phrases (click to insert):" : "💡 Phrases d'accroche utiles (cliquez pour insérer) :"}
                 </span>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-2">
                   {starterPhrases.map((phrase, i) => (
                     <button
                       key={i}
                       type="button"
                       onClick={() => handleInsertPhrase(phrase)}
-                      className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-indigo-50 dark:bg-slate-800/80 dark:hover:bg-indigo-950/60 text-slate-700 dark:text-slate-300 text-[11px] border border-slate-200/60 dark:border-slate-700 transition cursor-pointer hover:border-indigo-300"
+                      className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-indigo-50 dark:bg-slate-800 dark:hover:bg-indigo-950/80 text-slate-800 dark:text-slate-200 text-xs font-medium border border-slate-200 dark:border-slate-700 transition cursor-pointer hover:border-indigo-400"
                     >
                       + {phrase}
                     </button>

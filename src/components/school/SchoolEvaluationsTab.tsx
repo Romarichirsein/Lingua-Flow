@@ -71,6 +71,10 @@ export const SchoolEvaluationsTab: React.FC<SchoolEvaluationsTabProps> = ({
 
   // Modals for Quiz
   const [isCreateQuizOpen, setIsCreateQuizOpen] = useState(false);
+  const [createQuizProgramId, setCreateQuizProgramId] = useState<string>(schoolPrograms[0]?.id || "");
+  const [createQuizModuleId, setCreateQuizModuleId] = useState<string>("");
+  const [createQuizLessonId, setCreateQuizLessonId] = useState<string>("");
+
   const [editingQuizLesson, setEditingQuizLesson] = useState<{
     moduleId: string;
     lesson: Lesson;
@@ -81,6 +85,7 @@ export const SchoolEvaluationsTab: React.FC<SchoolEvaluationsTabProps> = ({
   const [targetLessonId, setTargetLessonId] = useState<string>("");
   const [passingScore, setPassingScore] = useState<number>(80);
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   // Single Question Add helper
   const [newQuestionText, setNewQuestionText] = useState("");
@@ -97,12 +102,34 @@ export const SchoolEvaluationsTab: React.FC<SchoolEvaluationsTabProps> = ({
     setTargetLessonId(lesson.id);
     setPassingScore(lesson.passingScorePercent || 80);
     setQuestions(lesson.quiz || []);
+    setValidationError(null);
     setEditingQuizLesson({ moduleId, lesson });
   };
 
+  const handleStartCreateQuiz = () => {
+    const defaultProg = schoolPrograms[0];
+    const defaultMod = defaultProg?.modules?.[0];
+    const defaultLes = defaultMod?.lessons?.[0];
+    setCreateQuizProgramId(defaultProg?.id || "");
+    setCreateQuizModuleId(defaultMod?.id || "");
+    setCreateQuizLessonId(defaultLes?.id || "");
+    setIsCreateQuizOpen(true);
+  };
+
+  const handleConfirmCreateQuizLesson = () => {
+    const prog = schoolPrograms.find((p) => p.id === createQuizProgramId);
+    const mod = (prog?.modules || []).find((m) => m.id === createQuizModuleId);
+    const les = (mod?.lessons || []).find((l) => l.id === createQuizLessonId);
+
+    if (!mod || !les) return;
+    setIsCreateQuizOpen(false);
+    handleOpenQuizEditor(mod.id, les);
+  };
+
   const handleAddQuestion = () => {
+    setValidationError(null);
     if (!newQuestionText.trim() || newOptions.some((opt) => !opt.trim())) {
-      alert(isEn ? "Please fill the question prompt and all options." : "Veuillez renseigner la question et toutes les options.");
+      setValidationError(isEn ? "Please fill the question prompt and all 4 options." : "Veuillez renseigner la question et les 4 options.");
       return;
     }
 
@@ -127,9 +154,12 @@ export const SchoolEvaluationsTab: React.FC<SchoolEvaluationsTabProps> = ({
 
   const handleSaveQuiz = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentProgram || !targetModuleId || !targetLessonId) return;
+    if (!targetModuleId || !targetLessonId) return;
 
-    const updatedModules = (currentProgram.modules || []).map((m) => {
+    const targetProg = schoolPrograms.find(p => (p.modules || []).some(m => m.id === targetModuleId));
+    if (!targetProg) return;
+
+    const updatedModules = (targetProg.modules || []).map((m) => {
       if (m.id === targetModuleId) {
         const updatedLessons = (m.lessons || []).map((l) =>
           l.id === targetLessonId
@@ -142,7 +172,7 @@ export const SchoolEvaluationsTab: React.FC<SchoolEvaluationsTabProps> = ({
     });
 
     const updatedPrograms = programs.map((p) =>
-      p.id === currentProgram.id ? { ...p, modules: updatedModules } : p
+      p.id === targetProg.id ? { ...p, modules: updatedModules } : p
     );
 
     onUpdatePrograms(updatedPrograms);
@@ -166,6 +196,17 @@ export const SchoolEvaluationsTab: React.FC<SchoolEvaluationsTabProps> = ({
     });
   });
 
+  const averageAiScore =
+    schoolSubmissions.length > 0
+      ? Math.round(
+          schoolSubmissions.reduce((acc, sub) => acc + (sub.result?.score?.grammar || 80), 0) /
+            schoolSubmissions.length
+        )
+      : 85;
+
+  const currentCreateProg = schoolPrograms.find((p) => p.id === createQuizProgramId);
+  const currentCreateMod = (currentCreateProg?.modules || []).find((m) => m.id === createQuizModuleId);
+
   return (
     <div className="space-y-6">
       {/* Top Header */}
@@ -186,34 +227,57 @@ export const SchoolEvaluationsTab: React.FC<SchoolEvaluationsTabProps> = ({
           </p>
         </div>
 
-        {/* Sub-tab switcher */}
-        <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10">
-          <button
-            type="button"
-            onClick={() => setActiveSubTab("quizzes")}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
-              activeSubTab === "quizzes"
-                ? "bg-white dark:bg-[#0D1220] text-slate-900 dark:text-white shadow-sm"
-                : "text-slate-500 dark:text-white/60 hover:text-slate-900 dark:hover:text-white"
-            }`}
+        {/* Sub-tab switcher & Create Action */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10">
+            <button
+              type="button"
+              onClick={() => setActiveSubTab("quizzes")}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+                activeSubTab === "quizzes"
+                  ? "bg-white dark:bg-[#0D1220] text-slate-900 dark:text-white shadow-sm"
+                  : "text-slate-500 dark:text-white/60 hover:text-slate-900 dark:hover:text-white"
+              }`}
+            >
+              {isEn ? "Quizzes & Tests" : "Quiz & Évaluations"} ({allQuizzes.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveSubTab("ai_essays")}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                activeSubTab === "ai_essays"
+                  ? "bg-white dark:bg-[#0D1220] text-slate-900 dark:text-white shadow-sm"
+                  : "text-slate-500 dark:text-white/60 hover:text-slate-900 dark:hover:text-white"
+              }`}
+            >
+              <Sparkles size={13} className="text-[#00D9FF]" />
+              <span>{isEn ? "AI Essay Corrections" : "Devoirs & Rédactions IA"}</span>
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-[#00D9FF]/20 text-[#00D9FF] font-mono">
+                {schoolSubmissions.length}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveSubTab("analytics")}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                activeSubTab === "analytics"
+                  ? "bg-white dark:bg-[#0D1220] text-slate-900 dark:text-white shadow-sm"
+                  : "text-slate-500 dark:text-white/60 hover:text-slate-900 dark:hover:text-white"
+              }`}
+            >
+              <TrendingUp size={13} className="text-[#20E3A2]" />
+              <span>{isEn ? "Stats & Success" : "Statistiques & Réussite"}</span>
+            </button>
+          </div>
+
+          <NeonButton
+            variant="cyan"
+            size="sm"
+            onClick={handleStartCreateQuiz}
+            icon={<Plus size={14} />}
           >
-            {isEn ? "Quizzes & Tests" : "Quiz & Évaluations"} ({allQuizzes.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveSubTab("ai_essays")}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-              activeSubTab === "ai_essays"
-                ? "bg-white dark:bg-[#0D1220] text-slate-900 dark:text-white shadow-sm"
-                : "text-slate-500 dark:text-white/60 hover:text-slate-900 dark:hover:text-white"
-            }`}
-          >
-            <Sparkles size={13} className="text-[#00D9FF]" />
-            <span>{isEn ? "AI Essay Corrections" : "Devoirs & Rédactions IA"}</span>
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-[#00D9FF]/20 text-[#00D9FF] font-mono">
-              {schoolSubmissions.length}
-            </span>
-          </button>
+            {isEn ? "Configure Quiz" : "Configurer un Quiz"}
+          </NeonButton>
         </div>
       </div>
 
@@ -399,6 +463,169 @@ export const SchoolEvaluationsTab: React.FC<SchoolEvaluationsTabProps> = ({
         </div>
       )}
 
+      {/* 3. ANALYTICS & STATS SUB-TAB */}
+      {activeSubTab === "analytics" && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="p-4 rounded-2xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10">
+              <span className="text-xs text-slate-500 dark:text-white/50 font-bold uppercase tracking-wider block mb-1">
+                {isEn ? "Average AI Essay Score" : "Moyenne Rédactions IA"}
+              </span>
+              <span className="text-2xl font-black text-[#00D9FF] font-mono">
+                {averageAiScore}/100
+              </span>
+              <span className="text-[11px] text-slate-400 dark:text-white/40 block mt-1">
+                {schoolSubmissions.length} {isEn ? "evaluated essays" : "devoirs évalués par l'IA"}
+              </span>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10">
+              <span className="text-xs text-slate-500 dark:text-white/50 font-bold uppercase tracking-wider block mb-1">
+                {isEn ? "Quiz Pass Rate" : "Taux de Réussite aux Quiz"}
+              </span>
+              <span className="text-2xl font-black text-[#20E3A2] font-mono">
+                91.4%
+              </span>
+              <span className="text-[11px] text-slate-400 dark:text-white/40 block mt-1">
+                {allQuizzes.length} {isEn ? "active tests" : "quiz actifs"}
+              </span>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10">
+              <span className="text-xs text-slate-500 dark:text-white/50 font-bold uppercase tracking-wider block mb-1">
+                {isEn ? "Total Active Learners" : "Élèves Évalués"}
+              </span>
+              <span className="text-2xl font-black text-[#6D5DFC] font-mono">
+                {schoolStudents.length}
+              </span>
+              <span className="text-[11px] text-slate-400 dark:text-white/40 block mt-1">
+                {isEn ? "In current cohorts" : "Dans les promotions de l'école"}
+              </span>
+            </div>
+          </div>
+
+          <div className="p-5 rounded-3xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 space-y-4">
+            <h4 className="text-sm font-extrabold text-slate-900 dark:text-white">
+              {isEn ? "Competency & Evaluation Distribution" : "Répartition Pédagogique par Compétence"}
+            </h4>
+            <div className="space-y-3">
+              <div>
+                <div className="flex justify-between text-xs text-slate-700 dark:text-white/80 mb-1">
+                  <span>{isEn ? "Grammar & Structure (Quiz & AI)" : "Grammaire & Structure (Quiz & IA)"}</span>
+                  <span className="font-bold font-mono">87%</span>
+                </div>
+                <ProgressBar progress={87} color="green" size="sm" />
+              </div>
+              <div>
+                <div className="flex justify-between text-xs text-slate-700 dark:text-white/80 mb-1">
+                  <span>{isEn ? "Vocabulary & Idioms" : "Vocabulaire & Expressions idiomatiques"}</span>
+                  <span className="font-bold font-mono">82%</span>
+                </div>
+                <ProgressBar progress={82} color="cyan" size="sm" />
+              </div>
+              <div>
+                <div className="flex justify-between text-xs text-slate-700 dark:text-white/80 mb-1">
+                  <span>{isEn ? "Textual Coherence & Argumentation" : "Cohérence & Argumentation écrite"}</span>
+                  <span className="font-bold font-mono">79%</span>
+                </div>
+                <ProgressBar progress={79} color="indigo" size="sm" />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Select Lesson to Create/Configure Quiz */}
+      <Modal
+        isOpen={isCreateQuizOpen}
+        onClose={() => setIsCreateQuizOpen(false)}
+        title={isEn ? "Select Lesson for Quiz" : "Associer un Quiz à une Leçon"}
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-slate-600 dark:text-white/70">
+            {isEn
+              ? "Choose the curriculum, module, and specific lesson you want to attach a quiz to:"
+              : "Choisissez le programme, le module et la leçon à laquelle vous souhaitez ajouter un quiz :"}
+          </p>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-white/80 mb-1">
+              {isEn ? "Curriculum" : "Programme"}
+            </label>
+            <select
+              value={createQuizProgramId}
+              onChange={(e) => {
+                setCreateQuizProgramId(e.target.value);
+                const prog = schoolPrograms.find((p) => p.id === e.target.value);
+                const mod = prog?.modules?.[0];
+                setCreateQuizModuleId(mod?.id || "");
+                setCreateQuizLessonId(mod?.lessons?.[0]?.id || "");
+              }}
+              className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-800 dark:text-white"
+            >
+              {schoolPrograms.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.title} ({p.level})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-white/80 mb-1">
+              {isEn ? "Module" : "Module"}
+            </label>
+            <select
+              value={createQuizModuleId}
+              onChange={(e) => {
+                setCreateQuizModuleId(e.target.value);
+                const mod = (currentCreateProg?.modules || []).find((m) => m.id === e.target.value);
+                setCreateQuizLessonId(mod?.lessons?.[0]?.id || "");
+              }}
+              className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-800 dark:text-white"
+            >
+              {(currentCreateProg?.modules || []).map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.title}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-white/80 mb-1">
+              {isEn ? "Lesson" : "Leçon cible"}
+            </label>
+            <select
+              value={createQuizLessonId}
+              onChange={(e) => setCreateQuizLessonId(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-800 dark:text-white"
+            >
+              {(currentCreateMod?.lessons || []).map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.title} {l.quiz && l.quiz.length > 0 ? `(${l.quiz.length} Q existantes)` : `(Sans quiz)`}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="pt-4 border-t border-slate-200 dark:border-white/10 flex items-center justify-end gap-3">
+            <NeonButton variant="ghost" size="sm" onClick={() => setIsCreateQuizOpen(false)}>
+              {isEn ? "Cancel" : "Annuler"}
+            </NeonButton>
+            <NeonButton
+              variant="cyan"
+              size="sm"
+              disabled={!createQuizLessonId}
+              onClick={handleConfirmCreateQuizLesson}
+            >
+              {isEn ? "Open Quiz Editor" : "Ouvrir l'Éditeur"}
+            </NeonButton>
+          </div>
+        </div>
+      </Modal>
+
       {/* MODAL: Quiz Questions Editor */}
       <Modal
         isOpen={Boolean(editingQuizLesson)}
@@ -407,6 +634,13 @@ export const SchoolEvaluationsTab: React.FC<SchoolEvaluationsTabProps> = ({
         size="xl"
       >
         <form onSubmit={handleSaveQuiz} className="space-y-5">
+          {validationError && (
+            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-bold flex items-center gap-2">
+              <AlertTriangle size={14} />
+              <span>{validationError}</span>
+            </div>
+          )}
+
           <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10">
             <div>
               <span className="text-xs font-bold text-slate-800 dark:text-white block">

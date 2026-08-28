@@ -1,4 +1,9 @@
-import React, { useState, useRef } from "react";
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React, { useState, useRef, useEffect } from "react";
 import {
   Upload,
   Link as LinkIcon,
@@ -10,7 +15,13 @@ import {
   Play,
   RotateCcw,
   Sparkles,
+  ExternalLink,
+  Shield,
+  Layers,
 } from "lucide-react";
+import { saveVideoFileToDB } from "../../lib/videoStorage";
+import { parseVideoSource, SAMPLE_VIDEO_PRESETS } from "../../lib/videoHelper";
+import { UniversalVideoPlayer } from "./UniversalVideoPlayer";
 
 interface VideoSourceInputProps {
   value: string;
@@ -25,18 +36,25 @@ export const VideoSourceInput: React.FC<VideoSourceInputProps> = ({
   label = "Source Vidéo de la Leçon",
   className = "",
 }) => {
-  // Mode: "upload" (from local device) or "url" (external link)
-  const isBlobOrData = value.startsWith("blob:") || value.startsWith("data:");
-  const [sourceMode, setSourceMode] = useState<"upload" | "url">(
-    isBlobOrData ? "upload" : "url"
+  const isLocalSource =
+    value.startsWith("idb:") ||
+    value.startsWith("data:") ||
+    value.startsWith("blob:");
+
+  const [sourceMode, setSourceMode] = useState<"upload" | "url" | "presets">(
+    isLocalSource ? "upload" : "url"
   );
   const [dragActive, setDragActive] = useState(false);
   const [fileName, setFileName] = useState<string | null>(
-    isBlobOrData ? "Vidéo importée depuis l'appareil" : null
+    isLocalSource ? "Vidéo persistante enregistrée" : null
   );
   const [fileSize, setFileSize] = useState<string | null>(null);
-  const [previewError, setPreviewError] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [fileTypeError, setFileTypeError] = useState<string | null>(null);
+  const [showLivePreview, setShowLivePreview] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const parsed = parseVideoSource(value);
 
   // Helper to format bytes
   const formatBytes = (bytes: number): string => {
@@ -47,23 +65,45 @@ export const VideoSourceInput: React.FC<VideoSourceInputProps> = ({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      processVideoFile(file);
+      await processVideoFile(file);
     }
   };
 
-  const processVideoFile = (file: File) => {
+  const processVideoFile = async (file: File) => {
+    setFileTypeError(null);
     if (!file.type.startsWith("video/")) {
-      alert("Veuillez sélectionner un fichier vidéo valide (MP4, WebM, MOV, etc.).");
+      setFileTypeError("Veuillez sélectionner un fichier vidéo valide (MP4, WebM, MOV, etc.).");
       return;
     }
-    const blobUrl = URL.createObjectURL(file);
-    setFileName(file.name);
-    setFileSize(formatBytes(file.size));
-    setPreviewError(false);
-    onChange(blobUrl);
+
+    try {
+      setIsUploading(true);
+      setFileName(file.name);
+      setFileSize(formatBytes(file.size));
+
+      // If file is small (< 5MB), convert to Base64 so it can easily serialize, OR save to IndexedDB
+      if (file.size < 4 * 1024 * 1024) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const dataUrl = reader.result as string;
+          onChange(dataUrl);
+          setIsUploading(false);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        // Save to persistent IndexedDB
+        const result = await saveVideoFileToDB(file, file.name);
+        onChange(result.uri);
+        setIsUploading(false);
+      }
+    } catch (err) {
+      console.error("Error storing video file:", err);
+      setIsUploading(false);
+      setFileTypeError("Impossible d'enregistrer ce fichier vidéo. Veuillez réessayer ou utiliser un lien web.");
+    }
   };
 
   const handleDrag = (e: React.DragEvent) => {
@@ -76,59 +116,22 @@ export const VideoSourceInput: React.FC<VideoSourceInputProps> = ({
     }
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      processVideoFile(e.dataTransfer.files[0]);
+      await processVideoFile(e.dataTransfer.files[0]);
     }
   };
 
   const handleClearVideo = () => {
     setFileName(null);
     setFileSize(null);
-    setPreviewError(false);
+    setShowLivePreview(false);
     onChange("");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
-    }
-  };
-
-  // Preset demo samples
-  const presets = [
-    {
-      label: "Démo MP4 Allemand",
-      url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
-    },
-    {
-      label: "Démo MP4 Italien",
-      url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
-    },
-    {
-      label: "Démo Cloud Stream",
-      url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-    },
-  ];
-
-  const isYouTube =
-    value.includes("youtube.com/watch") ||
-    value.includes("youtu.be/") ||
-    value.includes("youtube.com/embed");
-
-  const getYouTubeEmbed = (url: string) => {
-    try {
-      if (url.includes("youtu.be/")) {
-        const id = url.split("youtu.be/")[1]?.split("?")[0];
-        return `https://www.youtube.com/embed/${id}`;
-      }
-      if (url.includes("watch?v=")) {
-        const id = url.split("watch?v=")[1]?.split("&")[0];
-        return `https://www.youtube.com/embed/${id}`;
-      }
-      return url;
-    } catch {
-      return url;
     }
   };
 
@@ -140,134 +143,69 @@ export const VideoSourceInput: React.FC<VideoSourceInputProps> = ({
           {label}
         </label>
 
-        {/* Dual Mode Switcher (Upload from Device vs Web Link) */}
+        {/* Triple Mode Switcher (Upload | URL | Presets) */}
         <div className="inline-flex items-center p-1 rounded-xl bg-slate-200/70 dark:bg-white/10 text-xs">
-          <button
-            type="button"
-            onClick={() => setSourceMode("upload")}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold transition cursor-pointer select-none ${
-              sourceMode === "upload"
-                ? "bg-[#6D5DFC] text-white shadow-xs"
-                : "text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white"
-            }`}
-          >
-            <Upload size={13} />
-            <span>Depuis l'appareil</span>
-          </button>
-
           <button
             type="button"
             onClick={() => setSourceMode("url")}
             className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold transition cursor-pointer select-none ${
               sourceMode === "url"
-                ? "bg-[#6D5DFC] text-white shadow-xs"
-                : "text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white"
+                ? "bg-white dark:bg-[#6D5DFC] text-slate-900 dark:text-white shadow-xs"
+                : "text-slate-600 dark:text-white/60 hover:text-slate-900"
             }`}
           >
-            <LinkIcon size={13} />
-            <span>Lien Web / Stream</span>
+            <LinkIcon size={12} />
+            <span>Lien Web / Embed</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setSourceMode("upload")}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold transition cursor-pointer select-none ${
+              sourceMode === "upload"
+                ? "bg-white dark:bg-[#6D5DFC] text-slate-900 dark:text-white shadow-xs"
+                : "text-slate-600 dark:text-white/60 hover:text-slate-900"
+            }`}
+          >
+            <Upload size={12} />
+            <span>Importer Fichier</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setSourceMode("presets")}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold transition cursor-pointer select-none ${
+              sourceMode === "presets"
+                ? "bg-white dark:bg-[#6D5DFC] text-slate-900 dark:text-white shadow-xs"
+                : "text-slate-600 dark:text-white/60 hover:text-slate-900"
+            }`}
+          >
+            <Sparkles size={12} />
+            <span>Échantillons HD</span>
           </button>
         </div>
       </div>
 
-      {/* MODE 1: UPLOAD FROM DEVICE */}
-      {sourceMode === "upload" && (
-        <div className="space-y-3">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="video/mp4,video/webm,video/ogg,video/quicktime,video/*"
-            className="hidden"
-            onChange={handleFileChange}
-          />
-
-          {!value || (!isBlobOrData && !fileName) ? (
-            <div
-              onDragEnter={handleDrag}
-              onDragLeave={handleDrag}
-              onDragOver={handleDrag}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-              className={`relative border-2 border-dashed rounded-2xl p-6 sm:p-8 flex flex-col items-center justify-center text-center cursor-pointer transition ${
-                dragActive
-                  ? "border-[#00D9FF] bg-[#00D9FF]/5"
-                  : "border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-white/[0.02] hover:border-[#6D5DFC] hover:bg-[#6D5DFC]/5"
-              }`}
-            >
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#6D5DFC] to-[#00D9FF] text-white flex items-center justify-center shadow-[0_0_15px_rgba(109,93,252,0.3)] mb-3">
-                <Upload size={22} />
-              </div>
-              <p className="text-xs font-bold text-slate-800 dark:text-white mb-1">
-                Cliquez pour importer une vidéo depuis votre ordinateur ou appareil
-              </p>
-              <p className="text-[11px] text-slate-500 dark:text-white/50">
-                Glissez-déposez votre fichier vidéo ici (MP4, WebM, MOV supportés)
-              </p>
-            </div>
-          ) : (
-            /* Selected Local Video State */
-            <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center shrink-0 font-bold">
-                  <FileVideo size={20} />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                    {fileName || "Fichier vidéo local chargé"}
-                  </p>
-                  <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono">
-                    Prêt pour lecture • {fileSize || "Local Blob"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-white/10 text-[11px] font-bold text-slate-700 dark:text-white hover:bg-slate-100 transition cursor-pointer"
-                >
-                  Remplacer
-                </button>
-                <button
-                  type="button"
-                  onClick={handleClearVideo}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 transition cursor-pointer"
-                  title="Supprimer"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* MODE 2: WEB URL LINK */}
+      {/* MODE 1: URL / EMBED LINK */}
       {sourceMode === "url" && (
-        <div className="space-y-3">
-          <div className="relative flex items-center">
+        <div className="space-y-2">
+          <div className="relative">
+            <input
+              type="text"
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              placeholder="Ex: https://youtube.com/watch?v=... ou https://vimeo.com/... ou https://drive.google.com/file/d/... ou MP4 direct"
+              className="w-full pl-9 pr-24 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white font-mono placeholder:font-sans focus:outline-none focus:border-[#6D5DFC]"
+            />
             <LinkIcon
               size={15}
-              className="absolute left-3.5 text-slate-400 dark:text-white/40 pointer-events-none"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
             />
-            <input
-              type="url"
-              placeholder="https://domaine.com/video.mp4 ou lien YouTube..."
-              value={isBlobOrData ? "" : value}
-              onChange={(e) => {
-                setFileName(null);
-                setFileSize(null);
-                setPreviewError(false);
-                onChange(e.target.value);
-              }}
-              className="w-full pl-9 pr-8 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white font-mono placeholder:text-slate-400 dark:placeholder:text-white/30 outline-none focus:border-[#6D5DFC]"
-            />
-            {value && !isBlobOrData && (
+            {value && (
               <button
                 type="button"
                 onClick={handleClearVideo}
-                className="absolute right-2.5 p-1 text-slate-400 hover:text-rose-500 cursor-pointer"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-rose-500 transition p-1"
                 title="Effacer"
               >
                 <X size={14} />
@@ -275,70 +213,161 @@ export const VideoSourceInput: React.FC<VideoSourceInputProps> = ({
             )}
           </div>
 
-          {/* Preset Buttons */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/40">
-              Exemples rapides :
+          <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500 dark:text-white/50">
+            <span>
+              Supports : <b>YouTube</b>, <b>Vimeo</b>, <b>Google Drive</b>, <b>Dailymotion</b>, <b>Direct MP4 / WebM</b>
             </span>
-            {presets.map((preset) => (
-              <button
-                key={preset.label}
-                type="button"
-                onClick={() => {
-                  setFileName(preset.label);
-                  setFileSize("Cloud CDN");
-                  onChange(preset.url);
-                }}
-                className="px-2 py-1 rounded-lg text-[10px] font-medium bg-slate-100 dark:bg-white/5 hover:bg-[#6D5DFC]/15 hover:text-[#6D5DFC] text-slate-600 dark:text-white/60 border border-slate-200 dark:border-white/10 transition cursor-pointer"
-              >
-                {preset.label}
-              </button>
-            ))}
+            {value && (
+              <span className="px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-500 font-semibold font-mono text-[10px]">
+                {parsed.sourceLabel}
+              </span>
+            )}
           </div>
         </div>
       )}
 
-      {/* LIVE VIDEO PREVIEW IN MODAL */}
-      {value && (
-        <div className="space-y-1.5 pt-1">
-          <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-white/50">
-            <span className="flex items-center gap-1.5 text-[#00D9FF]">
-              <Play size={12} /> Aperçu direct du lecteur
-            </span>
-            <span className="text-[10px] font-mono">
-              {isBlobOrData ? "Fichier Local" : isYouTube ? "YouTube Stream" : "Flux MP4 Direct"}
-            </span>
-          </div>
+      {/* MODE 2: LOCAL DEVICE UPLOAD (IndexedDB / Base64) */}
+      {sourceMode === "upload" && (
+        <div className="space-y-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="video/*"
+            onChange={handleFileChange}
+            className="hidden"
+          />
 
-          <div className="relative aspect-video w-full rounded-2xl overflow-hidden bg-black border border-slate-200 dark:border-white/10 shadow-md">
-            {isYouTube ? (
-              <iframe
-                src={getYouTubeEmbed(value)}
-                className="w-full h-full border-0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                title="Aperçu YouTube"
-              />
+          <div
+            onDragEnter={handleDrag}
+            onDragLeave={handleDrag}
+            onDragOver={handleDrag}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+            className={`border-2 border-dashed rounded-2xl p-4 text-center cursor-pointer transition-all ${
+              dragActive
+                ? "border-[#6D5DFC] bg-[#6D5DFC]/10"
+                : "border-slate-300 dark:border-white/15 hover:border-[#6D5DFC] bg-slate-50 dark:bg-white/5"
+            }`}
+          >
+            {isUploading ? (
+              <div className="flex flex-col items-center justify-center py-2 space-y-2">
+                <div className="w-6 h-6 border-2 border-[#6D5DFC] border-t-transparent rounded-full animate-spin" />
+                <p className="text-xs font-bold text-slate-700 dark:text-white">
+                  Enregistrement persistant de la vidéo...
+                </p>
+              </div>
+            ) : value && isLocalSource ? (
+              <div className="flex items-center justify-between gap-3 text-left">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-500 flex items-center justify-center shrink-0">
+                    <FileVideo size={20} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-900 dark:text-white truncate max-w-xs">
+                      {fileName || "Vidéo persistante enregistrée"}
+                    </p>
+                    <p className="text-[10px] text-slate-400">
+                      {fileSize ? `${fileSize} • ` : ""}Persisté pour rechargements
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="px-2.5 py-1 rounded-lg bg-slate-200 dark:bg-white/10 text-[11px] font-bold text-slate-700 dark:text-white hover:bg-slate-300 transition"
+                  >
+                    Remplacer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleClearVideo}
+                    className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-500/10 transition"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              </div>
             ) : (
-              <video
-                src={value}
-                controls
-                playsInline
-                onError={() => setPreviewError(true)}
-                className="w-full h-full object-contain"
-              />
-            )}
-
-            {previewError && (
-              <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center p-4 text-center text-rose-400">
-                <AlertCircle size={24} className="mb-1" />
-                <p className="text-xs font-bold">Impossible de charger la vidéo</p>
-                <p className="text-[10px] text-white/60 mt-0.5">
-                  Vérifiez le lien URL ou réimportez un fichier vidéo local supporté.
+              <div className="space-y-1.5 py-2">
+                <div className="w-10 h-10 mx-auto rounded-xl bg-[#6D5DFC]/10 text-[#6D5DFC] flex items-center justify-center">
+                  <Upload size={18} />
+                </div>
+                <p className="text-xs font-bold text-slate-700 dark:text-white">
+                  Glissez-déposez une vidéo ici, ou <span className="text-[#6D5DFC]">parcourez vos fichiers</span>
+                </p>
+                <p className="text-[10px] text-slate-400">
+                  Formats acceptés : MP4, WebM, MOV (Sauvegardé avec persistance locale)
                 </p>
               </div>
             )}
           </div>
+
+          {fileTypeError && (
+            <p className="text-[11px] text-rose-500 flex items-center gap-1">
+              <AlertCircle size={13} /> {fileTypeError}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* MODE 3: HIGH-SPEED PRESET SAMPLES */}
+      {sourceMode === "presets" && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {SAMPLE_VIDEO_PRESETS.map((preset, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => {
+                onChange(preset.url);
+                setSourceMode("url");
+              }}
+              className="p-2.5 rounded-xl text-left bg-slate-50 dark:bg-white/5 hover:bg-[#6D5DFC]/10 border border-slate-200 dark:border-white/10 hover:border-[#6D5DFC]/40 transition flex items-center justify-between group cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                  <Play size={13} />
+                </div>
+                <span className="text-xs font-bold text-slate-800 dark:text-white/90 truncate">
+                  {preset.label}
+                </span>
+              </div>
+              <span className="text-[10px] text-indigo-500 font-bold uppercase shrink-0">
+                Appliquer
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Quick Live Preview Toggle */}
+      {value && (
+        <div className="pt-2 border-t border-slate-200/60 dark:border-white/5 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] text-slate-500 dark:text-white/50 flex items-center gap-1">
+              <Shield size={12} className="text-emerald-500" />
+              Source prête pour diffusion sécurisée
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowLivePreview(!showLivePreview)}
+              className="text-xs font-bold text-[#6D5DFC] hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              <Play size={12} />
+              <span>{showLivePreview ? "Masquer le test vidéo" : "Tester la lecture vidéo en direct"}</span>
+            </button>
+          </div>
+
+          {showLivePreview && (
+            <div className="mt-2 rounded-2xl overflow-hidden border border-indigo-500/30">
+              <UniversalVideoPlayer
+                videoUrl={value}
+                title="Aperçu du cours"
+                showDrmWatermark={false}
+              />
+            </div>
+          )}
         </div>
       )}
     </div>

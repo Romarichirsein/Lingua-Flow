@@ -2,21 +2,29 @@ import React from "react";
 import { motion } from "motion/react";
 
 interface ProgressBarProps {
-  value: number;
+  value?: number;
+  progress?: number; // alias for value
   max?: number;
   color?: "cyan" | "violet" | "emerald" | "amber" | "rose";
   showLabel?: boolean;
   height?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg"; // alias for height
 }
 
 export const ProgressBar: React.FC<ProgressBarProps> = ({
   value,
+  progress,
   max = 100,
   color = "cyan",
   showLabel = false,
-  height = "md",
+  height,
+  size = "md",
 }) => {
-  const percentage = Math.min(100, Math.max(0, Math.round((value / max) * 100)));
+  const effectiveValue = value !== undefined ? value : progress !== undefined ? progress : 0;
+  const effectiveHeight = height || size || "md";
+  const safeValue = typeof effectiveValue === "number" && !isNaN(effectiveValue) ? effectiveValue : 0;
+  const safeMax = typeof max === "number" && !isNaN(max) && max > 0 ? max : 100;
+  const percentage = Math.min(100, Math.max(0, Math.round((safeValue / safeMax) * 100)));
 
   const colorGradients = {
     cyan: "from-[#00D9FF] to-blue-500 shadow-[0_0_8px_rgba(0,217,255,0.6)]",
@@ -34,7 +42,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 
   return (
     <div className="w-full">
-      <div className={`w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-800/80 ${heightClasses[height]}`}>
+      <div className={`w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-800/80 ${heightClasses[effectiveHeight]}`}>
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${percentage}%` }}
@@ -45,7 +53,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
       {showLabel && (
         <div className="mt-1 flex justify-between text-xs text-slate-500 dark:text-slate-400">
           <span>{percentage}% terminé</span>
-          <span>{value} / {max}</span>
+          <span>{safeValue} / {safeMax}</span>
         </div>
       )}
     </div>

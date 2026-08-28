@@ -2,8 +2,6 @@ export type UserRole = "super_admin" | "school_admin" | "student";
 
 export type SupportedLanguage = "german" | "italian";
 
-export type SchoolLanguageConfig = "german" | "italian" | "both";
-
 export type UILocale = "fr" | "en";
 
 export type ThemeMode = "light" | "dark" | "system";
@@ -37,7 +35,7 @@ export interface School {
   id: string;
   name: string;
   slug: string;
-  language: SchoolLanguageConfig;
+  language: SupportedLanguage;
   logo: string;
   primaryColor: string;
   secondaryColor: string;

@@ -10,6 +10,7 @@ import {
 import { translations } from "../../lib/translations";
 import { NeonButton } from "../common/NeonButton";
 import { ConfettiShower, playCelebrationSound } from "../common/CelebrationEffects";
+import { UniversalVideoPlayer } from "../common/UniversalVideoPlayer";
 import {
   quizSuccess,
   quizSuccessCelebration,
@@ -87,16 +88,49 @@ export const InteractiveLessonPlayer: React.FC<InteractiveLessonPlayerProps> = (
 }) => {
   const t = translations[locale];
 
+  const vocabList = lesson.vocabulary || [];
+  const quizList = lesson.quiz || [];
+  const totalVocab = vocabList.length;
+  const totalQuiz = quizList.length;
+
   // Active sub-tab in lesson: video | theory | vocabulary | quiz
   const [activeTab, setActiveTab] = useState<"video" | "theory" | "vocabulary" | "quiz">("video");
 
-  // Dynamic Live Watermark Time (updates every second)
+  // Dynamic Live Watermark Time & Floating position (shifts dynamically to prevent screen capture masking)
   const [currentTimeStr, setCurrentTimeStr] = useState(new Date().toISOString());
+  const [watermarkOffset, setWatermarkOffset] = useState({ x: 10, y: 15 });
+  const [showDrmWarning, setShowDrmWarning] = useState(false);
+
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTimeStr(new Date().toISOString().replace("T", " ").substring(0, 19) + " UTC");
     }, 1000);
-    return () => clearInterval(timer);
+
+    const shiftTimer = setInterval(() => {
+      setWatermarkOffset({
+        x: Math.floor(Math.random() * 50) + 10,
+        y: Math.floor(Math.random() * 60) + 15,
+      });
+    }, 8000);
+
+    // Global shortcut listener to prevent video source / page saving
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        (e.key === "s" || e.key === "S" || e.key === "u" || e.key === "U" || e.key === "p" || e.key === "P")
+      ) {
+        e.preventDefault();
+        setShowDrmWarning(true);
+        setTimeout(() => setShowDrmWarning(false), 4000);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      clearInterval(timer);
+      clearInterval(shiftTimer);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
   }, []);
 
   // Flashcards state
@@ -155,15 +189,15 @@ export const InteractiveLessonPlayer: React.FC<InteractiveLessonPlayerProps> = (
   };
 
   const handleSubmitQuiz = () => {
-    if (!lesson.quiz || lesson.quiz.length === 0) return;
+    if (quizList.length === 0) return;
     let correctCount = 0;
-    lesson.quiz.forEach((q, idx) => {
+    quizList.forEach((q, idx) => {
       if (selectedAnswers[idx] === q.correctIndex) {
         correctCount += 1;
       }
     });
 
-    const scorePercent = Math.round((correctCount / lesson.quiz.length) * 100);
+    const scorePercent = Math.round((correctCount / quizList.length) * 100);
     setQuizScore(scorePercent);
     setQuizSubmitted(true);
 
@@ -194,11 +228,11 @@ export const InteractiveLessonPlayer: React.FC<InteractiveLessonPlayerProps> = (
     try {
       if (url.includes("youtu.be/")) {
         const id = url.split("youtu.be/")[1]?.split("?")[0];
-        return `https://www.youtube.com/embed/${id}?autoplay=0&rel=0`;
+        return `https://www.youtube-nocookie.com/embed/${id}?autoplay=0&rel=0&modestbranding=1&controls=1&showinfo=0&disablekb=1&iv_load_policy=3&playsinline=1`;
       }
       if (url.includes("watch?v=")) {
         const id = url.split("watch?v=")[1]?.split("&")[0];
-        return `https://www.youtube.com/embed/${id}?autoplay=0&rel=0`;
+        return `https://www.youtube-nocookie.com/embed/${id}?autoplay=0&rel=0&modestbranding=1&controls=1&showinfo=0&disablekb=1&iv_load_policy=3&playsinline=1`;
       }
       return url;
     } catch {
@@ -266,11 +300,7 @@ export const InteractiveLessonPlayer: React.FC<InteractiveLessonPlayerProps> = (
             <div>
               <div className="flex items-center gap-2">
                 <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-500 text-xs font-bold uppercase">
-                  {school.language === "both"
-                    ? (locale === "en" ? "German & Italian 🇩🇪🇮🇹" : "Allemand & Italien 🇩🇪🇮🇹")
-                    : school.language === "german"
-                    ? t.common.german
-                    : t.common.italian}
+                  {school.language === "german" ? t.common.german : t.common.italian}
                 </span>
                 <span className="flex items-center gap-1 text-xs text-slate-400">
                   <Clock size={12} /> {lesson.durationMinutes} min
@@ -356,7 +386,7 @@ export const InteractiveLessonPlayer: React.FC<InteractiveLessonPlayerProps> = (
               <span>{locale === "en" ? "Notes & Theory" : "Cours & Notes"}</span>
             </button>
 
-            {lesson.vocabulary && lesson.vocabulary.length > 0 && (
+            {totalVocab > 0 && (
               <button
                 type="button"
                 onClick={() => setActiveTab("vocabulary")}
@@ -367,11 +397,11 @@ export const InteractiveLessonPlayer: React.FC<InteractiveLessonPlayerProps> = (
                 }`}
               >
                 <Volume2 size={14} />
-                <span>{locale === "en" ? "Vocabulary" : "Vocabulaire"} ({lesson.vocabulary.length})</span>
+                <span>{locale === "en" ? "Vocabulary" : "Vocabulaire"} ({totalVocab})</span>
               </button>
             )}
 
-            {lesson.quiz && lesson.quiz.length > 0 && (
+            {totalQuiz > 0 && (
               <button
                 type="button"
                 onClick={() => setActiveTab("quiz")}
@@ -382,7 +412,7 @@ export const InteractiveLessonPlayer: React.FC<InteractiveLessonPlayerProps> = (
                 }`}
               >
                 <HelpCircle size={14} />
-                <span>{locale === "en" ? "Validation Quiz" : "Quiz de Validation"} ({lesson.quiz.length})</span>
+                <span>{locale === "en" ? "Validation Quiz" : "Quiz de Validation"} ({totalQuiz})</span>
               </button>
             )}
           </div>
@@ -398,14 +428,52 @@ export const InteractiveLessonPlayer: React.FC<InteractiveLessonPlayerProps> = (
                 exit="exit"
                 className="space-y-4"
               >
-                <div className="relative aspect-video w-full overflow-hidden rounded-3xl bg-slate-950 shadow-2xl border border-slate-800">
+                {/* DRM Alert Toast on attempted copy/download */}
+                <AnimatePresence>
+                  {showDrmWarning && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="p-3.5 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs flex items-center gap-2.5 font-medium shadow-lg backdrop-blur-sm"
+                    >
+                      <Shield size={18} className="shrink-0 text-amber-500" />
+                      <span>
+                        {locale === "en"
+                          ? "⚠️ Protected DRM Stream: Video download, source extraction, and screen recording are strictly prohibited."
+                          : "⚠️ Flux Sécurisé DRM : Le téléchargement, l'extraction de la vidéo et l'enregistrement sont strictement interdits."}
+                      </span>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* DRM Security Header Bar */}
+                <div className="flex items-center justify-between px-3 py-2 rounded-2xl bg-slate-900/90 text-white text-[11px] font-mono border border-white/10 shadow-sm select-none">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="font-bold text-emerald-400">DRM ENCRYPTED STREAM</span>
+                    <span className="hidden sm:inline text-slate-400">• Anti-Download Active</span>
+                  </div>
+                  <div className="text-slate-400 text-[10px]">
+                    Session ID: <span className="text-cyan-400">{student.id}</span>
+                  </div>
+                </div>
+
+                <div
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setShowDrmWarning(true);
+                    setTimeout(() => setShowDrmWarning(false), 4000);
+                  }}
+                  className="relative aspect-video w-full overflow-hidden rounded-3xl bg-slate-950 shadow-2xl border border-slate-800 select-none group"
+                >
                   {/* Video Player */}
                   {isYouTubeUrl ? (
                     <iframe
                       src={getYouTubeEmbedUrl(lesson.videoUrl)}
-                      className="h-full w-full border-0"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
+                      className="h-full w-full border-0 pointer-events-auto"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope"
                       title={lesson.title}
                     />
                   ) : (
@@ -413,40 +481,63 @@ export const InteractiveLessonPlayer: React.FC<InteractiveLessonPlayerProps> = (
                       src={lesson.videoUrl}
                       poster={lesson.videoPoster}
                       controls
+                      controlsList="nodownload nofullscreen noremoteplayback"
+                      disablePictureInPicture
                       playsInline
-                      className="h-full w-full object-contain bg-black"
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        setShowDrmWarning(true);
+                        setTimeout(() => setShowDrmWarning(false), 4000);
+                      }}
+                      className="h-full w-full object-contain bg-black select-none"
                     />
                   )}
 
-                  {/* DYNAMIC ANTI-LEAK WATERMARK OVERLAY */}
-                  <div className="pointer-events-none absolute inset-0 z-20 flex flex-col justify-between p-4 sm:p-6 opacity-30 select-none">
-                    <div className="flex items-center justify-between text-[11px] font-mono text-white tracking-widest uppercase">
+                  {/* DYNAMIC ANTI-LEAK MOVING WATERMARK OVERLAY */}
+                  <div className="pointer-events-none absolute inset-0 z-20 flex flex-col justify-between p-4 sm:p-6 opacity-35 select-none overflow-hidden">
+                    <div className="flex items-center justify-between text-[10px] font-mono text-white/90 tracking-widest uppercase">
                       <span>
                         {school.name} • {student.name}
                       </span>
                       <span>{student.email}</span>
                     </div>
-                    <div className="flex items-center justify-center">
-                      <div className="rounded-xl bg-black/40 px-3 py-1.5 backdrop-blur-xs text-center border border-white/10">
-                        <p className="text-[10px] font-mono text-cyan-300">
-                          CONFIDENTIAL • {student.id}
+
+                    {/* Floating Shifting Watermark */}
+                    <div
+                      style={{
+                        transform: `translate(${watermarkOffset.x}px, ${watermarkOffset.y}px)`,
+                        transition: "transform 4s ease-in-out",
+                      }}
+                      className="flex items-center justify-center"
+                    >
+                      <div className="rounded-xl bg-black/60 px-3.5 py-1.5 backdrop-blur-xs text-center border border-cyan-500/30 shadow-lg">
+                        <p className="text-[10px] font-mono font-bold text-cyan-300">
+                          CONFIDENTIAL DRM • {student.id}
                         </p>
-                        <p className="text-[9px] font-mono text-white/70">
+                        <p className="text-[9px] font-mono text-white/80">
                           {currentTimeStr}
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between text-[10px] font-mono text-white/80">
-                      <span>IP PROTECTED STREAM</span>
+
+                    <div className="flex items-center justify-between text-[9px] font-mono text-white/70">
+                      <span>PROTECTED STREAM • DOWNLOAD PROHIBITED</span>
                       <span>{currentTimeStr}</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="rounded-2xl bg-slate-50/80 dark:bg-slate-900/60 p-4 border border-slate-200/60 dark:border-slate-800">
-                  <h4 className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-wider mb-1">
-                    {locale === "en" ? "Lesson Summary" : "Résumé de la leçon"}
-                  </h4>
+                {/* Lesson Summary and DRM footer */}
+                <div className="rounded-2xl bg-slate-50/80 dark:bg-slate-900/60 p-4 border border-slate-200/60 dark:border-slate-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-wider">
+                      {locale === "en" ? "Lesson Summary" : "Résumé de la leçon"}
+                    </h4>
+                    <span className="flex items-center gap-1 text-[10px] font-mono text-emerald-600 dark:text-emerald-400">
+                      <Shield size={12} />
+                      {locale === "en" ? "DRM Protected" : "Protégé par DRM"}
+                    </span>
+                  </div>
                   <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
                     {lesson.summary}
                   </p>
@@ -475,7 +566,7 @@ export const InteractiveLessonPlayer: React.FC<InteractiveLessonPlayerProps> = (
             )}
 
             {/* TAB 3: VOCABULARY FLASHCARDS */}
-            {activeTab === "vocabulary" && lesson.vocabulary && lesson.vocabulary.length > 0 && (
+            {activeTab === "vocabulary" && totalVocab > 0 && (
               <motion.div
                 key="vocab-tab"
                 variants={tabContentVariants}
@@ -494,14 +585,16 @@ export const InteractiveLessonPlayer: React.FC<InteractiveLessonPlayerProps> = (
                     className="relative min-h-[230px] rounded-3xl border border-indigo-500/30 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 p-8 shadow-xl cursor-pointer flex flex-col items-center justify-center text-center transition-all select-none"
                   >
                     <span className="absolute top-4 left-4 text-[10px] font-bold uppercase tracking-wider text-indigo-500 bg-indigo-500/10 px-2.5 py-1 rounded-lg">
-                      {locale === "en" ? `Card ${activeVocabIndex + 1} / ${lesson.vocabulary.length}` : `Carte ${activeVocabIndex + 1} / ${lesson.vocabulary.length}`}
+                      {locale === "en" ? `Card ${activeVocabIndex + 1} / ${totalVocab}` : `Carte ${activeVocabIndex + 1} / ${totalVocab}`}
                     </span>
 
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleSpeak(lesson.vocabulary![activeVocabIndex].term);
+                        if (vocabList[activeVocabIndex]) {
+                          handleSpeak(vocabList[activeVocabIndex].term);
+                        }
                       }}
                       className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-md hover:bg-indigo-500 transition cursor-pointer"
                       title={locale === "en" ? "Listen to audio pronunciation" : "Écouter la prononciation audio"}
@@ -512,23 +605,23 @@ export const InteractiveLessonPlayer: React.FC<InteractiveLessonPlayerProps> = (
                     {!isFlipped ? (
                       <div className="space-y-2">
                         <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
-                          {lesson.vocabulary[activeVocabIndex].term}
+                          {vocabList[activeVocabIndex]?.term || ""}
                         </p>
                         <p className="text-xs text-slate-400">{locale === "en" ? "Click to reveal translation" : "Cliquez pour voir la traduction"}</p>
                       </div>
                     ) : (
                       <div className="space-y-3">
                         <p className="text-xl sm:text-2xl font-bold text-indigo-600 dark:text-indigo-400">
-                          {lesson.vocabulary[activeVocabIndex].translation}
+                          {vocabList[activeVocabIndex]?.translation || ""}
                         </p>
-                        {lesson.vocabulary[activeVocabIndex].exampleSentence && (
+                        {vocabList[activeVocabIndex]?.exampleSentence && (
                           <div className="rounded-xl bg-slate-100 dark:bg-slate-800/80 p-3 text-xs">
                             <p className="font-semibold text-slate-800 dark:text-slate-200 italic">
-                              "{lesson.vocabulary[activeVocabIndex].exampleSentence}"
+                              "{vocabList[activeVocabIndex].exampleSentence}"
                             </p>
-                            {lesson.vocabulary[activeVocabIndex].exampleTranslation && (
+                            {vocabList[activeVocabIndex]?.exampleTranslation && (
                               <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5">
-                                {lesson.vocabulary[activeVocabIndex].exampleTranslation}
+                                {vocabList[activeVocabIndex].exampleTranslation}
                               </p>
                             )}
                           </div>
@@ -556,7 +649,9 @@ export const InteractiveLessonPlayer: React.FC<InteractiveLessonPlayerProps> = (
                     type="button"
                     onClick={() => {
                       setIsFlipped(false);
-                      handleSpeak(lesson.vocabulary![activeVocabIndex].term);
+                      if (vocabList[activeVocabIndex]) {
+                        handleSpeak(vocabList[activeVocabIndex].term);
+                      }
                     }}
                     className="flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400 font-semibold"
                   >
@@ -565,11 +660,11 @@ export const InteractiveLessonPlayer: React.FC<InteractiveLessonPlayerProps> = (
 
                   <button
                     type="button"
-                    disabled={activeVocabIndex === lesson.vocabulary.length - 1}
+                    disabled={activeVocabIndex >= totalVocab - 1}
                     onClick={() => {
                       setIsFlipped(false);
                       setActiveVocabIndex((prev) =>
-                        Math.min(lesson.vocabulary!.length - 1, prev + 1)
+                        Math.min(totalVocab - 1, prev + 1)
                       );
                     }}
                     className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white disabled:opacity-30 transition cursor-pointer"
@@ -581,7 +676,7 @@ export const InteractiveLessonPlayer: React.FC<InteractiveLessonPlayerProps> = (
             )}
 
             {/* TAB 4: QUIZ VALIDATION */}
-            {activeTab === "quiz" && lesson.quiz && lesson.quiz.length > 0 && (
+            {activeTab === "quiz" && totalQuiz > 0 && (
               <motion.div
                 key="quiz-tab"
                 variants={tabContentVariants}
@@ -726,7 +821,7 @@ export const InteractiveLessonPlayer: React.FC<InteractiveLessonPlayerProps> = (
                       variant="primary"
                       size="sm"
                       onClick={handleSubmitQuiz}
-                      disabled={Object.keys(selectedAnswers).length < lesson.quiz.length}
+                      disabled={Object.keys(selectedAnswers).length < totalQuiz}
                       icon={<Sparkles size={15} />}
                     >
                       {t.student.submitQuiz}
