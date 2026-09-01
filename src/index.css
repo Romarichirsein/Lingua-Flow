@@ -1,0 +1,145 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: #f8fafc;
+  --surface: #ffffff;
+  --surface-soft: #f1f5f9;
+  --surface-elevated: #ffffff;
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --border: rgba(15, 23, 42, 0.12);
+
+  --bg: var(--background);
+  --text-main: var(--text-primary);
+  --text-muted: var(--text-secondary);
+
+  --neon-primary: #6d5dfc;
+  --neon-cyan: #00d9ff;
+  --neon-emerald: #20e3a2;
+  --neon-rose: #ff4d8d;
+  --neon-amber: #f59e0b;
+
+  --shadow-card: 0 10px 30px -5px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+}
+
+.dark {
+  --background: #070a13;
+  --surface: #0f172a;
+  --surface-soft: #1e293b;
+  --surface-elevated: #1e293b;
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --border: rgba(255, 255, 255, 0.12);
+
+  --bg: var(--background);
+  --text-main: var(--text-primary);
+  --text-muted: var(--text-secondary);
+
+  --neon-primary: #6d5dfc;
+  --neon-cyan: #00d9ff;
+  --neon-emerald: #20e3a2;
+  --neon-rose: #ff4d8d;
+  --neon-amber: #f59e0b;
+
+  --shadow-card: 0 18px 45px rgba(0, 0, 0, 0.5);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  min-height: 100vh;
+  transition: background-color 0.25s ease, color 0.25s ease;
+  overflow-x: hidden;
+}
+
+/* Glassmorphic Editorial Cards */
+.neon-card {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dark .neon-card {
+  background: var(--surface);
+  border-color: var(--border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.neon-card:hover {
+  border-color: rgba(109, 93, 252, 0.35);
+}
+
+.dark .neon-card:hover {
+  border-color: rgba(0, 217, 255, 0.35);
+  box-shadow: 0 0 25px rgba(0, 217, 255, 0.1), 0 16px 36px rgba(0, 0, 0, 0.5);
+}
+
+/* High Contrast and accessible text utilities */
+.text-high-contrast {
+  color: var(--text-primary);
+}
+
+.text-muted-contrast {
+  color: var(--text-secondary);
+}
+
+/* Editorial glow accents */
+.neon-glow-primary {
+  box-shadow: 0 0 20px rgba(109, 93, 252, 0.4);
+}
+
+.neon-glow-cyan {
+  box-shadow: 0 0 20px rgba(0, 217, 252, 0.35);
+}
+
+.neon-glow-emerald {
+  box-shadow: 0 0 20px rgba(32, 227, 162, 0.4);
+}
+
+.neon-glow-rose {
+  box-shadow: 0 0 20px rgba(255, 77, 141, 0.4);
+}
+
+/* Watermark Canvas Layer */
+.video-watermark-overlay {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.22;
+  user-select: none;
+}
+
+/* Custom subtle scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(203, 213, 225, 0.3);
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(244, 247, 255, 0.2);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(109, 93, 252, 0.5);
+}
+

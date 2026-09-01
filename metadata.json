@@ -1,0 +1,6 @@
+{
+  "name": "LinguaFlow - LMS B2B & E-Learning Multi-Écoles",
+  "description": "Plateforme SaaS E-Learning B2B pour écoles de langues (Allemand & Italien). Espaces isolés Super Admin, Directeurs d'Écoles et Élèves, cours vidéo filigranés, correcteur d'écriture IA et tuteur conversationnel.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
