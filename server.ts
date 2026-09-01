@@ -1,6 +1,5 @@
 import express from "express";
 import path from "path";
-import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import { createClient } from "@sanity/client";
 
@@ -51,7 +50,7 @@ function getGeminiClient(): GoogleGenAI | null {
 }
 
 /**
- * Robust Gemini Content Generation Helper using gemini-3.6-flash
+ * Robust Gemini Content Generation Helper using gemini-3.7-flash
  */
 async function callGemini(
   prompt: string,
@@ -67,7 +66,7 @@ async function callGemini(
     throw new Error("Gemini client is not initialized (missing API key)");
   }
 
-  const modelName = options.model || "gemini-3.6-flash";
+  const modelName = options.model || "gemini-3.7-flash";
   const timeoutMs = options.timeoutMs || 15000;
 
   const generatePromise = gemini.models.generateContent({
@@ -93,7 +92,7 @@ async function callGemini(
 async function callGeminiChat(
   history: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }>,
   systemInstruction?: string,
-  modelName: string = "gemini-3.6-flash"
+  modelName: string = "gemini-3.7-flash"
 ): Promise<string> {
   const gemini = getGeminiClient();
   if (!gemini) {
@@ -820,9 +819,10 @@ app.post("/api/progression/complete-lesson", async (req, res) => {
   }
 });
 
-// Setup Vite middleware
+// Setup Vite middleware for local / Cloud Run dev & production
 async function setupVite() {
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
@@ -843,4 +843,9 @@ async function setupVite() {
   });
 }
 
-setupVite();
+// Only launch standalone web server if not running inside a serverless environment like Vercel
+if (!process.env.VERCEL && process.env.NODE_ENV !== "test") {
+  setupVite();
+}
+
+export default app;
