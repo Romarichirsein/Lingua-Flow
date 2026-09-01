@@ -8,6 +8,26 @@ const PORT = 3000;
 
 app.use(express.json({ limit: "10mb" }));
 
+// Serverless / CORS / URL Normalization Middleware
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
+  // Normalize serverless URL paths (handles when /api is stripped or rewritten on Vercel)
+  if (req.url && !req.url.startsWith("/api") && !req.url.startsWith("/@") && !req.url.startsWith("/src") && !req.url.startsWith("/node_modules")) {
+    const rawPath = req.url.split("?")[0];
+    const query = req.url.includes("?") ? req.url.substring(req.url.indexOf("?")) : "";
+    if (["/health", "/sanity", "/ai", "/progression"].some((prefix) => rawPath.startsWith(prefix))) {
+      req.url = `/api${rawPath}${query}`;
+    }
+  }
+  next();
+});
+
 // SeekAI / OpenAI-Compatible Configuration
 const SEEKAI_BASE_URL = process.env.SEEKAI_BASE_URL || "https://seekai.cc/v1";
 const SEEKAI_API_KEY = process.env.SEEKAI_API_KEY || "";
@@ -670,11 +690,11 @@ Return ONLY valid JSON matching this exact structure:
 
     let evaluation: any = null;
 
-    // Primary AI: Gemini 3.6 Flash
+    // Primary AI: Gemini 3.7 Flash
     try {
       const geminiText = await callGemini(`${systemPrompt}\n\n${userPrompt}`, {
         jsonMode: true,
-        model: "gemini-3.6-flash",
+        model: "gemini-3.7-flash",
         timeoutMs: 15000,
       });
       if (geminiText) {
