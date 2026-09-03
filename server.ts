@@ -55,6 +55,14 @@ const sanity = createClient({
   token: SANITY_API_TOKEN,
 });
 
+// DeepSeek Status & Balance In-Memory Cache
+let deepSeekBalanceCache = {
+  isAvailable: false,
+  connected: false,
+  balanceUSD: "0.00",
+  lastChecked: 0,
+};
+
 // Lazy Gemini client helper
 let aiClient: GoogleGenAI | null = null;
 function getGeminiClient(): GoogleGenAI | null {
@@ -75,8 +83,15 @@ function getGeminiClient(): GoogleGenAI | null {
   return aiClient;
 }
 
+const GEMINI_MODELS_CASCADE = [
+  "gemini-2.5-flash",
+  "gemini-2.5-pro",
+  "gemini-1.5-flash",
+  "gemini-3.7-flash",
+];
+
 /**
- * Robust Gemini Content Generation Helper using gemini-3.7-flash
+ * Robust Gemini Content Generation Helper with multi-model failover
  */
 async function callGemini(
   prompt: string,
@@ -92,54 +107,117 @@ async function callGemini(
     throw new Error("Gemini client is not initialized (missing API key)");
   }
 
-  const modelName = options.model || "gemini-3.7-flash";
+  const primaryModel = options.model || "gemini-2.5-flash";
+  const modelsToTry = [
+    primaryModel,
+    ...GEMINI_MODELS_CASCADE.filter((m) => m !== primaryModel),
+  ];
+
   const timeoutMs = options.timeoutMs || 15000;
+  let lastError: any = null;
 
-  const generatePromise = gemini.models.generateContent({
-    model: modelName,
-    contents: prompt,
-    config: {
-      ...(options.systemInstruction ? { systemInstruction: options.systemInstruction } : {}),
-      ...(options.jsonMode ? { responseMimeType: "application/json" } : {}),
-    },
-  });
+  for (const modelName of modelsToTry) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-  const timeoutPromise = new Promise<never>((_, reject) =>
-    setTimeout(() => reject(new Error(`Gemini request timed out after ${timeoutMs}ms`)), timeoutMs)
-  );
+      const generatePromise = gemini.models.generateContent({
+        model: modelName,
+        contents: prompt,
+        config: {
+          ...(options.systemInstruction ? { systemInstruction: options.systemInstruction } : {}),
+          ...(options.jsonMode ? { responseMimeType: "application/json" } : {}),
+        },
+      });
 
-  const response: any = await Promise.race([generatePromise, timeoutPromise]);
-  return response?.text || "";
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`Gemini timeout on ${modelName}`)), timeoutMs)
+      );
+
+      const response: any = await Promise.race([generatePromise, timeoutPromise]);
+      clearTimeout(timer);
+
+      if (response?.text) {
+        return response.text;
+      }
+    } catch (err: any) {
+      lastError = err;
+      const errMsg = err?.message || String(err);
+      // If error is high demand (503), rate limit (429), or unavailable, continue to next model
+      if (
+        errMsg.includes("503") ||
+        errMsg.includes("high demand") ||
+        errMsg.includes("UNAVAILABLE") ||
+        errMsg.includes("RESOURCE_EXHAUSTED") ||
+        errMsg.includes("429")
+      ) {
+        console.warn(`Gemini model ${modelName} high demand, trying next model in cascade...`);
+        continue;
+      }
+      // If it's another non-recoverable error and not last model, still try backup
+      console.warn(`Gemini model ${modelName} notice: ${errMsg}`);
+    }
+  }
+
+  throw lastError || new Error("All Gemini models failed");
 }
 
 /**
- * Multi-turn Gemini Chat helper
+ * Multi-turn Gemini Chat helper with resilient fallback
  */
 async function callGeminiChat(
   history: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }>,
   systemInstruction?: string,
-  modelName: string = "gemini-3.7-flash"
+  preferredModel: string = "gemini-2.5-flash"
 ): Promise<string> {
   const gemini = getGeminiClient();
   if (!gemini) {
     throw new Error("Gemini client is not configured");
   }
 
+  const modelsToTry = [
+    preferredModel,
+    ...GEMINI_MODELS_CASCADE.filter((m) => m !== preferredModel),
+  ];
+
   const timeoutMs = 15000;
-  const generatePromise = gemini.models.generateContent({
-    model: modelName,
-    contents: history,
-    config: {
-      ...(systemInstruction ? { systemInstruction } : {}),
-    },
-  });
+  let lastError: any = null;
 
-  const timeoutPromise = new Promise<never>((_, reject) =>
-    setTimeout(() => reject(new Error(`Gemini chat timed out after ${timeoutMs}ms`)), timeoutMs)
-  );
+  for (const modelName of modelsToTry) {
+    try {
+      const generatePromise = gemini.models.generateContent({
+        model: modelName,
+        contents: history,
+        config: {
+          ...(systemInstruction ? { systemInstruction } : {}),
+        },
+      });
 
-  const response: any = await Promise.race([generatePromise, timeoutPromise]);
-  return response?.text || "";
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`Gemini chat timeout on ${modelName}`)), timeoutMs)
+      );
+
+      const response: any = await Promise.race([generatePromise, timeoutPromise]);
+      if (response?.text) {
+        return response.text;
+      }
+    } catch (err: any) {
+      lastError = err;
+      const errMsg = err?.message || String(err);
+      if (
+        errMsg.includes("503") ||
+        errMsg.includes("high demand") ||
+        errMsg.includes("UNAVAILABLE") ||
+        errMsg.includes("RESOURCE_EXHAUSTED") ||
+        errMsg.includes("429")
+      ) {
+        console.warn(`Gemini Chat on ${modelName} high demand, trying next cascade model...`);
+        continue;
+      }
+    }
+  }
+
+  throw lastError || new Error("All Gemini Chat models in cascade failed");
 }
 
 /**
@@ -153,6 +231,17 @@ async function callDeepSeek(
   const apiKey = process.env.DEEPSEEK_API_KEY || DEEPSEEK_API_KEY;
   if (!apiKey) {
     throw new Error("DeepSeek API key is not configured");
+  }
+
+  // Check if balance was recently verified as 0 to avoid failing requests and slow latencies
+  if (
+    !deepSeekBalanceCache.isAvailable &&
+    Date.now() - deepSeekBalanceCache.lastChecked < 60000 &&
+    deepSeekBalanceCache.lastChecked > 0
+  ) {
+    throw new Error(
+      `DeepSeek account balance is 0.00 USD (Insufficient Balance - please top up on platform.deepseek.com)`
+    );
   }
 
   const model = options.model || DEEPSEEK_MODEL || "deepseek-chat";
@@ -195,6 +284,10 @@ async function callDeepSeek(
         const parsed = JSON.parse(errorBody);
         if (parsed.error?.message) {
           msg = `DeepSeek (${parsed.error.code || response.status}): ${parsed.error.message}`;
+          if (parsed.error.message.includes("Insufficient Balance")) {
+            deepSeekBalanceCache.isAvailable = false;
+            deepSeekBalanceCache.lastChecked = Date.now();
+          }
         }
       } catch {}
       throw new Error(msg);
@@ -205,6 +298,8 @@ async function callDeepSeek(
     if (!choice) {
       throw new Error("Invalid response structure from DeepSeek API");
     }
+    deepSeekBalanceCache.isAvailable = true;
+    deepSeekBalanceCache.lastChecked = Date.now();
     return choice;
   } catch (err: any) {
     clearTimeout(timer);
@@ -223,6 +318,7 @@ async function checkDeepSeekBalance(): Promise<{
 }> {
   const apiKey = process.env.DEEPSEEK_API_KEY || DEEPSEEK_API_KEY;
   if (!apiKey) {
+    deepSeekBalanceCache = { connected: false, isAvailable: false, balanceUSD: "0.00", lastChecked: Date.now() };
     return { connected: false, isAvailable: false, error: "No DeepSeek API key configured" };
   }
 
@@ -234,13 +330,21 @@ async function checkDeepSeekBalance(): Promise<{
     });
     if (!res.ok) {
       const txt = await res.text();
+      deepSeekBalanceCache = { connected: false, isAvailable: false, balanceUSD: "0.00", lastChecked: Date.now() };
       return { connected: false, isAvailable: false, error: `HTTP ${res.status}: ${txt}` };
     }
     const data = await res.json();
     const total = data.balance_infos?.[0]?.total_balance || "0.00";
+    const isAvail = (data.is_available ?? false) && parseFloat(total) > 0;
+    deepSeekBalanceCache = {
+      connected: true,
+      isAvailable: isAvail,
+      balanceUSD: total,
+      lastChecked: Date.now(),
+    };
     return {
       connected: true,
-      isAvailable: data.is_available ?? false,
+      isAvailable: isAvail,
       balanceUSD: total,
     };
   } catch (err: any) {
@@ -517,14 +621,14 @@ Evaluate this student text according to CEFR criteria.`;
   } catch (deepseekErr: any) {
     console.log("DeepSeek notice (trying Gemini 3.7):", deepseekErr.message);
 
-    // 2. Secondary AI Engine: Gemini 3.7 Flash
+    // 2. Secondary AI Engine: Gemini Multi-Model Cascade
     try {
       rawJsonText = await callGemini(
         `${systemPrompt}\n\n${userPrompt}`,
-        { jsonMode: true, model: "gemini-3.7-flash", timeoutMs: 15000 }
+        { jsonMode: true, timeoutMs: 15000 }
       );
     } catch (geminiErr: any) {
-      console.log("Gemini 3.7 notice (trying SeekAI):", geminiErr.message);
+      console.log("Gemini cascade notice (trying SeekAI):", geminiErr.message);
 
       // 3. Tertiary AI Engine: SeekAI
       try {
@@ -725,14 +829,12 @@ Key pedagogical rules:
         timeoutMs: 15000,
       });
     } catch (deepseekErr: any) {
-      console.log("DeepSeek chat notice (falling back to Gemini 3.7):", deepseekErr.message);
-
-      // 2. Secondary AI Engine: Gemini 3.7 Flash
+      // 2. Secondary AI Engine: Gemini Multi-Model Cascade
       try {
         reply = await callGeminiChat(
           geminiHistory,
           systemPrompt,
-          "gemini-3.7-flash"
+          "gemini-2.5-flash"
         );
       } catch (geminiErr: any) {
         console.log("Gemini chat notice, trying SeekAI:", geminiErr.message);
@@ -872,13 +974,10 @@ Return ONLY valid JSON matching this exact structure:
         evaluation = JSON.parse(clean);
       }
     } catch (deepseekErr: any) {
-      console.log("DeepSeek action notice (trying Gemini 3.7):", deepseekErr.message);
-
-      // 2. Secondary AI: Gemini 3.7 Flash
+      // 2. Secondary AI: Gemini Multi-Model Cascade
       try {
         const geminiText = await callGemini(`${systemPrompt}\n\n${userPrompt}`, {
           jsonMode: true,
-          model: "gemini-3.7-flash",
           timeoutMs: 15000,
         });
         if (geminiText) {
