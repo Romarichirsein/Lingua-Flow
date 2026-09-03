@@ -386,11 +386,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       placeholder={
-                        selectedRoleTab === "super_admin"
-                          ? "linguaflowadmin@gmail.com"
-                          : selectedRoleTab === "school_admin"
-                          ? "directeur@ecole.com"
-                          : "eleve@email.com"
+                        locale === "en"
+                          ? "name@example.com"
+                          : "nom@exemple.com"
                       }
                       required
                       className="w-full h-11 rounded-xl border border-slate-300 dark:border-white/10 bg-slate-50 dark:bg-white/5 pl-10 pr-3 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/30 outline-none transition focus:border-[#6D5DFC] focus:bg-white dark:focus:bg-white/10"

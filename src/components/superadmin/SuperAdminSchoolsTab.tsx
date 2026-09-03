@@ -987,7 +987,7 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
                 required
                 value={formData.managerName}
                 onChange={(e) => setFormData({ ...formData, managerName: e.target.value })}
-                placeholder="ex: Klaus Weber"
+                placeholder={isEn ? "ex: John Smith" : "ex: Jean Dupont"}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#00D9FF]"
               />
             </div>
@@ -1001,7 +1001,7 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
                 required
                 value={formData.managerEmail}
                 onChange={(e) => setFormData({ ...formData, managerEmail: e.target.value })}
-                placeholder="klaus@ecole.de"
+                placeholder="directeur@exemple.com"
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#00D9FF]"
               />
             </div>
@@ -1014,7 +1014,7 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
                 type="tel"
                 value={formData.managerPhone}
                 onChange={(e) => setFormData({ ...formData, managerPhone: e.target.value })}
-                placeholder="+49 151 2345678"
+                placeholder="+33 6 00 00 00 00"
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#00D9FF]"
               />
             </div>
@@ -1132,7 +1132,7 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
                     required
                     value={formData.username}
                     onChange={(e) => setFormData({ ...formData, username: e.target.value.toLowerCase().replace(/\s+/g, "_") })}
-                    placeholder="ex: klaus.weber ou ecole_berlin"
+                    placeholder={isEn ? "e.g. director_academy or school_main" : "ex: direction_ecole ou responsable"}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#6D5DFC]"
                   />
                 </div>
