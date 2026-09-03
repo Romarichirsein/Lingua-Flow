@@ -12,7 +12,7 @@ import {
 export const INITIAL_PLATFORM_CONFIG: GlobalPlatformConfig = {
   superAdminWhatsapp: "https://wa.me/33612345678",
   platformName: "LinguaFlow SaaS",
-  supportEmail: "support@linguaflow.io",
+  supportEmail: "linguaflowadmin@gmail.com",
   primaryBrandColor: "#6D5DFC",
   aiCorrectionStrictness: "standard",
   aiCorrectionTemperature: 0.3,

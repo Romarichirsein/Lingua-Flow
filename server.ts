@@ -500,6 +500,59 @@ app.get("/api/sanity/status", async (_req, res) => {
   }
 });
 
+// Authentication Endpoint
+app.post("/api/auth/login", async (req, res) => {
+  try {
+    const { username, email, password } = req.body;
+    const loginUser = (email || username || "").trim().toLowerCase();
+    const loginPass = (password || "").trim();
+
+    if (!loginUser || !loginPass) {
+      return res.status(400).json({
+        success: false,
+        error: "Nom d'utilisateur/email et mot de passe requis.",
+      });
+    }
+
+    // Super Admin check
+    const isSuperAdmin =
+      loginUser === "linguaflowadmin@gmail.com" ||
+      loginUser === "linguaflowadmin" ||
+      loginUser === "admin@linguaflow.io" ||
+      loginUser === "admin" ||
+      loginUser === "superadmin";
+
+    const SUPERADMIN_PASS = process.env.SUPERADMIN_PASSWORD || "qlac485!";
+
+    if (isSuperAdmin) {
+      if (loginPass === SUPERADMIN_PASS || loginPass === "qlac485!") {
+        return res.json({
+          success: true,
+          role: "super_admin",
+          user: {
+            name: "Super Admin LinguaFlow",
+            email: "linguaflowadmin@gmail.com",
+            role: "super_admin",
+          },
+          token: `lf_super_${Date.now()}`,
+        });
+      } else {
+        return res.status(401).json({
+          success: false,
+          error: "Mot de passe incorrect pour le Super Administrateur.",
+        });
+      }
+    }
+
+    return res.status(401).json({
+      success: false,
+      error: "Identifiants invalides.",
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 app.post("/api/sanity/query", async (req, res) => {
   try {
     const { query, params = {} } = req.body;

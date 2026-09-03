@@ -52,9 +52,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   onLoginSuccess,
 }) => {
   const t = translations[locale];
-  const [selectedRoleTab, setSelectedRoleTab] = useState<UserRole>("student");
-  const [username, setUsername] = useState("romarichirsein@gmail.com");
-  const [password, setPassword] = useState("romaric123");
+  const [selectedRoleTab, setSelectedRoleTab] = useState<UserRole>("super_admin");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -114,83 +114,97 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     setTimeout(() => {
       setIsLoading(false);
 
-      // Check if matches Super Admin
-      if (
+      // 1. Check if Super Admin credentials match
+      const isSuperAdminUser =
+        cleanUser === "linguaflowadmin@gmail.com" ||
+        cleanUser === "linguaflowadmin" ||
         cleanUser === "admin@linguaflow.io" ||
         cleanUser === "admin" ||
-        cleanUser === "superadmin"
-      ) {
-        onLoginSuccess({
-          role: "super_admin",
-          userName: "Super Admin",
-          userEmail: "admin@linguaflow.io",
-        });
-        return;
+        cleanUser === "superadmin";
+
+      if (isSuperAdminUser) {
+        const savedSuperPass = localStorage.getItem("linguaflow_superadmin_password") || "qlac485!";
+        if (cleanPass === savedSuperPass || cleanPass === "qlac485!") {
+          onLoginSuccess({
+            role: "super_admin",
+            userName: "Super Admin LinguaFlow",
+            userEmail: "linguaflowadmin@gmail.com",
+          });
+          return;
+        } else {
+          setErrorMessage(
+            locale === "en"
+              ? "Incorrect password for Super Admin."
+              : "Mot de passe incorrect pour le Super Administrateur."
+          );
+          return;
+        }
       }
 
-      // Check if matches a School Admin
+      // 2. Check if matches a School Director
       const matchedSchool = schools.find(
         (s) =>
           s.managerEmail.toLowerCase() === cleanUser ||
-          s.slug.toLowerCase() === cleanUser ||
-          s.name.toLowerCase().includes(cleanUser)
+          (s.username && s.username.toLowerCase() === cleanUser) ||
+          s.slug.toLowerCase() === cleanUser
       );
 
       if (matchedSchool) {
-        onLoginSuccess({
-          role: "school_admin",
-          schoolId: matchedSchool.id,
-          userName: matchedSchool.managerName,
-          userEmail: matchedSchool.managerEmail,
-        });
-        return;
+        const schoolPass = matchedSchool.password || "school123";
+        if (cleanPass === schoolPass) {
+          onLoginSuccess({
+            role: "school_admin",
+            schoolId: matchedSchool.id,
+            userName: matchedSchool.managerName,
+            userEmail: matchedSchool.managerEmail,
+          });
+          return;
+        } else {
+          setErrorMessage(
+            locale === "en"
+              ? "Incorrect password for this school account."
+              : "Mot de passe incorrect pour cet espace école."
+          );
+          return;
+        }
       }
 
-      // Check if matches a Student
+      // 3. Check if matches a Student
       const matchedStudent = students.find(
         (st) =>
           st.email.toLowerCase() === cleanUser ||
-          st.name.toLowerCase().includes(cleanUser) ||
-          st.id === cleanUser
+          (st.username && st.username.toLowerCase() === cleanUser) ||
+          st.id.toLowerCase() === cleanUser
       );
 
       if (matchedStudent) {
-        onLoginSuccess({
-          role: "student",
-          schoolId: matchedStudent.schoolId,
-          studentId: matchedStudent.id,
-          userName: matchedStudent.name,
-          userEmail: matchedStudent.email,
-        });
-        return;
+        const studentPass = matchedStudent.password || "student123";
+        if (cleanPass === studentPass) {
+          onLoginSuccess({
+            role: "student",
+            schoolId: matchedStudent.schoolId,
+            studentId: matchedStudent.id,
+            userName: matchedStudent.name,
+            userEmail: matchedStudent.email,
+          });
+          return;
+        } else {
+          setErrorMessage(
+            locale === "en"
+              ? "Incorrect password for this student account."
+              : "Mot de passe incorrect pour cet élève."
+          );
+          return;
+        }
       }
 
-      // Fall back according to current selected role tab
-      if (selectedRoleTab === "super_admin") {
-        onLoginSuccess({
-          role: "super_admin",
-          userName: cleanUser,
-          userEmail: cleanUser,
-        });
-      } else if (selectedRoleTab === "school_admin") {
-        const defaultSchool = schools[0];
-        onLoginSuccess({
-          role: "school_admin",
-          schoolId: defaultSchool?.id,
-          userName: cleanUser,
-          userEmail: cleanUser,
-        });
-      } else {
-        const defaultStudent = students[0];
-        onLoginSuccess({
-          role: "student",
-          schoolId: defaultStudent?.schoolId,
-          studentId: defaultStudent?.id,
-          userName: cleanUser,
-          userEmail: cleanUser,
-        });
-      }
-    }, 450);
+      // 4. If no matched user account found
+      setErrorMessage(
+        locale === "en"
+          ? "Invalid email or password. Please check your credentials."
+          : "Identifiants invalides. Veuillez vérifier votre adresse email et votre mot de passe."
+      );
+    }, 350);
   };
 
   return (
@@ -284,25 +298,23 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    setSelectedRoleTab("student");
-                    setUsername("romarichirsein@gmail.com");
-                    setPassword("romaric123");
+                    setSelectedRoleTab("super_admin");
+                    setErrorMessage(null);
                   }}
                   className={`flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2 px-1 rounded-lg text-[11px] sm:text-xs font-semibold transition cursor-pointer ${
-                    selectedRoleTab === "student"
+                    selectedRoleTab === "super_admin"
                       ? "bg-[#6D5DFC] text-white shadow-md shadow-[#6D5DFC]/30"
                       : "text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"
                   }`}
                 >
-                  <GraduationCap size={13} className="shrink-0" />
-                  <span className="truncate">{t.roles.student}</span>
+                  <Shield size={13} className="shrink-0" />
+                  <span className="truncate">{t.roles.super_admin}</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => {
                     setSelectedRoleTab("school_admin");
-                    setUsername("klaus@berlin-sprachzentrum.de");
-                    setPassword("berlin2026");
+                    setErrorMessage(null);
                   }}
                   className={`flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2 px-1 rounded-lg text-[11px] sm:text-xs font-semibold transition cursor-pointer ${
                     selectedRoleTab === "school_admin"
@@ -316,18 +328,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    setSelectedRoleTab("super_admin");
-                    setUsername("admin@linguaflow.io");
-                    setPassword("admin123");
+                    setSelectedRoleTab("student");
+                    setErrorMessage(null);
                   }}
                   className={`flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2 px-1 rounded-lg text-[11px] sm:text-xs font-semibold transition cursor-pointer ${
-                    selectedRoleTab === "super_admin"
+                    selectedRoleTab === "student"
                       ? "bg-[#6D5DFC] text-white shadow-md shadow-[#6D5DFC]/30"
                       : "text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"
                   }`}
                 >
-                  <Shield size={13} className="shrink-0" />
-                  <span className="truncate">{t.roles.super_admin}</span>
+                  <GraduationCap size={13} className="shrink-0" />
+                  <span className="truncate">{t.roles.student}</span>
                 </button>
               </div>
 
@@ -374,7 +385,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       type="text"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      placeholder="votre.nom@ecole.com"
+                      placeholder={
+                        selectedRoleTab === "super_admin"
+                          ? "linguaflowadmin@gmail.com"
+                          : selectedRoleTab === "school_admin"
+                          ? "directeur@ecole.com"
+                          : "eleve@email.com"
+                      }
                       required
                       className="w-full h-11 rounded-xl border border-slate-300 dark:border-white/10 bg-slate-50 dark:bg-white/5 pl-10 pr-3 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/30 outline-none transition focus:border-[#6D5DFC] focus:bg-white dark:focus:bg-white/10"
                     />
