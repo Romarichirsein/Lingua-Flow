@@ -28,34 +28,29 @@ import {
 
 interface HeaderProps {
   currentRole: UserRole;
-  onRoleChange: (role: UserRole) => void;
+  onRoleChange?: (role: UserRole) => void;
   locale: UILocale;
   onLocaleChange: (locale: UILocale) => void;
   theme: ThemeMode;
   onThemeChange: (theme: ThemeMode) => void;
   currentSchool?: School;
   currentStudent?: Student;
-  availableSchools: School[];
-  onSelectSchool: (schoolId: string) => void;
-  availableStudents: Student[];
-  onSelectStudent: (studentId: string) => void;
+  availableSchools?: School[];
+  onSelectSchool?: (schoolId: string) => void;
+  availableStudents?: Student[];
+  onSelectStudent?: (studentId: string) => void;
   currentUserName?: string;
   onLogout?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   currentRole,
-  onRoleChange,
   locale,
   onLocaleChange,
   theme,
   onThemeChange,
   currentSchool,
   currentStudent,
-  availableSchools,
-  onSelectSchool,
-  availableStudents,
-  onSelectStudent,
   currentUserName,
   onLogout,
 }) => {
@@ -112,11 +107,6 @@ export const Header: React.FC<HeaderProps> = ({
 
   const statusInfo = getEffectiveStatusInfo();
 
-  const handleRoleSelect = (role: UserRole) => {
-    onRoleChange(role);
-    setIsMobileMenuOpen(false);
-  };
-
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 backdrop-blur-xl dark:border-white/5 dark:bg-[#070A12]/95">
       <div className="mx-auto flex h-16 sm:h-20 max-w-7xl items-center justify-between px-3 sm:px-6 lg:px-8 gap-2">
@@ -156,100 +146,37 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
 
-        {/* DESKTOP Controls: Role Switcher, Tenant Selector, Language & Theme */}
+        {/* DESKTOP Controls: Language, Theme & User Profile */}
         <div className="hidden md:flex items-center gap-2 sm:gap-3 lg:gap-4">
-          {/* Active Tenant / Student Quick Switcher for Testing */}
-          {currentRole === "school_admin" && (
-            <div className="hidden lg:flex items-center gap-1.5 rounded-xl bg-slate-100 dark:bg-white/5 p-1 border border-slate-200 dark:border-white/10 text-xs">
-              <Building2 size={14} className="text-slate-400 dark:text-white/40 ml-1.5" />
-              <select
-                id="school-select-dropdown"
-                value={currentSchool?.id || ""}
-                onChange={(e) => onSelectSchool(e.target.value)}
-                className="bg-transparent font-medium text-slate-700 dark:text-white/80 outline-none pr-1 cursor-pointer"
-              >
-                {availableSchools.map((school) => (
-                  <option key={school.id} value={school.id} className="dark:bg-[#0D1220]">
-                    {school.name} ({school.language === "german" ? "DE" : "IT"})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {currentRole === "student" && (
-            <div className="hidden lg:flex items-center gap-1.5 rounded-xl bg-slate-100 dark:bg-white/5 p-1 border border-slate-200 dark:border-white/10 text-xs">
-              <GraduationCap size={14} className="text-slate-400 dark:text-white/40 ml-1.5" />
-              <select
-                id="student-select-dropdown"
-                value={currentStudent?.id || ""}
-                onChange={(e) => onSelectStudent(e.target.value)}
-                className="bg-transparent font-medium text-slate-700 dark:text-white/80 outline-none pr-1 cursor-pointer"
-              >
-                {availableStudents.map((st) => (
-                  <option key={st.id} value={st.id} className="dark:bg-[#0D1220]">
-                    {st.name} ({st.status === "expired" ? t.common.expired : t.common.active})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Role Switcher Pill */}
-          <div className="flex items-center rounded-xl bg-slate-100 p-1 dark:bg-white/5 border border-slate-200 dark:border-white/10">
-            <button
-              id="role-btn-superadmin"
-              type="button"
-              onClick={() => onRoleChange("super_admin")}
-              className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition cursor-pointer ${
-                currentRole === "super_admin"
-                  ? "bg-[#6D5DFC] text-white shadow-[0_0_15px_rgba(109,93,252,0.35)]"
-                  : "text-slate-600 hover:text-slate-900 dark:text-white/50 dark:hover:text-white"
-              }`}
-              title={t.roles.super_admin}
-            >
-              <Shield size={13} />
-              <span className="hidden lg:inline">{t.roles.super_admin}</span>
-            </button>
-            <button
-              id="role-btn-schooladmin"
-              type="button"
-              onClick={() => onRoleChange("school_admin")}
-              className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition cursor-pointer ${
-                currentRole === "school_admin"
-                  ? "bg-[#6D5DFC] text-white shadow-[0_0_15px_rgba(109,93,252,0.35)]"
-                  : "text-slate-600 hover:text-slate-900 dark:text-white/50 dark:hover:text-white"
-              }`}
-              title={t.roles.school_admin}
-            >
-              <Building2 size={13} />
-              <span className="hidden lg:inline">{t.roles.school_admin}</span>
-            </button>
-            <button
-              id="role-btn-student"
-              type="button"
-              onClick={() => onRoleChange("student")}
-              className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition cursor-pointer ${
-                currentRole === "student"
-                  ? "bg-[#6D5DFC] text-white shadow-[0_0_15px_rgba(109,93,252,0.35)]"
-                  : "text-slate-600 hover:text-slate-900 dark:text-white/50 dark:hover:text-white"
-              }`}
-              title={t.roles.student}
-            >
-              <GraduationCap size={13} />
-              <span className="hidden lg:inline">{t.roles.student}</span>
-            </button>
+          {/* Active Space / Role Badge */}
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#6D5DFC]/10 border border-[#6D5DFC]/20 text-xs font-semibold text-[#6D5DFC] dark:text-[#a399ff]">
+            {currentRole === "super_admin" ? (
+              <>
+                <Shield size={14} className="text-[#6D5DFC] dark:text-[#a399ff]" />
+                <span>{t.roles.super_admin}</span>
+              </>
+            ) : currentRole === "school_admin" ? (
+              <>
+                <Building2 size={14} className="text-[#6D5DFC] dark:text-[#a399ff]" />
+                <span className="max-w-[150px] truncate">{currentSchool?.name || t.roles.school_admin}</span>
+              </>
+            ) : (
+              <>
+                <GraduationCap size={14} className="text-[#6D5DFC] dark:text-[#a399ff]" />
+                <span className="max-w-[150px] truncate">{currentStudent?.name || t.roles.student}</span>
+              </>
+            )}
           </div>
 
           {/* User Profile & Logout Button */}
           {onLogout && (
             <div className="flex items-center gap-2 border-l border-slate-200 dark:border-white/10 pl-2 sm:pl-3">
-              <div className="hidden xl:flex items-center gap-2 px-2 py-1 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5 text-xs">
+              <div className="hidden xl:flex items-center gap-2 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5 text-xs">
                 <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#6D5DFC] text-white text-[10px] font-bold">
                   {currentUserName ? currentUserName.charAt(0).toUpperCase() : <User size={12} />}
                 </div>
                 <div className="text-left">
-                  <p className="font-semibold text-slate-800 dark:text-white max-w-[120px] truncate leading-tight">
+                  <p className="font-semibold text-slate-800 dark:text-white max-w-[140px] truncate leading-tight">
                     {currentUserName ||
                       (currentRole === "super_admin"
                         ? t.roles.super_admin
@@ -370,107 +297,6 @@ export const Header: React.FC<HeaderProps> = ({
                     </span>
                   )}
                 </div>
-
-                {/* Role Switcher Grid */}
-                <div className="space-y-1.5">
-                  <p className="text-[11px] font-bold text-slate-500 dark:text-white/40 uppercase tracking-wider px-1">
-                    {locale === "en" ? "Switch Workspace / Role" : "Espace & Profils"}
-                  </p>
-
-                  <div className="grid grid-cols-3 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleRoleSelect("super_admin")}
-                      className={`flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-xl border text-xs font-semibold transition cursor-pointer ${
-                        currentRole === "super_admin"
-                          ? "bg-[#6D5DFC] text-white border-[#6D5DFC] shadow-md shadow-[#6D5DFC]/20"
-                          : "bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-700 dark:text-white/70 hover:bg-slate-100"
-                      }`}
-                    >
-                      <Shield size={16} />
-                      <span className="text-[11px]">{t.roles.super_admin}</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleRoleSelect("school_admin")}
-                      className={`flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-xl border text-xs font-semibold transition cursor-pointer ${
-                        currentRole === "school_admin"
-                          ? "bg-[#6D5DFC] text-white border-[#6D5DFC] shadow-md shadow-[#6D5DFC]/20"
-                          : "bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-700 dark:text-white/70 hover:bg-slate-100"
-                      }`}
-                    >
-                      <Building2 size={16} />
-                      <span className="text-[11px]">{t.roles.school_admin}</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleRoleSelect("student")}
-                      className={`flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-xl border text-xs font-semibold transition cursor-pointer ${
-                        currentRole === "student"
-                          ? "bg-[#6D5DFC] text-white border-[#6D5DFC] shadow-md shadow-[#6D5DFC]/20"
-                          : "bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-700 dark:text-white/70 hover:bg-slate-100"
-                      }`}
-                    >
-                      <GraduationCap size={16} />
-                      <span className="text-[11px]">{t.roles.student}</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Tenant / Student Switchers for testing */}
-                {currentRole === "school_admin" && (
-                  <div className="space-y-1 rounded-2xl bg-slate-50 dark:bg-white/5 p-3 border border-slate-200/70 dark:border-white/10">
-                    <label
-                      htmlFor="mobile-school-select"
-                      className="text-[10px] font-bold uppercase text-slate-400 block mb-1"
-                    >
-                      {locale === "en" ? "Select School" : "Établissement Actif"}
-                    </label>
-                    <select
-                      id="mobile-school-select"
-                      value={currentSchool?.id || ""}
-                      onChange={(e) => {
-                        onSelectSchool(e.target.value);
-                        setIsMobileMenuOpen(false);
-                      }}
-                      className="w-full bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 rounded-xl p-2 text-xs font-medium text-slate-800 dark:text-white outline-none"
-                    >
-                      {availableSchools.map((school) => (
-                        <option key={school.id} value={school.id}>
-                          {school.name} ({school.language === "german" ? "Allemand" : "Italien"})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {currentRole === "student" && (
-                  <div className="space-y-1 rounded-2xl bg-slate-50 dark:bg-white/5 p-3 border border-slate-200/70 dark:border-white/10">
-                    <label
-                      htmlFor="mobile-student-select"
-                      className="text-[10px] font-bold uppercase text-slate-400 block mb-1"
-                    >
-                      {locale === "en" ? "Select Student" : "Apprenant Actif"}
-                    </label>
-                    <select
-                      id="mobile-student-select"
-                      value={currentStudent?.id || ""}
-                      onChange={(e) => {
-                        onSelectStudent(e.target.value);
-                        setIsMobileMenuOpen(false);
-                      }}
-                      className="w-full bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 rounded-xl p-2 text-xs font-medium text-slate-800 dark:text-white outline-none"
-                    >
-                      {availableStudents.map((st) => (
-                        <option key={st.id} value={st.id}>
-                          {st.name} ({st.status === "expired" ? t.common.expired : t.common.active})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
 
                 {/* Language Switcher Section */}
                 <div className="space-y-1.5">
