@@ -28,7 +28,13 @@ app.use((req, res, next) => {
   next();
 });
 
-// SeekAI / OpenAI-Compatible Configuration
+// DeepSeek Official API Configuration (https://platform.deepseek.com)
+const DEEPSEEK_BASE_URL = process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com/v1";
+const DEEPSEEK_API_KEY =
+  process.env.DEEPSEEK_API_KEY || "sk-bb202eba45684a749396860b30073831";
+const DEEPSEEK_MODEL = process.env.DEEPSEEK_MODEL || "deepseek-chat";
+
+// SeekAI / OpenAI-Compatible Proxy Configuration
 const SEEKAI_BASE_URL = process.env.SEEKAI_BASE_URL || "https://seekai.cc/v1";
 const SEEKAI_API_KEY = process.env.SEEKAI_API_KEY || "";
 const SEEKAI_DEFAULT_MODEL = process.env.SEEKAI_MODEL || "deepseek-v4-flash";
@@ -137,6 +143,112 @@ async function callGeminiChat(
 }
 
 /**
+ * Official DeepSeek API Caller (https://api.deepseek.com)
+ * Supports deepseek-chat (DeepSeek V3) and deepseek-reasoner (DeepSeek R1)
+ */
+async function callDeepSeek(
+  messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
+  options: { model?: string; jsonMode?: boolean; temperature?: number; timeoutMs?: number } = {}
+): Promise<string> {
+  const apiKey = process.env.DEEPSEEK_API_KEY || DEEPSEEK_API_KEY;
+  if (!apiKey) {
+    throw new Error("DeepSeek API key is not configured");
+  }
+
+  const model = options.model || DEEPSEEK_MODEL || "deepseek-chat";
+  const rawBase = (process.env.DEEPSEEK_BASE_URL || DEEPSEEK_BASE_URL).replace(/\/$/, "");
+  const endpoint = rawBase.endsWith("/v1")
+    ? `${rawBase}/chat/completions`
+    : `${rawBase}/v1/chat/completions`;
+
+  const payload: any = {
+    model,
+    messages,
+    temperature: options.temperature ?? 0.7,
+  };
+
+  if (options.jsonMode) {
+    payload.response_format = { type: "json_object" };
+  }
+
+  const timeoutMs = options.timeoutMs ?? 15000;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timer);
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      let msg = `DeepSeek HTTP ${response.status}: ${errorBody}`;
+      try {
+        const parsed = JSON.parse(errorBody);
+        if (parsed.error?.message) {
+          msg = `DeepSeek (${parsed.error.code || response.status}): ${parsed.error.message}`;
+        }
+      } catch {}
+      throw new Error(msg);
+    }
+
+    const data = await response.json();
+    const choice = data.choices?.[0]?.message?.content;
+    if (!choice) {
+      throw new Error("Invalid response structure from DeepSeek API");
+    }
+    return choice;
+  } catch (err: any) {
+    clearTimeout(timer);
+    throw err;
+  }
+}
+
+/**
+ * Check DeepSeek Account Balance and Connectivity
+ */
+async function checkDeepSeekBalance(): Promise<{
+  connected: boolean;
+  isAvailable: boolean;
+  balanceUSD?: string;
+  error?: string;
+}> {
+  const apiKey = process.env.DEEPSEEK_API_KEY || DEEPSEEK_API_KEY;
+  if (!apiKey) {
+    return { connected: false, isAvailable: false, error: "No DeepSeek API key configured" };
+  }
+
+  try {
+    const res = await fetch("https://api.deepseek.com/user/balance", {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+    });
+    if (!res.ok) {
+      const txt = await res.text();
+      return { connected: false, isAvailable: false, error: `HTTP ${res.status}: ${txt}` };
+    }
+    const data = await res.json();
+    const total = data.balance_infos?.[0]?.total_balance || "0.00";
+    return {
+      connected: true,
+      isAvailable: data.is_available ?? false,
+      balanceUSD: total,
+    };
+  } catch (err: any) {
+    return { connected: false, isAvailable: false, error: err.message };
+  }
+}
+
+/**
  * Universal AI Caller:
  * Calls SeekAI (OpenAI-compatible) endpoint with requested model
  */
@@ -207,17 +319,30 @@ app.get("/api/health", async (_req, res) => {
     sanityHealthy = false;
   }
 
+  const deepseekStatus = await checkDeepSeekBalance();
+
   res.json({
     status: "ok",
     app: "LinguaFlow SaaS B2B",
     aiEngine: {
+      deepseek: {
+        configured: !!(process.env.DEEPSEEK_API_KEY || DEEPSEEK_API_KEY),
+        endpoint: DEEPSEEK_BASE_URL,
+        model: DEEPSEEK_MODEL,
+        connected: deepseekStatus.connected,
+        isAvailable: deepseekStatus.isAvailable,
+        balanceUSD: deepseekStatus.balanceUSD || "0.00",
+        note: !deepseekStatus.isAvailable ? "DeepSeek key valid but balance is 0.00 USD - auto-fallback to Gemini active" : "DeepSeek active",
+      },
+      gemini: {
+        configured: !!process.env.GEMINI_API_KEY,
+        model: "gemini-3.7-flash",
+      },
       seekAI: {
         configured: !!SEEKAI_API_KEY,
         endpoint: SEEKAI_BASE_URL,
-        supportedModels: ["gemini-3-1-pro", "gpt-5-4", "deepseek-v4-flash", "claude-sonnet-5", "grok-4-5"],
         defaultModel: SEEKAI_DEFAULT_MODEL,
       },
-      gemini: { configured: !!process.env.GEMINI_API_KEY },
     },
     sanity: {
       configured: !!SANITY_PROJECT_ID && !!SANITY_API_TOKEN,
@@ -228,6 +353,16 @@ app.get("/api/health", async (_req, res) => {
       documentCount: sanityDocCount,
     },
     timestamp: new Date().toISOString(),
+  });
+});
+
+app.get("/api/ai/deepseek/status", async (_req, res) => {
+  const status = await checkDeepSeekBalance();
+  res.json({
+    engine: "DeepSeek Official (api.deepseek.com)",
+    ...status,
+    model: DEEPSEEK_MODEL,
+    endpoint: DEEPSEEK_BASE_URL,
   });
 });
 
@@ -370,26 +505,39 @@ Evaluate this student text according to CEFR criteria.`;
 
   let rawJsonText = "";
 
-  // 1. Primary AI Engine: Call Gemini 3.6 Flash with JSON Mode
+  // 1. Primary AI Engine: Try Official DeepSeek API (deepseek-chat)
   try {
-    rawJsonText = await callGemini(
-      `${systemPrompt}\n\n${userPrompt}`,
-      { jsonMode: true, model: "gemini-3.6-flash", timeoutMs: 15000 }
+    rawJsonText = await callDeepSeek(
+      [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      { model: DEEPSEEK_MODEL, jsonMode: true, timeoutMs: 15000 }
     );
-  } catch (geminiErr: any) {
-    console.log("Primary Gemini notice, attempting fallback:", geminiErr.message);
+  } catch (deepseekErr: any) {
+    console.log("DeepSeek notice (trying Gemini 3.7):", deepseekErr.message);
 
-    // 2. Try SeekAI as secondary if Gemini fails
+    // 2. Secondary AI Engine: Gemini 3.7 Flash
     try {
-      rawJsonText = await callOpenAICompatible(
-        [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        { model: preferredModel, jsonMode: true, timeoutMs: 6000 }
+      rawJsonText = await callGemini(
+        `${systemPrompt}\n\n${userPrompt}`,
+        { jsonMode: true, model: "gemini-3.7-flash", timeoutMs: 15000 }
       );
-    } catch (seekErr: any) {
-      console.log("Secondary SeekAI notice:", seekErr.message);
+    } catch (geminiErr: any) {
+      console.log("Gemini 3.7 notice (trying SeekAI):", geminiErr.message);
+
+      // 3. Tertiary AI Engine: SeekAI
+      try {
+        rawJsonText = await callOpenAICompatible(
+          [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          { model: preferredModel, jsonMode: true, timeoutMs: 6000 }
+        );
+      } catch (seekErr: any) {
+        console.log("SeekAI notice:", seekErr.message);
+      }
     }
   }
 
@@ -560,33 +708,53 @@ Key pedagogical rules:
 
     let reply = "";
 
-    // 1. Primary AI Engine: Gemini
+    // 1. Primary AI Engine: DeepSeek (deepseek-chat or deepseek-reasoner)
     try {
-      reply = await callGeminiChat(
-        geminiHistory,
-        systemPrompt,
-        thinkingMode ? "gemini-3.6-flash" : "gemini-3.6-flash"
-      );
-    } catch (geminiErr: any) {
-      console.log("Primary Gemini chat notice, trying SeekAI:", geminiErr.message);
+      const deepseekMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+        { role: "system", content: systemPrompt },
+        ...geminiHistory.map((g) => ({
+          role: g.role === "model" ? ("assistant" as const) : ("user" as const),
+          content: g.parts[0]?.text || "",
+        })),
+      ];
 
-      // 2. Secondary AI Engine: SeekAI
+      const modelToUse = thinkingMode || useDeepThinking ? "deepseek-reasoner" : DEEPSEEK_MODEL;
+      reply = await callDeepSeek(deepseekMessages, {
+        model: modelToUse,
+        temperature: 0.7,
+        timeoutMs: 15000,
+      });
+    } catch (deepseekErr: any) {
+      console.log("DeepSeek chat notice (falling back to Gemini 3.7):", deepseekErr.message);
+
+      // 2. Secondary AI Engine: Gemini 3.7 Flash
       try {
-        const openAIMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
-          { role: "system", content: systemPrompt },
-          ...geminiHistory.map((g) => ({
-            role: g.role === "model" ? ("assistant" as const) : ("user" as const),
-            content: g.parts[0]?.text || "",
-          })),
-        ];
+        reply = await callGeminiChat(
+          geminiHistory,
+          systemPrompt,
+          "gemini-3.7-flash"
+        );
+      } catch (geminiErr: any) {
+        console.log("Gemini chat notice, trying SeekAI:", geminiErr.message);
 
-        reply = await callOpenAICompatible(openAIMessages, {
-          model,
-          temperature: 0.7,
-          timeoutMs: 6000,
-        });
-      } catch (seekErr: any) {
-        console.log("SeekAI chat notice:", seekErr.message);
+        // 3. Tertiary AI Engine: SeekAI
+        try {
+          const openAIMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+            { role: "system", content: systemPrompt },
+            ...geminiHistory.map((g) => ({
+              role: g.role === "model" ? ("assistant" as const) : ("user" as const),
+              content: g.parts[0]?.text || "",
+            })),
+          ];
+
+          reply = await callOpenAICompatible(openAIMessages, {
+            model,
+            temperature: 0.7,
+            timeoutMs: 6000,
+          });
+        } catch (seekErr: any) {
+          console.log("SeekAI chat notice:", seekErr.message);
+        }
       }
     }
 
@@ -690,35 +858,52 @@ Return ONLY valid JSON matching this exact structure:
 
     let evaluation: any = null;
 
-    // Primary AI: Gemini 3.7 Flash
+    // 1. Primary AI: DeepSeek Official (deepseek-chat)
     try {
-      const geminiText = await callGemini(`${systemPrompt}\n\n${userPrompt}`, {
-        jsonMode: true,
-        model: "gemini-3.7-flash",
-        timeoutMs: 15000,
-      });
-      if (geminiText) {
-        const clean = geminiText.replace(/```json/gi, "").replace(/```/g, "").trim();
+      const deepseekJson = await callDeepSeek(
+        [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        { model: DEEPSEEK_MODEL, jsonMode: true, temperature: 0.2, timeoutMs: 15000 }
+      );
+      if (deepseekJson) {
+        const clean = deepseekJson.replace(/```json/gi, "").replace(/```/g, "").trim();
         evaluation = JSON.parse(clean);
       }
-    } catch (geminiErr: any) {
-      console.log("Primary Gemini action notice, trying SeekAI:", geminiErr.message);
+    } catch (deepseekErr: any) {
+      console.log("DeepSeek action notice (trying Gemini 3.7):", deepseekErr.message);
 
-      // Secondary AI: SeekAI
+      // 2. Secondary AI: Gemini 3.7 Flash
       try {
-        const seekResponse = await callSeekAI(
-          [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-          { model, jsonMode: true, temperature: 0.2, timeoutMs: 6000 }
-        );
-        if (seekResponse) {
-          const clean = seekResponse.replace(/```json/gi, "").replace(/```/g, "").trim();
+        const geminiText = await callGemini(`${systemPrompt}\n\n${userPrompt}`, {
+          jsonMode: true,
+          model: "gemini-3.7-flash",
+          timeoutMs: 15000,
+        });
+        if (geminiText) {
+          const clean = geminiText.replace(/```json/gi, "").replace(/```/g, "").trim();
           evaluation = JSON.parse(clean);
         }
-      } catch (seekErr: any) {
-        console.log("SeekAI action notice:", seekErr.message);
+      } catch (geminiErr: any) {
+        console.log("Gemini action notice (trying SeekAI):", geminiErr.message);
+
+        // 3. Tertiary AI: SeekAI
+        try {
+          const seekResponse = await callSeekAI(
+            [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userPrompt },
+            ],
+            { model, jsonMode: true, temperature: 0.2, timeoutMs: 6000 }
+          );
+          if (seekResponse) {
+            const clean = seekResponse.replace(/```json/gi, "").replace(/```/g, "").trim();
+            evaluation = JSON.parse(clean);
+          }
+        } catch (seekErr: any) {
+          console.log("SeekAI action notice:", seekErr.message);
+        }
       }
     }
 
