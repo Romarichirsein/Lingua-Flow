@@ -8,7 +8,7 @@ export type ThemeMode = "light" | "dark" | "system";
 
 export type EntityStatus = "active" | "suspended" | "blocked" | "expired" | "archived" | "deleted";
 
-export type CEFRLevel = "A1" | "A2" | "B1" | "B2" | "C1";
+export type CEFRLevel = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
 
 export interface UserPreferences {
   locale: UILocale;

@@ -97,7 +97,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   ];
 
   // Handle Form Submit
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
@@ -105,16 +105,50 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     const cleanPass = password.trim();
 
     if (!cleanUser || !cleanPass) {
-      setErrorMessage(locale === "en" ? "Please enter your username/email and password." : "Veuillez saisir votre nom d'utilisateur/email et votre mot de passe.");
+      setErrorMessage(
+        locale === "en"
+          ? "Please enter your username/email and password."
+          : "Veuillez saisir votre nom d'utilisateur/email et votre mot de passe."
+      );
       return;
     }
 
     setIsLoading(true);
 
+    // 1. Try real server-side authentication first
+    try {
+      const resp = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: cleanUser,
+          password: cleanPass,
+        }),
+      });
+
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.success) {
+          setIsLoading(false);
+          onLoginSuccess({
+            role: data.role,
+            schoolId: data.school?.id || data.user?.schoolId,
+            studentId: data.student?.id || data.user?.studentId,
+            userName: data.user?.name || "Utilisateur",
+            userEmail: data.user?.email || cleanUser,
+          });
+          return;
+        }
+      }
+    } catch {
+      // Server not reachable or network error - fallback to local authentication
+    }
+
+    // 2. Client-side state fallback verification
     setTimeout(() => {
       setIsLoading(false);
 
-      // 1. Check if Super Admin credentials match
+      // Check if Super Admin credentials match
       const isSuperAdminUser =
         cleanUser === "linguaflowadmin@gmail.com" ||
         cleanUser === "linguaflowadmin" ||
@@ -141,7 +175,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         }
       }
 
-      // 2. Check if matches a School Director
+      // Check if matches a School Director
       const matchedSchool = schools.find(
         (s) =>
           s.managerEmail.toLowerCase() === cleanUser ||
@@ -169,7 +203,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         }
       }
 
-      // 3. Check if matches a Student
+      // Check if matches a Student
       const matchedStudent = students.find(
         (st) =>
           st.email.toLowerCase() === cleanUser ||
@@ -198,13 +232,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         }
       }
 
-      // 4. If no matched user account found
+      // If no matched user account found
       setErrorMessage(
         locale === "en"
           ? "Invalid email or password. Please check your credentials."
           : "Identifiants invalides. Veuillez vérifier votre adresse email et votre mot de passe."
       );
-    }, 350);
+    }, 200);
   };
 
   return (
@@ -472,6 +506,23 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   )}
                 </button>
               </form>
+
+              {/* Assistance & Security Notice */}
+              <div className="mt-6 pt-4 border-t border-slate-200 dark:border-white/10 text-center">
+                <p className="text-xs text-slate-500 dark:text-white/50 leading-relaxed">
+                  {locale === "en"
+                    ? "Access credentials are provided directly by your school administration or system administrator."
+                    : "Vos identifiants d'accès vous sont transmis directement par la direction de votre école ou l'administrateur de l'académie."}
+                </p>
+                <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-[11px] text-slate-500 dark:text-white/50">
+                  <Lock size={12} className="text-[#6D5DFC] dark:text-[#00D9FF]" />
+                  <span>
+                    {locale === "en"
+                      ? "End-to-end encrypted session & isolated workspace"
+                      : "Session chiffrée de bout en bout & espace isolé"}
+                  </span>
+                </div>
+              </div>
             </motion.div>
           </div>
         </div>

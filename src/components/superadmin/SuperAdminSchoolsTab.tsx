@@ -689,6 +689,17 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
                       {/* Actions */}
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          {onSelectSchoolTab && (
+                            <button
+                              type="button"
+                              onClick={() => onSelectSchoolTab(school.id)}
+                              className="p-2 rounded-xl text-slate-500 hover:text-[#6D5DFC] hover:bg-[#6D5DFC]/10 transition cursor-pointer"
+                              title={isEn ? "Open school portal" : "Accéder directement à l'espace école"}
+                            >
+                              <ExternalLink size={15} />
+                            </button>
+                          )}
+
                           <button
                             type="button"
                             onClick={() => setCredentialsSchool(school)}
@@ -838,7 +849,18 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
                 </div>
 
                 {/* Mobile Action Buttons (min 44px touch targets) */}
-                <div className="grid grid-cols-5 gap-1.5 pt-1">
+                <div className="grid grid-cols-6 gap-1.5 pt-1">
+                  {onSelectSchoolTab && (
+                    <button
+                      type="button"
+                      onClick={() => onSelectSchoolTab(school.id)}
+                      className="flex items-center justify-center p-2.5 rounded-xl bg-[#6D5DFC]/10 hover:bg-[#6D5DFC]/20 text-[#6D5DFC] dark:text-[#a399ff] text-xs font-bold transition min-h-[44px] cursor-pointer"
+                      title={isEn ? "Open portal" : "Accéder"}
+                    >
+                      <ExternalLink size={16} />
+                    </button>
+                  )}
+
                   <button
                     type="button"
                     onClick={() => setCredentialsSchool(school)}
@@ -951,7 +973,7 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="ex: Berlin Sprachzentrum"
+                placeholder="ex: Académie des Langues"
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#00D9FF]"
               />
             </div>

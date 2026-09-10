@@ -64,6 +64,13 @@ export const AIWritingAssistant: React.FC<AIWritingAssistantProps> = ({
 
   // Selected level & topics
   const [level, setLevel] = useState<CEFRLevel>(student.level || "A1");
+
+  useEffect(() => {
+    if (student.level) {
+      setLevel(student.level);
+    }
+  }, [student.level, student.id]);
+
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedPromptIndex, setSelectedPromptIndex] = useState<number>(0);
   const [customPrompt, setCustomPrompt] = useState<string>("");

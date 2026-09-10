@@ -16,6 +16,7 @@ import {
   Copy,
   Check,
   MessageCircle,
+  FileCheck,
 } from "lucide-react";
 import { SidebarTabs, TabDefinition } from "../common/SidebarTabs";
 
@@ -95,10 +96,10 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({
     },
     {
       id: "evaluations",
-      label: t.student.tabs.evaluations.label,
-      shortLabel: locale === "en" ? "Quizzes" : "Quiz",
+      label: "Prüfung",
+      shortLabel: "Prüfung",
       description: t.student.tabs.evaluations.desc,
-      icon: <HelpCircle size={18} />,
+      icon: <FileCheck size={18} />,
     },
     {
       id: "progress",

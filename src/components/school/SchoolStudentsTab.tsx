@@ -628,6 +628,17 @@ export const SchoolStudentsTab: React.FC<SchoolStudentsTabProps> = ({
                       onClick={(e) => e.stopPropagation()}
                     >
                       <div className="flex items-center justify-end gap-1.5">
+                        {onSelectStudentTab && (
+                          <button
+                            type="button"
+                            onClick={() => onSelectStudentTab(student.id)}
+                            className="p-2 rounded-lg text-slate-400 hover:text-[#6D5DFC] hover:bg-[#6D5DFC]/10 transition"
+                            title="Ouvrir l'espace d'apprentissage de l'élève"
+                          >
+                            <ExternalLink size={14} />
+                          </button>
+                        )}
+
                         <button
                           type="button"
                           onClick={() => {

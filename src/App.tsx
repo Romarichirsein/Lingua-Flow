@@ -76,10 +76,10 @@ export default function App() {
 
   // Selected School & Student for testing isolation
   const [selectedSchoolId, setSelectedSchoolId] = useState<string>(
-    data.schools[0]?.id || "school-berlin"
+    data.schools[0]?.id || ""
   );
   const [selectedStudentId, setSelectedStudentId] = useState<string>(
-    data.students[0]?.id || "stu-romaric"
+    data.students[0]?.id || ""
   );
 
   // Active subpath for tabs
@@ -169,6 +169,22 @@ export default function App() {
       window.removeEventListener("popstate", handleRouteChange);
     };
   }, [handleRouteChange]);
+
+  // Synchronize registered schools and students with backend server
+  useEffect(() => {
+    if (data.schools && data.students) {
+      fetch("/api/users/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          schools: data.schools,
+          students: data.students,
+        }),
+      }).catch((err) => {
+        console.debug("Backend user sync notice:", err.message);
+      });
+    }
+  }, [data.schools, data.students]);
 
   // Persistent save helper
   const updateData = (partial: Partial<typeof data>) => {
@@ -392,80 +408,140 @@ export default function App() {
                 </motion.div>
               )}
 
-              {role === "school_admin" && currentSchool && (
-                <motion.div
-                  key={`school-admin-view-${currentSchool.id}`}
-                  variants={pageTransition}
-                  initial="hidden"
-                  animate="visible"
-                  exit="exit"
-                >
-                  <SchoolDashboard
-                    locale={locale}
-                    school={currentSchool}
-                    students={data.students}
-                    programs={data.programs}
-                    auditLogs={data.logs}
-                    submissions={data.aiSubmissions || []}
-                    announcements={data.announcements || []}
-                    activeSubpath={currentRoute.subpath || "dashboard"}
-                    config={data.config}
-                    onUpdateStudents={(students) => updateData({ students })}
-                    onUpdatePrograms={(programs) => updateData({ programs })}
-                    onUpdateSchool={(updatedSchool) =>
-                      updateData({
-                        schools: data.schools.map((s) =>
-                          s.id === updatedSchool.id ? updatedSchool : s
-                        ),
-                      })
-                    }
-                    onAddLog={handleAddLog}
-                    onSelectStudentTab={(studentId) => {
-                      setSelectedStudentId(studentId);
-                      setRole("student");
-                    }}
-                  />
-                </motion.div>
+              {role === "school_admin" && (
+                currentSchool ? (
+                  <motion.div
+                    key={`school-admin-view-${currentSchool.id}`}
+                    variants={pageTransition}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                  >
+                    <SchoolDashboard
+                      locale={locale}
+                      school={currentSchool}
+                      students={data.students}
+                      programs={data.programs}
+                      auditLogs={data.logs}
+                      submissions={data.aiSubmissions || []}
+                      announcements={data.announcements || []}
+                      activeSubpath={currentRoute.subpath || "dashboard"}
+                      config={data.config}
+                      onUpdateStudents={(students) => updateData({ students })}
+                      onUpdatePrograms={(programs) => updateData({ programs })}
+                      onUpdateSchool={(updatedSchool) =>
+                        updateData({
+                          schools: data.schools.map((s) =>
+                            s.id === updatedSchool.id ? updatedSchool : s
+                          ),
+                        })
+                      }
+                      onAddLog={handleAddLog}
+                      onSelectStudentTab={(studentId) => {
+                        setSelectedStudentId(studentId);
+                        setRole("student");
+                      }}
+                    />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="no-school-view"
+                    variants={pageTransition}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                    className="max-w-xl mx-auto my-16 p-8 rounded-3xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 text-center space-y-4 shadow-sm"
+                  >
+                    <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 text-[#6D5DFC] flex items-center justify-center mx-auto text-2xl">
+                      🏫
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                      {locale === "en" ? "No School Configured" : "Aucune École Configurée"}
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-white/60 leading-relaxed">
+                      {locale === "en"
+                        ? "No partner school is currently registered. Create a school from the Super Admin dashboard to get started."
+                        : "Aucune école partenaire n'est actuellement enregistrée. Veuillez créer une école depuis le tableau de bord Super Admin pour commencer."}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => handleRoleChange("super_admin")}
+                      className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#6D5DFC] to-[#00D9FF] text-white text-xs font-bold shadow-md hover:opacity-95 transition cursor-pointer"
+                    >
+                      {locale === "en" ? "Go to Super Admin" : "Accéder au Super Admin"}
+                    </button>
+                  </motion.div>
+                )
               )}
 
-              {role === "student" && currentStudent && currentSchool && (
-                <motion.div
-                  key={`student-view-${currentStudent.id}`}
-                  variants={pageTransition}
-                  initial="hidden"
-                  animate="visible"
-                  exit="exit"
-                >
-                  <StudentPortal
-                    locale={locale}
-                    theme={theme}
-                    onUpdateTheme={handleThemeChange}
-                    student={currentStudent}
-                    school={currentSchool}
-                    programs={data.programs}
-                    submissions={data.aiSubmissions || []}
-                    announcements={data.announcements || []}
-                    activeSubpath={currentRoute.subpath || "dashboard"}
-                    onUpdateStudent={(updatedStudent) =>
-                      updateData({
-                        students: data.students.map((s) =>
-                          s.id === updatedStudent.id ? updatedStudent : s
-                        ),
-                      })
-                    }
-                    onSaveSubmission={(newSub) => {
-                      updateData({
-                        aiSubmissions: [newSub, ...(data.aiSubmissions || []).filter((s) => s.id !== newSub.id)],
-                      });
-                      handleAddLog(
-                        "Rédaction IA Validée",
-                        `L'élève ${currentStudent.name} a soumis un texte sur "${newSub.topic}" (Score: ${newSub.result.overallScore || newSub.result.score?.grammar || 80}/100).`
-                      );
-                    }}
-                    onUpdateLocale={setLocale}
-                    onAddLog={handleAddLog}
-                  />
-                </motion.div>
+              {role === "student" && (
+                currentStudent && currentSchool ? (
+                  <motion.div
+                    key={`student-view-${currentStudent.id}`}
+                    variants={pageTransition}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                  >
+                    <StudentPortal
+                      locale={locale}
+                      theme={theme}
+                      onUpdateTheme={handleThemeChange}
+                      student={currentStudent}
+                      school={currentSchool}
+                      programs={data.programs}
+                      submissions={data.aiSubmissions || []}
+                      announcements={data.announcements || []}
+                      activeSubpath={currentRoute.subpath || "dashboard"}
+                      onUpdateStudent={(updatedStudent) =>
+                        updateData({
+                          students: data.students.map((s) =>
+                            s.id === updatedStudent.id ? updatedStudent : s
+                          ),
+                        })
+                      }
+                      onSaveSubmission={(newSub) => {
+                        updateData({
+                          aiSubmissions: [newSub, ...(data.aiSubmissions || []).filter((s) => s.id !== newSub.id)],
+                        });
+                        handleAddLog(
+                          "Rédaction IA Validée",
+                          `L'élève ${currentStudent.name} a soumis un texte sur "${newSub.topic}" (Score: ${newSub.result.overallScore || newSub.result.score?.grammar || 80}/100).`
+                        );
+                      }}
+                      onUpdateLocale={setLocale}
+                      onAddLog={handleAddLog}
+                    />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="no-student-view"
+                    variants={pageTransition}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                    className="max-w-xl mx-auto my-16 p-8 rounded-3xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 text-center space-y-4 shadow-sm"
+                  >
+                    <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 text-[#6D5DFC] flex items-center justify-center mx-auto text-2xl">
+                      🎓
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                      {locale === "en" ? "No Student Enrolled" : "Aucun Apprenant Enregistré"}
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-white/60 leading-relaxed">
+                      {locale === "en"
+                        ? "No student account found. Please sign in with student credentials or contact your school administrator."
+                        : "Aucun compte apprenant trouvé. Veuillez vous connecter avec vos identifiants ou contacter la direction de votre école."}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#6D5DFC] to-[#00D9FF] text-white text-xs font-bold shadow-md hover:opacity-95 transition cursor-pointer"
+                    >
+                      {locale === "en" ? "Back to Login" : "Retour à la Connexion"}
+                    </button>
+                  </motion.div>
+                )
               )}
             </AnimatePresence>
           </main>

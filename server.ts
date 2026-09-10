@@ -21,7 +21,7 @@ app.use((req, res, next) => {
   if (req.url && !req.url.startsWith("/api") && !req.url.startsWith("/@") && !req.url.startsWith("/src") && !req.url.startsWith("/node_modules")) {
     const rawPath = req.url.split("?")[0];
     const query = req.url.includes("?") ? req.url.substring(req.url.indexOf("?")) : "";
-    if (["/health", "/sanity", "/ai", "/progression"].some((prefix) => rawPath.startsWith(prefix))) {
+    if (["/health", "/sanity", "/ai", "/progression", "/auth"].some((prefix) => rawPath.startsWith(prefix))) {
       req.url = `/api${rawPath}${query}`;
     }
   }
@@ -84,10 +84,10 @@ function getGeminiClient(): GoogleGenAI | null {
 }
 
 const GEMINI_MODELS_CASCADE = [
-  "gemini-2.5-flash",
-  "gemini-2.5-pro",
-  "gemini-1.5-flash",
-  "gemini-3.7-flash",
+  "gemini-3.8-flash",
+  "gemini-flash-latest",
+  "gemini-3.1-pro-preview",
+  "gemini-3.1-flash-lite",
 ];
 
 /**
@@ -107,7 +107,7 @@ async function callGemini(
     throw new Error("Gemini client is not initialized (missing API key)");
   }
 
-  const primaryModel = options.model || "gemini-2.5-flash";
+  const primaryModel = options.model || "gemini-3.8-flash";
   const modelsToTry = [
     primaryModel,
     ...GEMINI_MODELS_CASCADE.filter((m) => m !== primaryModel),
@@ -168,7 +168,7 @@ async function callGemini(
 async function callGeminiChat(
   history: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }>,
   systemInstruction?: string,
-  preferredModel: string = "gemini-2.5-flash"
+  preferredModel: string = "gemini-3.8-flash"
 ): Promise<string> {
   const gemini = getGeminiClient();
   if (!gemini) {
@@ -440,7 +440,7 @@ app.get("/api/health", async (_req, res) => {
       },
       gemini: {
         configured: !!process.env.GEMINI_API_KEY,
-        model: "gemini-3.7-flash",
+        model: "gemini-3.8-flash",
       },
       seekAI: {
         configured: !!SEEKAI_API_KEY,
@@ -500,7 +500,60 @@ app.get("/api/sanity/status", async (_req, res) => {
   }
 });
 
-// Authentication Endpoint
+// In-memory sync store for active schools and students
+let serverSyncedSchools: any[] = [];
+let serverSyncedStudents: any[] = [];
+
+// Endpoint to sync users (schools, school directors, students)
+app.post("/api/users/sync", (req, res) => {
+  try {
+    const { schools, students } = req.body;
+    if (Array.isArray(schools)) {
+      serverSyncedSchools = schools;
+    }
+    if (Array.isArray(students)) {
+      serverSyncedStudents = students;
+    }
+    return res.json({
+      success: true,
+      message: "Utilisateurs synchronisés avec succès avec le système.",
+      stats: {
+        schoolsCount: serverSyncedSchools.length,
+        studentsCount: serverSyncedStudents.length,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get("/api/users/sync", (_req, res) => {
+  return res.json({
+    success: true,
+    schoolsCount: serverSyncedSchools.length,
+    studentsCount: serverSyncedStudents.length,
+    schools: serverSyncedSchools.map((s) => ({
+      id: s.id,
+      name: s.name,
+      slug: s.slug,
+      language: s.language,
+      managerEmail: s.managerEmail,
+      username: s.username,
+      status: s.status,
+    })),
+    students: serverSyncedStudents.map((st) => ({
+      id: st.id,
+      name: st.name,
+      email: st.email,
+      schoolId: st.schoolId,
+      level: st.level,
+      status: st.status,
+    })),
+  });
+});
+
+// Authentication Endpoint supporting Super Admin, School Director, and Student
 app.post("/api/auth/login", async (req, res) => {
   try {
     const { username, email, password } = req.body;
@@ -514,7 +567,7 @@ app.post("/api/auth/login", async (req, res) => {
       });
     }
 
-    // Super Admin check
+    // 1. Super Admin check
     const isSuperAdmin =
       loginUser === "linguaflowadmin@gmail.com" ||
       loginUser === "linguaflowadmin" ||
@@ -544,9 +597,77 @@ app.post("/api/auth/login", async (req, res) => {
       }
     }
 
+    // 2. School Admin check (Director)
+    const matchingSchool = serverSyncedSchools.find((s) => {
+      const matchEmail = (s.managerEmail || "").toLowerCase() === loginUser;
+      const matchUsername = (s.username || "").toLowerCase() === loginUser;
+      const matchSlug = (s.slug || "").toLowerCase() === loginUser;
+      const matchId = (s.id || "").toLowerCase() === loginUser;
+      return matchEmail || matchUsername || matchSlug || matchId;
+    });
+
+    if (matchingSchool) {
+      if (!matchingSchool.password || matchingSchool.password === loginPass) {
+        return res.json({
+          success: true,
+          role: "school_admin",
+          user: {
+            name: matchingSchool.managerName || matchingSchool.name,
+            email: matchingSchool.managerEmail,
+            schoolId: matchingSchool.id,
+            schoolName: matchingSchool.name,
+            schoolSlug: matchingSchool.slug,
+            language: matchingSchool.language,
+            role: "school_admin",
+          },
+          school: matchingSchool,
+          token: `lf_school_${Date.now()}`,
+        });
+      } else {
+        return res.status(401).json({
+          success: false,
+          error: "Mot de passe incorrect pour cette école.",
+        });
+      }
+    }
+
+    // 3. Student check
+    const matchingStudent = serverSyncedStudents.find((st) => {
+      const matchEmail = (st.email || "").toLowerCase() === loginUser;
+      const matchName = (st.name || "").toLowerCase() === loginUser;
+      const matchId = (st.id || "").toLowerCase() === loginUser;
+      return matchEmail || matchName || matchId;
+    });
+
+    if (matchingStudent) {
+      if (!matchingStudent.password || matchingStudent.password === loginPass) {
+        const studentSchool = serverSyncedSchools.find((s) => s.id === matchingStudent.schoolId);
+        return res.json({
+          success: true,
+          role: "student",
+          user: {
+            name: matchingStudent.name,
+            email: matchingStudent.email,
+            studentId: matchingStudent.id,
+            schoolId: matchingStudent.schoolId,
+            level: matchingStudent.level,
+            role: "student",
+          },
+          student: matchingStudent,
+          school: studentSchool,
+          token: `lf_student_${Date.now()}`,
+        });
+      } else {
+        return res.status(401).json({
+          success: false,
+          error: "Mot de passe incorrect pour cet apprenant.",
+        });
+      }
+    }
+
     return res.status(401).json({
       success: false,
-      error: "Identifiants invalides.",
+      error: "Identifiants invalides. Vérifiez votre adresse email ou identifiant.",
     });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
@@ -621,8 +742,17 @@ app.post("/api/ai/writing-correction", async (req, res) => {
 
   const targetLangName = language === "german" ? "German (Deutsch)" : "Italian (Italiano)";
   const expLangName = explanationLanguage === "en" ? "English" : "French";
+  const studentLvl = (level || "A2").toUpperCase();
+  const cefrRules = getCEFRLevelRules(studentLvl, language);
 
-  const systemPrompt = `You are an expert language examiner, pedagogy coach, and native tutor specialized in ${targetLangName} for CEFR level ${level || "A2"}.
+  const systemPrompt = `You are an expert official CEFR language examiner and native pedagogy coach specialized in ${targetLangName} evaluating a student at CEFR level ${studentLvl}.
+${cefrRules}
+
+Evaluation Guidelines for level ${studentLvl}:
+- If student is A1: Assess basic sentence comprehension, subject-verb agreement, and simple vocabulary. Do NOT penalize for lack of advanced connectors or subjunctive.
+- If student is A2: Check present and past tense consistency, basic connectors (weil/perché, aber/ma), and everyday vocabulary.
+- If student is B1: Check logical connectors, polite conditional/subjunctive, sentence variety, and coherence across multiple sentences.
+- If student is B2/C1: Demand idiomatic expressions, syntactic complexity, register precision, and sophisticated transitions.
 Always provide constructive, warm, clear pedagogical corrections.
 Explanations and feedback MUST be in ${expLangName}.
 
@@ -797,6 +927,72 @@ Evaluate this student text according to CEFR criteria.`;
 
 // --------------------------------------------------------------------------
 // AI CHATBOT TUTOR
+function getCEFRLevelRules(level: string, language: string): string {
+  const isGerman = language === "german";
+  const normLevel = (level || "A2").toUpperCase();
+  switch (normLevel) {
+    case "A1":
+      return isGerman
+        ? `CEFR A1 LEVEL CONSTRAINTS (Absolute Beginner):
+- Max sentence length: 5 to 8 words. Keep syntax ultra-simple: Subject + Verb + Object.
+- Present tense (Präsens) only. No complex subordinate clauses (no 'weil', 'dass', 'obwohl', no relative pronouns).
+- Basic A1 vocabulary: greetings, numbers, colors, family, food, daily objects, countries.
+- Be very warm and encouraging. If the student writes French or English, guide them kindly into German.
+- Always include a small helpful hint in brackets in French or English: [💡 Conseil A1: ...]`
+        : `CEFR A1 LEVEL CONSTRAINTS (Principiante assoluto):
+- Lunghezza massima frase: 5-8 parole. Sintassi ultra-semplice: Soggetto + Verbo + Oggetto.
+- Solo presente indicativo. Nessuna subordinata complessa (niente 'perché', 'che', 'sebbene').
+- Vocabolario base A1: saluti, numeri, colori, famiglia, cibo, oggetti quotidiani.
+- Sempre molto incoraggiante. Includi un piccolo suggerimento pedagogico tra parentesi: [💡 Consiglio A1: ...]`;
+    case "A2":
+      return isGerman
+        ? `CEFR A2 LEVEL CONSTRAINTS (Elementary):
+- Sentence length: 8 to 12 words. Simple connectors allowed (und, aber, oder, weil).
+- Simple past with 'haben/sein' + Perfekt. Modal verbs in present (können, müssen, wollen, dürfen).
+- Topics: daily routine, shopping, hobbies, holidays, housing, describing past events.
+- Ask simple, engaging questions to prompt the student to write 1-2 sentences.
+- Include a pedagogical tip if grammar errors appear: [💡 Conseil A2: ...]`
+        : `CEFR A2 LEVEL CONSTRAINTS (Elementare):
+- Lunghezza frase: 8-12 parole. Connettori semplici (e, ma, o, perché).
+- Uso del passato prossimo e imperfetto di base. Verbi modali (potere, dovere, volere).
+- Argomenti: routine quotidiana, acquisti, passatempi, vacanze, descrizioni.
+- Includi suggerimenti costruttivi: [💡 Consiglio A2: ...]`;
+    case "B1":
+      return isGerman
+        ? `CEFR B1 LEVEL CONSTRAINTS (Intermediate):
+- Natural, standard German with subordinate clauses (dass, wenn, weil, obwohl).
+- Polite subjunctive (hätte, wäre, würde gerne, könnte). Future and narrative past.
+- Topics: personal opinions, travel memories, work life, current news, cultural habits.
+- Challenge the student with conversational follow-up questions asking for their justification or opinion.`
+        : `CEFR B1 LEVEL CONSTRAINTS (Intermedio):
+- Italiano standard con subordinate (che, quando, perché, sebbene).
+- Condizionale presente (vorrei, potrei, sarebbe). Passato prossimo e imperfetto combinati.
+- Argomenti: opinioni personali, ricordi, lavoro, notizie, costumi e tradizioni.
+- Stimola l'allievo chiedendo la sua opinione e motivazioni.`;
+    case "B2":
+      return isGerman
+        ? `CEFR B2 LEVEL CONSTRAINTS (Vantage / Upper Intermediate):
+- Rich, idiomatic German with complex sentence structures, passive voice, Konjunktiv II.
+- Abstract topics: technology, sociology, professional negotiations, environmental debates.
+- Correct subtle grammatical nuances (prepositional verbs, case government: Genitiv, Dativ/Akkusativ wechselnd).`
+        : `CEFR B2 LEVEL CONSTRAINTS (Intermedio superiore):
+- Italiano ricco e idiomatico con congiuntivo presente e passato, periodo ipotetico, forma passiva.
+- Argomenti complessi: tecnologia, società, trattative professionali, attualità culturale.
+- Correggi sfumature di registro, concordanza dei tempi e preposizioni rette dai verbi.`;
+    case "C1":
+    default:
+      return isGerman
+        ? `CEFR C1 LEVEL CONSTRAINTS (Autonomous / Mastery):
+- Native-level syntactic variety, sophisticated connectors, academic and formal vocabulary.
+- Idiomatic precision, stylistic nuances, rhetorical finesse, nuanced synonyms.
+- Provide advanced feedback on register appropriateness, tone, and stylistic elegance.`
+        : `CEFR C1 LEVEL CONSTRAINTS (Avanzato / Padronanza):
+- Varietà sintattica madrelingua, connettivi sofisticati, lessico accademico e formale.
+- Precisione idiomatica, sfumature stilistiche, retorica raffinata.
+- Fornisci feedback approfondito sull'eleganza stilistica, il registro e la precisione lessicale.`;
+  }
+}
+
 // --------------------------------------------------------------------------
 app.post("/api/ai/chat", async (req, res) => {
   try {
@@ -814,17 +1010,20 @@ app.post("/api/ai/chat", async (req, res) => {
     } = req.body;
 
     const targetLangName = language === "german" ? "German (Deutsch)" : "Italian (Italiano)";
-    const studentLvl = level || "A2";
+    const studentLvl = (level || "A2").toUpperCase();
+    const cefrRules = getCEFRLevelRules(studentLvl, language);
 
     const systemPrompt = `You are "LinguaBot", the official AI language conversation partner and pedagogical tutor at "${schoolName || "Language Academy"}".
-You specialize exclusively in teaching and conversing in ${targetLangName} at the CEFR ${studentLvl} level for student "${studentName || "Student"}".
+You specialize exclusively in teaching and conversing in ${targetLangName} specifically calibrated to CEFR ${studentLvl} for student "${studentName || "Student"}".
 ${thinkingMode || useDeepThinking ? "Provide thorough, in-depth pedagogical explanations with explicit grammatical breakdown whenever relevant." : ""}
 
+${cefrRules}
+
 Key pedagogical rules:
-1. Speak primarily in ${targetLangName}, adapting grammar and vocabulary to ${studentLvl}.
-2. If the user makes a mistake in ${targetLangName}, gently include a short pedagogical tip in brackets: [💡 Conseil: ...], then continue the natural dialogue in ${targetLangName}.
-3. Keep the conversation lively, friendly, educational, asking engaging open questions related to daily life, travel, culture, or professional settings in Germany/Austria/Switzerland or Italy.
-4. If the student asks a grammar or vocabulary explanation in French or English, explain it clearly and provide authentic examples in ${targetLangName}.`;
+1. Speak primarily in ${targetLangName}, strictly respecting the CEFR ${studentLvl} constraints above.
+2. If the user makes a mistake in ${targetLangName}, gently include a short pedagogical tip in brackets: [💡 Conseil ${studentLvl}: ...], then continue the natural dialogue in ${targetLangName}.
+3. Keep the conversation lively, friendly, educational, asking engaging open questions adapted to level ${studentLvl}.
+4. If the student asks a grammar or vocabulary explanation in French or English, explain it clearly in that language and provide authentic examples in ${targetLangName} calibrated for level ${studentLvl}.`;
 
     // Construct Gemini contents array
     const geminiHistory: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }> = [];
@@ -879,7 +1078,7 @@ Key pedagogical rules:
       reply = await callDeepSeek(deepseekMessages, {
         model: modelToUse,
         temperature: 0.7,
-        timeoutMs: 15000,
+        timeoutMs: 8000,
       });
     } catch (deepseekErr: any) {
       // 2. Secondary AI Engine: Gemini Multi-Model Cascade
@@ -887,7 +1086,7 @@ Key pedagogical rules:
         reply = await callGeminiChat(
           geminiHistory,
           systemPrompt,
-          "gemini-2.5-flash"
+          "gemini-3.8-flash"
         );
       } catch (geminiErr: any) {
         console.log("Gemini chat notice, trying SeekAI:", geminiErr.message);
@@ -913,25 +1112,48 @@ Key pedagogical rules:
       }
     }
 
-    // 3. Smart dynamic fallback if offline
+    // 3. Smart dynamic level-calibrated fallback if offline or timeout
     if (!reply) {
       const lastUserMsg = (message || geminiHistory[geminiHistory.length - 1]?.parts[0]?.text || "").toLowerCase();
 
       if (language === "german") {
-        if (lastUserMsg.includes("hallo") || lastUserMsg.includes("guten") || lastUserMsg.includes("tag")) {
-          reply = `Hallo ${studentName || ""}! Schön dich zu sehen. Wie geht es dir heute und was möchtest du auf Deutsch üben? 😊`;
-        } else if (lastUserMsg.includes("restaurant") || lastUserMsg.includes("essen") || lastUserMsg.includes("bestellen")) {
-          reply = `Guten Tag! Herzlich willkommen im Restaurant "Zum goldenen Bären". Möchten Sie schon etwas trinken oder direkt die Speisekarte sehen? 🍽️`;
+        if (studentLvl === "A1") {
+          if (lastUserMsg.includes("hallo") || lastUserMsg.includes("guten") || lastUserMsg.includes("tag")) {
+            reply = `Hallo ${studentName || ""}! Wie heißt du? [💡 Conseil A1: Tu peux répondre par "Ich heiße..." ou "Mein Name ist..."]`;
+          } else if (lastUserMsg.includes("wie geht") || lastUserMsg.includes("danke")) {
+            reply = `Mir geht es gut, danke! Und dir? [💡 Conseil A1: Réponds avec "Sehr gut!" ou "Es geht."].`;
+          } else {
+            reply = `Sehr gut! [💡 Conseil A1: Le verbe se place toujours en 2ème position: "Ich lerne Deutsch."]. Wie alt bist du?`;
+          }
+        } else if (studentLvl === "A2") {
+          if (lastUserMsg.includes("hallo") || lastUserMsg.includes("guten")) {
+            reply = `Hallo ${studentName || ""}! Wie geht es dir heute und was hast du Schönes gemacht? [💡 Conseil A2: Utilise le Perfekt: "Gestern habe ich gearbeitet."].`;
+          } else {
+            reply = `Guter Satz! [💡 Conseil A2: Avec 'weil', le verbe conjugué se place à la toute fin]. Erzähle mir von deinem Lieblingstag!`;
+          }
+        } else if (studentLvl === "B1") {
+          reply = `Guten Tag ${studentName || ""}! Das ist ein interessanter Gedanke. Was ist deine persönliche Meinung dazu, und welche Erfahrungen hast du bisher gemacht?`;
+        } else if (studentLvl === "B2") {
+          reply = `Ein differenzierter Beitrag, ${studentName || ""}! [💡 Tipp B2: Achte auf die korrekte Rektion der Verben mit Präpositionen]. Wie schätzt du die langfristigen Perspektiven dieser Situation ein?`;
         } else {
-          reply = `Sehr gut formuliert! [💡 Tipp: Achte auf die Satzstellung des Verbs an Position 2 im Hauptsatz]. Was machst du heute noch Schönes?`;
+          reply = `Exzellent formuliert, ${studentName || ""}. Das sprachliche Register ist bemerkenswert präzise. Welche stilistischen Nuancen würdest du in einer formellen Debatte hierzu noch einbringen?`;
         }
       } else {
-        if (lastUserMsg.includes("ciao") || lastUserMsg.includes("buongiorno") || lastUserMsg.includes("salve")) {
-          reply = `Ciao ${studentName || ""}! Che piacere sentirti. Come stai oggi e cosa vorresti esercitare in italiano? 🇮🇹`;
-        } else if (lastUserMsg.includes("ristorante") || lastUserMsg.includes("mangiare") || lastUserMsg.includes("ordinare")) {
-          reply = `Benvenuto alla Trattoria Bella Roma! Abbiamo pasta fresca fatta a mano e deliziosi antipasti oggi. Cosa gradisci da bere per iniziare? 🍷🍝`;
+        // Italian
+        if (studentLvl === "A1") {
+          if (lastUserMsg.includes("ciao") || lastUserMsg.includes("buongiorno")) {
+            reply = `Ciao ${studentName || ""}! Come ti chiami? [💡 Consiglio A1: Puoi rispondere dicendo "Mi chiamo..." o "Sono..."].`;
+          } else {
+            reply = `Molto bene! [💡 Consiglio A1: Fai attenzione all'articolo: "il libro", "la pizza"]. Di dove sei?`;
+          }
+        } else if (studentLvl === "A2") {
+          reply = `Ciao ${studentName || ""}! Che bello sentirti. Cosa hai fatto di bello questo fine settimana? [💡 Consiglio A2: Usa il Passato Prossimo con essere o avere].`;
+        } else if (studentLvl === "B1") {
+          reply = `Ottimo spunto di conversazione, ${studentName || ""}! Qual è la tua opinione personale su questo tema? Raccontami una tua esperienza simile.`;
+        } else if (studentLvl === "B2") {
+          reply = `Un'argomentazione molto ben strutturata, ${studentName || ""}! [💡 Consiglio B2: Per esprimere un'ipotesi, prova a usare il congiuntivo imperfetto con il condizionale]. Come vedi l'evoluzione futura?`;
         } else {
-          reply = `Ottimo tentativo! [💡 Consiglio: Ricorda sempre l'accordo tra aggettivo e sostantivo]. Raccontami, cosa farai questo weekend?`;
+          reply = `Espressione impeccabile e registro elevato, ${studentName || ""}. Quali ulteriori sfumature stilistiche o riferimenti culturali ritieni opportuno considerare per approfondire l'analisi?`;
         }
       }
     }
@@ -979,10 +1201,20 @@ app.post("/api/ai/action/correction", async (req, res) => {
 
     const isGerman = language === "german";
     const targetLangLabel = isGerman ? "German (Deutsch)" : "Italian (Italiano)";
+    const studentLvl = (level || "A2").toUpperCase();
+    const cefrRules = getCEFRLevelRules(studentLvl, language);
 
     const systemPrompt = `You are an expert CEFR language professor and pedagogical evaluator at "${schoolName}".
-Your task is to analyze, score, and provide constructive corrections for a student's written text in ${targetLangLabel} at the ${level} level.
+Your task is to analyze, score, and provide constructive corrections for a student's written text in ${targetLangLabel} specifically calibrated to CEFR ${studentLvl}.
 Student Name: "${studentName}".
+
+${cefrRules}
+
+Evaluation Criteria for level ${studentLvl}:
+- If student is A1: Check basic sentence comprehension, subject-verb agreement, and simple vocabulary. Do NOT penalize for lack of advanced connectors or subjunctive.
+- If student is A2: Check present and past tense consistency, basic connectors (weil/perché, aber/ma), and everyday vocabulary.
+- If student is B1: Check logical connectors, polite conditional/subjunctive, sentence variety, and coherence across multiple sentences.
+- If student is B2/C1: Demand idiomatic expressions, syntactic complexity, register precision, and sophisticated transitions.
 
 Return ONLY valid JSON matching this exact structure:
 {

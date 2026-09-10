@@ -27,7 +27,7 @@ import { StudentProgramsTab } from "./StudentProgramsTab";
 import { InteractiveLessonPlayer } from "./InteractiveLessonPlayer";
 import { AIWritingAssistant } from "./AIWritingAssistant";
 import { AIChatTutor } from "./AIChatTutor";
-import { StudentEvaluationsTab } from "./StudentEvaluationsTab";
+import { StudentPrufungTab } from "./StudentPrufungTab";
 import { StudentProgressTab } from "./StudentProgressTab";
 import { StudentNotificationsTab } from "./StudentNotificationsTab";
 import { StudentProfileTab } from "./StudentProfileTab";
@@ -424,9 +424,9 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
           <AIChatTutor student={student} school={school} locale={locale} />
         )}
 
-        {/* 6. EVALUATIONS & QUIZ TAB */}
+        {/* 6. PRÜFUNG & ZERTIFIZIERUNG TAB */}
         {activeTab === "evaluations" && (
-          <StudentEvaluationsTab
+          <StudentPrufungTab
             student={student}
             school={school}
             program={activeProgram}
