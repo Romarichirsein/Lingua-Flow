@@ -43,8 +43,8 @@ export default function App() {
   // Persistence initialization
   const [data, setData] = useState(() => getStoredData());
 
-  // App Lifecycle States: Direct instant render -> Login / Dashboard
-  const [showSplash, setShowSplash] = useState(false);
+  // App Lifecycle States: 10-second circular loading intro -> Login / Dashboard
+  const [showSplash, setShowSplash] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     const route = parseCurrentRoute();
     return route.type !== "login" && route.type !== "splash";
