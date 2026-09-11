@@ -9,7 +9,7 @@ import {
   CheckCircle2,
   AlertCircle,
   RotateCcw,
-  Sparkles,
+  Play,
   Award,
   BookOpen,
   ArrowRight,
@@ -206,7 +206,7 @@ export const StudentEvaluationsTab: React.FC<StudentEvaluationsTabProps> = ({
                   variant={isPassed ? "emerald" : "primary"}
                   size="sm"
                   onClick={() => handleStartQuiz(les)}
-                  icon={isPassed ? <RotateCcw size={14} /> : <Sparkles size={14} />}
+                  icon={isPassed ? <RotateCcw size={14} /> : <Play size={14} />}
                 >
                   {isPassed ? (locale === "en" ? "Retry Quiz" : "Recommencer") : (locale === "en" ? "Start Quiz" : "Lancer le quiz")}
                 </NeonButton>

@@ -10,7 +10,6 @@ import {
   Printer,
   ShieldCheck,
   BookOpen,
-  Sparkles,
   TrendingUp,
   Clock,
   Lock,

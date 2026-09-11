@@ -6,7 +6,7 @@ import {
   Bell,
   CheckCircle2,
   Calendar,
-  Sparkles,
+  PenTool,
   BookOpen,
   MessageSquare,
   AlertTriangle,
@@ -88,7 +88,7 @@ export const StudentNotificationsTab: React.FC<StudentNotificationsTabProps> = (
     {
       id: "notif-3",
       type: "ai",
-      title: locale === "en" ? "AI Writing Assistant Available" : "Assistant Rédaction IA disponible",
+      title: locale === "en" ? "Writing Studio Available" : "Atelier d'Écriture disponible",
       message: locale === "en"
         ? "Practice writing immersion texts and receive immediate CEFR-compliant feedback."
         : "Entraînez-vous à rédiger des textes en immersion et recevez un retour immédiat conforme au standard CECRL.",
@@ -195,7 +195,7 @@ export const StudentNotificationsTab: React.FC<StudentNotificationsTabProps> = (
                 case "lesson":
                   return <BookOpen size={18} className="text-indigo-500" />;
                 case "ai":
-                  return <Sparkles size={18} className="text-cyan-500" />;
+                  return <PenTool size={18} className="text-cyan-500" />;
                 case "school":
                   return <MessageSquare size={18} className="text-emerald-500" />;
                 default:

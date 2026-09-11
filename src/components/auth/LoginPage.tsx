@@ -18,7 +18,7 @@ import {
   LogIn,
   CheckCircle2,
   AlertCircle,
-  Sparkles,
+  Languages,
   ArrowRight,
 } from "lucide-react";
 import { LanguageSwitcher } from "../common/LanguageSwitcher";
@@ -79,12 +79,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       icon: <GraduationCap size={20} className="text-[#6D5DFC]" />,
     },
     {
-      title: locale === "en" ? "AI Tutor & Writing Assistant" : "Tuteur Conversationnel & IA Rédactionnelle",
+      title: locale === "en" ? "Oral Practice & Writing Studio" : "Pratique Orale & Atelier d'Écriture",
       desc:
         locale === "en"
-          ? "Interactive voice-enabled oral practice and automated grammar corrections with CEFR score analytics."
-          : "Pratique orale immersive avec synthèse vocale et corrections grammaticales automatisées conformes CECRL.",
-      icon: <Sparkles size={20} className="text-[#20E3A2]" />,
+          ? "Voice-enabled pronunciation practice, lexical reinforcement, and grammar corrections with CEFR score analytics."
+          : "Pratique orale avec synthèse vocale, renforcement lexical et corrections grammaticales conformes CECRL.",
+      icon: <Languages size={20} className="text-[#20E3A2]" />,
     },
     {
       title: locale === "en" ? "Enterprise Security & Anti-Leak" : "Sécurité Entreprise & Anti-Fuite",
@@ -282,9 +282,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           {/* Left Column: Platform Presentation & Features */}
           <div className="lg:col-span-6 space-y-5 sm:space-y-6">
             <div>
-              <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 rounded-full bg-[#6D5DFC]/10 border border-[#6D5DFC]/30 text-[#6D5DFC] dark:text-[#a399ff] text-[11px] sm:text-xs font-semibold mb-2 sm:mb-3">
-                <Sparkles size={13} className="text-[#6D5DFC] dark:text-[#00D9FF] shrink-0" />
-                <span className="truncate">{locale === "en" ? "Dedicated Multi-Tenant SaaS Platform" : "Plateforme SaaS Multi-Tenant Dédiée"}</span>
+              <div className="flex items-center gap-2 mb-3 text-xs font-semibold uppercase tracking-wider text-[#6D5DFC] dark:text-[#00D9FF]">
+                <Building2 size={15} />
+                <span>{locale === "en" ? "Multi-School Educational Platform" : "Plateforme Académique Multi-Écoles"}</span>
               </div>
               <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 dark:text-white leading-tight">
                 {locale === "en" ? "Log in to your learning space" : "Connexion à votre espace d'apprentissage"}

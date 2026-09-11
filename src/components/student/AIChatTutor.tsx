@@ -14,7 +14,8 @@ import {
   Bot,
   User,
   Send,
-  Sparkles,
+  Languages,
+  Loader2,
   Volume2,
   Brain,
   RotateCcw,
@@ -259,7 +260,7 @@ export const AIChatTutor: React.FC<AIChatTutorProps> = ({
       });
 
       if (!res.ok) {
-        throw new Error("Erreur de communication avec le tuteur IA.");
+        throw new Error("Erreur de communication avec le tuteur.");
       }
 
       const data = await res.json();
@@ -363,10 +364,10 @@ export const AIChatTutor: React.FC<AIChatTutorProps> = ({
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-                {locale === "en" ? "Adaptive AI Tutor" : "Tuteur IA Adaptatif"}
+                {locale === "en" ? "Interactive Language Tutor" : "Tuteur Linguistique Interactif"}
               </h3>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 flex items-center gap-1">
-                <Sparkles size={10} />
+                <Languages size={11} />
                 {language === "german" ? (isEn ? "German 🇩🇪" : "Allemand 🇩🇪") : (isEn ? "Italian 🇮🇹" : "Italien 🇮🇹")}
               </span>
 
@@ -472,11 +473,11 @@ export const AIChatTutor: React.FC<AIChatTutorProps> = ({
 
         {isLoading && (
           <div className="flex items-center gap-2 text-xs text-indigo-500 dark:text-indigo-400 animate-pulse pl-10">
-            <Sparkles size={14} className="animate-spin" />
+            <Loader2 size={14} className="animate-spin" />
             <span>
               {useThinkingMode
                 ? (locale === "en" ? `In-depth pedagogical reasoning for CEFR ${activeLevel}...` : `Raisonnement pédagogique approfondi pour CECRL ${activeLevel}...`)
-                : (locale === "en" ? `LinguaBot is formulating response (CEFR ${activeLevel})...` : `LinguaBot formule sa réponse adaptée au niveau ${activeLevel}...`)}
+                : (locale === "en" ? `Formulating response (CEFR ${activeLevel})...` : `Formulation de la réponse adaptée au niveau ${activeLevel}...`)}
             </span>
           </div>
         )}

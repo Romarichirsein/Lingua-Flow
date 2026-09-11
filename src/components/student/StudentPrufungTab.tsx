@@ -28,7 +28,6 @@ import {
   Square,
   Volume2,
   RefreshCw,
-  Sparkles,
   HelpCircle,
   ExternalLink,
   ChevronRight,
@@ -1217,16 +1216,16 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
                     {isEvaluatingWriting ? (
                       <RefreshCw size={14} className="animate-spin" />
                     ) : (
-                      <Sparkles size={14} />
+                      <CheckCircle2 size={14} />
                     )}
                     <span>
                       {isEvaluatingWriting
                         ? isEn
-                          ? "Evaluating with AI..."
-                          : "Correction IA en cours..."
+                          ? "Evaluating writing..."
+                          : "Évaluation de la rédaction en cours..."
                         : isEn
-                        ? "Evaluate My Writing (AI)"
-                        : "Évaluer ma rédaction avec l'IA"}
+                        ? "Evaluate My Writing"
+                        : "Évaluer ma rédaction"}
                     </span>
                   </button>
                 </div>

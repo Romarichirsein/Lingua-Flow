@@ -7,7 +7,7 @@ import { ProgressBar } from "../common/ProgressBar";
 import { NeonButton } from "../common/NeonButton";
 import {
   BookOpen,
-  Sparkles,
+  PenTool,
   CheckCircle2,
   PlayCircle,
   Clock,
@@ -337,7 +337,7 @@ export const StudentDashboardTab: React.FC<StudentDashboardTabProps> = ({
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-indigo-500">
-                  <Sparkles size={18} />
+                  <PenTool size={18} />
                   <span className="font-bold text-xs">{t.student.tabs.writing.label}</span>
                 </div>
                 <ArrowRight size={14} className="text-indigo-400 group-hover:translate-x-1 transition" />

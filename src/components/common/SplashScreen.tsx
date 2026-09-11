@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { ArrowRight, Sparkles, ShieldCheck, Check } from "lucide-react";
+import { ArrowRight, ShieldCheck, Check } from "lucide-react";
 
 interface SplashScreenProps {
   onComplete: () => void;
@@ -246,11 +246,11 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
               />
             </motion.div>
 
-            {/* Micro badge under logo */}
-            <div className="relative z-20 mt-1.5 flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/5 border border-white/10">
-              <Sparkles size={10} className="text-[#00D9FF]" />
-              <span className="text-[9px] font-bold tracking-widest text-slate-300 uppercase">
-                SaaS B2B
+            {/* Status indicator under logo */}
+            <div className="relative z-20 mt-1.5 flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/5 border border-white/10">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#00D9FF] animate-pulse" />
+              <span className="text-[9px] font-bold tracking-widest text-slate-300 uppercase font-mono">
+                SaaS Académie
               </span>
             </div>
           </div>

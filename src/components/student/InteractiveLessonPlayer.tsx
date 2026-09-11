@@ -28,7 +28,6 @@ import {
   Award,
   Shield,
   Clock,
-  Sparkles,
   ChevronRight,
   ChevronLeft,
   RotateCcw,
@@ -775,7 +774,7 @@ export const InteractiveLessonPlayer: React.FC<InteractiveLessonPlayerProps> = (
                       size="sm"
                       onClick={handleSubmitQuiz}
                       disabled={Object.keys(selectedAnswers).length < totalQuiz}
-                      icon={<Sparkles size={15} />}
+                      icon={<CheckCircle2 size={15} />}
                     >
                       {t.student.submitQuiz}
                     </NeonButton>

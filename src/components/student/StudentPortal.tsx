@@ -35,7 +35,6 @@ import { ModuleUnlockedModal } from "../common/CelebrationEffects";
 import { navigateTo } from "../../lib/router";
 import {
   BookOpen,
-  Sparkles,
   MessageSquare,
   CheckCircle2,
   Lock,

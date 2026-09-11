@@ -18,7 +18,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   FileText,
-  Sparkles,
+  PenTool,
   Award,
   Users,
   Search,
@@ -250,8 +250,8 @@ export const SchoolEvaluationsTab: React.FC<SchoolEvaluationsTabProps> = ({
                   : "text-slate-500 dark:text-white/60 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
-              <Sparkles size={13} className="text-[#00D9FF]" />
-              <span>{isEn ? "AI Essay Corrections" : "Devoirs & Rédactions IA"}</span>
+              <PenTool size={13} className="text-[#00D9FF]" />
+              <span>{isEn ? "Essay Corrections" : "Devoirs & Rédactions"}</span>
               <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-[#00D9FF]/20 text-[#00D9FF] font-mono">
                 {schoolSubmissions.length}
               </span>
@@ -396,15 +396,15 @@ export const SchoolEvaluationsTab: React.FC<SchoolEvaluationsTabProps> = ({
       {activeSubTab === "ai_essays" && (
         <div className="space-y-4">
           <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-            <Sparkles size={16} className="text-[#00D9FF]" />
-            <span>{isEn ? "Learner Written Compositions & Gemini AI Evaluations" : "Rédactions des Élèves & Analyses Gemini IA"}</span>
+            <PenTool size={16} className="text-[#00D9FF]" />
+            <span>{isEn ? "Learner Written Compositions & Evaluations" : "Rédactions des Élèves & Évaluations Écrites"}</span>
           </h3>
 
           {schoolSubmissions.length === 0 ? (
             <div className="py-16 text-center bg-white dark:bg-[#0D1220] rounded-3xl border border-slate-200 dark:border-white/10 text-xs text-slate-400 space-y-2">
-              <Sparkles size={28} className="mx-auto text-[#00D9FF] opacity-60" />
+              <PenTool size={28} className="mx-auto text-[#00D9FF] opacity-60" />
               <p className="font-bold text-slate-700 dark:text-white/80">
-                {isEn ? "No AI writing submissions found." : "Aucune composition soumise pour cette école."}
+                {isEn ? "No writing submissions found." : "Aucune composition soumise pour cette école."}
               </p>
               <p className="text-[11px]">
                 {isEn

@@ -12,6 +12,8 @@ import {
   Copy,
   Check,
   MessageCircle,
+  History,
+  ShieldCheck,
 } from "lucide-react";
 import { SidebarTabs, TabDefinition } from "../common/SidebarTabs";
 
@@ -22,12 +24,14 @@ export type SchoolTab =
   | "courses"
   | "evaluations"
   | "pedagogy"
+  | "audit"
   | "settings";
 
 interface SchoolLayoutProps {
   school: School;
   students: Student[];
   programs?: Program[];
+  auditLogs?: any[];
   activeTab: SchoolTab;
   onTabChange: (tab: SchoolTab) => void;
   children: React.ReactNode;
@@ -37,6 +41,8 @@ interface SchoolLayoutProps {
 export const SchoolLayout: React.FC<SchoolLayoutProps> = ({
   school,
   students,
+  programs,
+  auditLogs = [],
   activeTab,
   onTabChange,
   children,
@@ -46,6 +52,12 @@ export const SchoolLayout: React.FC<SchoolLayoutProps> = ({
   const [copiedLink, setCopiedLink] = useState(false);
 
   const schoolStudents = students.filter((s) => s.schoolId === school.id);
+  const schoolLogs = auditLogs.filter(
+    (l) =>
+      l.schoolId === school.id ||
+      l.targetId === school.id ||
+      (l.schoolName && l.schoolName.toLowerCase() === school.name.toLowerCase())
+  );
   const quotaUsedPercent = Math.min(
     100,
     Math.round((schoolStudents.length / Math.max(1, school.studentQuota)) * 100)
@@ -95,6 +107,15 @@ export const SchoolLayout: React.FC<SchoolLayoutProps> = ({
       shortLabel: locale === "en" ? "Pedagogy" : "Pédagogie",
       description: t.schoolAdmin.tabs.pedagogy.desc,
       icon: <TrendingUp size={18} />,
+    },
+    {
+      id: "audit",
+      label: (t.schoolAdmin.tabs as any).audit?.label || (locale === "en" ? "Audit & Traceability" : "Audit & Traçabilité"),
+      shortLabel: locale === "en" ? "Audit" : "Audit",
+      description: (t.schoolAdmin.tabs as any).audit?.desc || (locale === "en" ? "Security logs and administrative traceability" : "Traçabilité des actions et journal de sécurité"),
+      icon: <History size={18} />,
+      badge: schoolLogs.length > 0 ? `${schoolLogs.length}` : undefined,
+      badgeColor: "cyan",
     },
     {
       id: "settings",

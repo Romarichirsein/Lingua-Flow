@@ -33,6 +33,7 @@ import {
   MoreVertical,
   Shield,
   Eye,
+  Key,
 } from "lucide-react";
 import { NeonButton } from "../common/NeonButton";
 import { ProgressBar } from "../common/ProgressBar";
@@ -157,11 +158,14 @@ export const SchoolStudentsTab: React.FC<SchoolStudentsTabProps> = ({
       return;
     }
 
+    const studentUsername = formData.email.trim().toLowerCase().split("@")[0] || `eleve_${Date.now()}`;
     const newStudent: Student = {
       id: `std_${Date.now()}`,
       schoolId: school.id,
       name: formData.name.trim(),
       email: formData.email.trim().toLowerCase(),
+      username: studentUsername,
+      password: "student123",
       phone: formData.phone.trim() || undefined,
       level: formData.level,
       enrolledProgramId: formData.enrolledProgramId || undefined,
@@ -310,11 +314,16 @@ export const SchoolStudentsTab: React.FC<SchoolStudentsTabProps> = ({
           break;
         }
 
+        const cleanEmail = email.toLowerCase();
+        const username = cleanEmail.split("@")[0] || `eleve_${Date.now()}_${i}`;
+
         newEnrolled.push({
           id: `std_csv_${Date.now()}_${i}`,
           schoolId: school.id,
           name,
-          email: email.toLowerCase(),
+          email: cleanEmail,
+          username,
+          password: "student123",
           phone: phone || undefined,
           level,
           enrolledProgramId: schoolPrograms[0]?.id,
@@ -547,7 +556,10 @@ export const SchoolStudentsTab: React.FC<SchoolStudentsTabProps> = ({
                   <tr
                     key={student.id}
                     className="hover:bg-slate-50/80 dark:hover:bg-white/5 transition-colors cursor-pointer"
-                    onClick={() => setSelectedStudentForDetail(student)}
+                    onClick={() => {
+                      if (onOpenStudentDetail) onOpenStudentDetail(student);
+                      else setSelectedStudentForDetail(student);
+                    }}
                   >
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-3">
@@ -642,6 +654,21 @@ export const SchoolStudentsTab: React.FC<SchoolStudentsTabProps> = ({
                         <button
                           type="button"
                           onClick={() => {
+                            if (onOpenStudentDetail) {
+                              onOpenStudentDetail(student);
+                            } else {
+                              setSelectedStudentForDetail(student);
+                            }
+                          }}
+                          className="p-2 rounded-lg text-slate-400 hover:text-[#20E3A2] hover:bg-[#20E3A2]/10 transition cursor-pointer"
+                          title="Identifiants & Accès de connexion"
+                        >
+                          <Key size={14} />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
                             setFormData({
                               name: student.name,
                               email: student.email,
@@ -696,7 +723,10 @@ export const SchoolStudentsTab: React.FC<SchoolStudentsTabProps> = ({
           paginatedStudents.map((student) => (
             <div
               key={student.id}
-              onClick={() => setSelectedStudentForDetail(student)}
+              onClick={() => {
+                if (onOpenStudentDetail) onOpenStudentDetail(student);
+                else setSelectedStudentForDetail(student);
+              }}
               className="p-4 bg-white dark:bg-[#0D1220] rounded-2xl border border-slate-200 dark:border-white/10 space-y-3 shadow-sm cursor-pointer"
             >
               <div className="flex items-center justify-between">
