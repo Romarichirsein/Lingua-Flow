@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Program, School, UILocale } from "../../types";
 import { Modal } from "../common/Modal";
+import { SchoolLogo } from "../common/SchoolLogo";
 import {
   GraduationCap,
   BookOpen,
@@ -180,7 +181,12 @@ export const SuperAdminProgramsTab: React.FC<SuperAdminProgramsTabProps> = ({
                   </p>
 
                   <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-white/80 mt-3 pt-3 border-t border-slate-100 dark:border-white/5">
-                    <span>{school?.logo || "🏫"}</span>
+                    <SchoolLogo
+                      logo={school?.logo}
+                      name={school?.name}
+                      language={school?.language}
+                      size="xs"
+                    />
                     <span className="truncate">{school?.name || (isEn ? "Partner School" : "École Partenaire")}</span>
                   </div>
                 </div>

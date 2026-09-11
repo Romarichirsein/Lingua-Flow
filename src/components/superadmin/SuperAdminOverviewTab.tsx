@@ -1,6 +1,7 @@
 import React from "react";
 import { School, Student, Program, ActivityLog, Announcement, UILocale } from "../../types";
 import { ProgressBar } from "../common/ProgressBar";
+import { SchoolLogo } from "../common/SchoolLogo";
 import {
   Building2,
   Users,
@@ -223,9 +224,12 @@ export const SuperAdminOverviewTab: React.FC<SuperAdminOverviewTabProps> = ({
                     className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 flex items-center justify-between gap-3 text-xs hover:border-[#6D5DFC]/40 transition"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="text-2xl p-2 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 shrink-0">
-                        {school.logo || (school.language === "german" ? "🇩🇪" : "🇮🇹")}
-                      </div>
+                      <SchoolLogo
+                        logo={school.logo}
+                        name={school.name}
+                        language={school.language}
+                        size="md"
+                      />
                       <div>
                         <div className="flex items-center gap-2">
                           <h4 className="font-bold text-sm text-slate-900 dark:text-white">

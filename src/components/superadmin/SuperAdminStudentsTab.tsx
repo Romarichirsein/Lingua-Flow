@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Student, School, UILocale, EntityStatus } from "../../types";
 import { Modal } from "../common/Modal";
 import { ProgressBar } from "../common/ProgressBar";
+import { SchoolLogo } from "../common/SchoolLogo";
 import {
   Users,
   Search,
@@ -274,8 +275,13 @@ export const SuperAdminStudentsTab: React.FC<SuperAdminStudentsTabProps> = ({
                       <td className="py-3.5 px-4">
                         {school ? (
                           <div>
-                            <p className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                              <span>{school.logo || "🏫"}</span>
+                            <p className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                              <SchoolLogo
+                                logo={school.logo}
+                                name={school.name}
+                                language={school.language}
+                                size="xs"
+                              />
                               <span>{school.name}</span>
                             </p>
                             <span className="text-[10px] text-slate-400">

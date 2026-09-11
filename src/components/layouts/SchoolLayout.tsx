@@ -16,6 +16,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { SidebarTabs, TabDefinition } from "../common/SidebarTabs";
+import { SchoolLogo } from "../common/SchoolLogo";
 
 export type SchoolTab =
   | "dashboard"
@@ -138,9 +139,13 @@ export const SchoolLayout: React.FC<SchoolLayoutProps> = ({
       {/* School Header Identity Bar */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white/90 dark:bg-[#0D1220]/90 backdrop-blur-md p-4 sm:p-5 rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm">
         <div className="flex items-center gap-3.5 sm:gap-4">
-          <div className="text-3xl p-2.5 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 shrink-0">
-            {school.logo || (school.language === "german" ? "🇩🇪" : "🇮🇹")}
-          </div>
+          <SchoolLogo
+            logo={school.logo}
+            name={school.name}
+            language={school.language}
+            size="lg"
+            className="shadow-sm"
+          />
 
           <div>
             <div className="flex flex-wrap items-center gap-2 mb-1">

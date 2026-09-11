@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { School, Student, Program, ActivityLog, EntityStatus, UILocale } from "../../types";
 import { Modal } from "../common/Modal";
 import { ProgressBar } from "../common/ProgressBar";
+import { SchoolLogo } from "../common/SchoolLogo";
 import {
   Building2,
   Users,
@@ -79,9 +80,12 @@ export const SuperAdminSchoolDetailModal: React.FC<SuperAdminSchoolDetailModalPr
         {/* Header Hero Card */}
         <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-slate-100 to-slate-200/50 dark:from-white/[0.04] dark:to-white/[0.02] border border-slate-200 dark:border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
-            <div className="text-3xl p-3 rounded-2xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 shrink-0">
-              {school.logo || (school.language === "german" ? "🇩🇪" : "🇮🇹")}
-            </div>
+            <SchoolLogo
+              logo={school.logo}
+              name={school.name}
+              language={school.language}
+              size="lg"
+            />
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white">

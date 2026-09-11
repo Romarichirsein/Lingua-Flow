@@ -4,6 +4,7 @@ import { School, Student, Program, ActivityLog, EntityStatus, SupportedLanguage,
 import { Modal } from "../common/Modal";
 import { ProgressBar } from "../common/ProgressBar";
 import { SuperAdminSchoolDetailModal } from "./SuperAdminSchoolDetailModal";
+import { SchoolLogo } from "../common/SchoolLogo";
 import {
   Building2,
   Users,
@@ -601,9 +602,12 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
                       {/* School & Language */}
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="text-2xl p-2 rounded-xl bg-slate-100 dark:bg-white/5 shrink-0">
-                            {school.logo || (school.language === "german" ? "🇩🇪" : "🇮🇹")}
-                          </div>
+                          <SchoolLogo
+                            logo={school.logo}
+                            name={school.name}
+                            language={school.language}
+                            size="md"
+                          />
                           <div>
                             <button
                               type="button"
@@ -798,9 +802,12 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
                 {/* Header */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <div className="text-2xl p-2 rounded-xl bg-slate-100 dark:bg-white/5 shrink-0">
-                      {school.logo || (school.language === "german" ? "🇩🇪" : "🇮🇹")}
-                    </div>
+                    <SchoolLogo
+                      logo={school.logo}
+                      name={school.name}
+                      language={school.language}
+                      size="md"
+                    />
                     <div>
                       <h4 className="font-bold text-sm text-slate-900 dark:text-white leading-tight">
                         {school.name}
@@ -1244,7 +1251,12 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
         {statusActionSchool && (
           <div className="space-y-4">
             <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 flex items-center gap-3">
-              <span className="text-2xl">{statusActionSchool.school.logo || "🏫"}</span>
+              <SchoolLogo
+                logo={statusActionSchool.school.logo}
+                name={statusActionSchool.school.name}
+                language={statusActionSchool.school.language}
+                size="md"
+              />
               <div>
                 <h4 className="font-bold text-sm text-slate-900 dark:text-white">
                   {statusActionSchool.school.name}
