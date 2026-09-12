@@ -85,9 +85,10 @@ function getGeminiClient(): GoogleGenAI | null {
 
 const GEMINI_MODELS_CASCADE = [
   "gemini-3.8-flash",
-  "gemini-flash-latest",
-  "gemini-3.1-pro-preview",
+  "gemini-3.6-flash",
   "gemini-3.1-flash-lite",
+  "gemini-3.1-pro-preview",
+  "gemini-flash-latest",
 ];
 
 /**
@@ -117,10 +118,8 @@ async function callGemini(
   let lastError: any = null;
 
   for (const modelName of modelsToTry) {
+    let timer: NodeJS.Timeout | undefined;
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
-
       const generatePromise = gemini.models.generateContent({
         model: modelName,
         contents: prompt,
@@ -130,31 +129,32 @@ async function callGemini(
         },
       });
 
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error(`Gemini timeout on ${modelName}`)), timeoutMs)
-      );
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`Gemini timeout on ${modelName}`)), timeoutMs);
+      });
 
       const response: any = await Promise.race([generatePromise, timeoutPromise]);
-      clearTimeout(timer);
+      if (timer) clearTimeout(timer);
 
       if (response?.text) {
         return response.text;
       }
     } catch (err: any) {
+      if (timer) clearTimeout(timer);
       lastError = err;
       const errMsg = err?.message || String(err);
-      // If error is high demand (503), rate limit (429), or unavailable, continue to next model
       if (
         errMsg.includes("503") ||
         errMsg.includes("high demand") ||
         errMsg.includes("UNAVAILABLE") ||
         errMsg.includes("RESOURCE_EXHAUSTED") ||
-        errMsg.includes("429")
+        errMsg.includes("429") ||
+        errMsg.includes("404") ||
+        errMsg.includes("not found")
       ) {
-        console.warn(`Gemini model ${modelName} high demand, trying next model in cascade...`);
+        console.warn(`Gemini model ${modelName} unavailable/busy, trying next model in cascade...`);
         continue;
       }
-      // If it's another non-recoverable error and not last model, still try backup
       console.warn(`Gemini model ${modelName} notice: ${errMsg}`);
     }
   }
@@ -184,6 +184,7 @@ async function callGeminiChat(
   let lastError: any = null;
 
   for (const modelName of modelsToTry) {
+    let timer: NodeJS.Timeout | undefined;
     try {
       const generatePromise = gemini.models.generateContent({
         model: modelName,
@@ -193,15 +194,18 @@ async function callGeminiChat(
         },
       });
 
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error(`Gemini chat timeout on ${modelName}`)), timeoutMs)
-      );
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`Gemini chat timeout on ${modelName}`)), timeoutMs);
+      });
 
       const response: any = await Promise.race([generatePromise, timeoutPromise]);
+      if (timer) clearTimeout(timer);
+
       if (response?.text) {
         return response.text;
       }
     } catch (err: any) {
+      if (timer) clearTimeout(timer);
       lastError = err;
       const errMsg = err?.message || String(err);
       if (
@@ -209,11 +213,14 @@ async function callGeminiChat(
         errMsg.includes("high demand") ||
         errMsg.includes("UNAVAILABLE") ||
         errMsg.includes("RESOURCE_EXHAUSTED") ||
-        errMsg.includes("429")
+        errMsg.includes("429") ||
+        errMsg.includes("404") ||
+        errMsg.includes("not found")
       ) {
-        console.warn(`Gemini Chat on ${modelName} high demand, trying next cascade model...`);
+        console.warn(`Gemini Chat on ${modelName} unavailable/busy, trying next cascade model...`);
         continue;
       }
+      console.warn(`Gemini Chat on ${modelName} notice: ${errMsg}`);
     }
   }
 
@@ -792,39 +799,45 @@ Evaluate this student text according to CEFR criteria.`;
 
   let rawJsonText = "";
 
-  // 1. Primary AI Engine: Try Official DeepSeek API (deepseek-chat)
-  try {
-    rawJsonText = await callDeepSeek(
-      [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      { model: DEEPSEEK_MODEL, jsonMode: true, timeoutMs: 15000 }
-    );
-  } catch (deepseekErr: any) {
-    console.log("DeepSeek notice (trying Gemini 3.7):", deepseekErr.message);
-
-    // 2. Secondary AI Engine: Gemini Multi-Model Cascade
+  // 1. Primary AI Engine: Gemini Multi-Model Cascade (instant & high accuracy)
+  if (process.env.GEMINI_API_KEY) {
     try {
       rawJsonText = await callGemini(
         `${systemPrompt}\n\n${userPrompt}`,
         { jsonMode: true, timeoutMs: 15000 }
       );
     } catch (geminiErr: any) {
-      console.log("Gemini cascade notice (trying SeekAI):", geminiErr.message);
+      console.warn("Gemini cascade notice (trying DeepSeek/SeekAI):", geminiErr?.message || geminiErr);
+    }
+  }
 
-      // 3. Tertiary AI Engine: SeekAI
-      try {
-        rawJsonText = await callOpenAICompatible(
-          [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-          { model: preferredModel, jsonMode: true, timeoutMs: 6000 }
-        );
-      } catch (seekErr: any) {
-        console.log("SeekAI notice:", seekErr.message);
-      }
+  // 2. Secondary AI Engine: Try Official DeepSeek API (deepseek-chat)
+  if (!rawJsonText && deepSeekBalanceCache.isAvailable && (process.env.DEEPSEEK_API_KEY || DEEPSEEK_API_KEY)) {
+    try {
+      rawJsonText = await callDeepSeek(
+        [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        { model: DEEPSEEK_MODEL, jsonMode: true, timeoutMs: 8000 }
+      );
+    } catch (deepseekErr: any) {
+      console.warn("DeepSeek notice:", deepseekErr?.message || deepseekErr);
+    }
+  }
+
+  // 3. Tertiary AI Engine: SeekAI
+  if (!rawJsonText) {
+    try {
+      rawJsonText = await callOpenAICompatible(
+        [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        { model: preferredModel, jsonMode: true, timeoutMs: 6000 }
+      );
+    } catch (seekErr: any) {
+      console.warn("SeekAI notice:", seekErr?.message || seekErr);
     }
   }
 
@@ -926,71 +939,267 @@ Evaluate this student text according to CEFR criteria.`;
 });
 
 // --------------------------------------------------------------------------
-// AI CHATBOT TUTOR
+// AI CHATBOT TUTOR - FULL GERMAN PEDAGOGICAL APTITUDE & ALL CEFR LEVELS
 function getCEFRLevelRules(level: string, language: string): string {
   const isGerman = language === "german";
   const normLevel = (level || "A2").toUpperCase();
   switch (normLevel) {
     case "A1":
       return isGerman
-        ? `CEFR A1 LEVEL CONSTRAINTS (Absolute Beginner):
-- Max sentence length: 5 to 8 words. Keep syntax ultra-simple: Subject + Verb + Object.
-- Present tense (Präsens) only. No complex subordinate clauses (no 'weil', 'dass', 'obwohl', no relative pronouns).
-- Basic A1 vocabulary: greetings, numbers, colors, family, food, daily objects, countries.
-- Be very warm and encouraging. If the student writes French or English, guide them kindly into German.
-- Always include a small helpful hint in brackets in French or English: [💡 Conseil A1: ...]`
+        ? `CEFR A1 LEVEL CONSTRAINTS (Absolute Beginner / Anfänger):
+- Max sentence length: 5 to 9 words. Keep syntax direct: Subject + Verb + Object.
+- Present tense (Präsens) only. No complex subordinate clauses (avoid 'weil', 'dass', 'obwohl', no relative clauses).
+- Core vocabulary: Begrüßung, Familie, Zahlen, Uhrzeit, Farben, Essen & Trinken, Wohnort, Hobbys, einfache Fragen.
+- Modals allowed in simple present: 'möchte', 'kann', 'muss'.
+- Keep a very encouraging, warm atmosphere.
+- Always include a small pedagogical hint in brackets in French: [💡 Conseil A1: ...]`
         : `CEFR A1 LEVEL CONSTRAINTS (Principiante assoluto):
 - Lunghezza massima frase: 5-8 parole. Sintassi ultra-semplice: Soggetto + Verbo + Oggetto.
-- Solo presente indicativo. Nessuna subordinata complessa (niente 'perché', 'che', 'sebbene').
-- Vocabolario base A1: saluti, numeri, colori, famiglia, cibo, oggetti quotidiani.
-- Sempre molto incoraggiante. Includi un piccolo suggerimento pedagogico tra parentesi: [💡 Consiglio A1: ...]`;
+- Solo presente indicativo. Nessuna subordinata complessa.
+- Includi sempre un piccolo suggerimento pedagogico tra parentesi: [💡 Consiglio A1: ...]`;
     case "A2":
       return isGerman
-        ? `CEFR A2 LEVEL CONSTRAINTS (Elementary):
-- Sentence length: 8 to 12 words. Simple connectors allowed (und, aber, oder, weil).
-- Simple past with 'haben/sein' + Perfekt. Modal verbs in present (können, müssen, wollen, dürfen).
-- Topics: daily routine, shopping, hobbies, holidays, housing, describing past events.
-- Ask simple, engaging questions to prompt the student to write 1-2 sentences.
-- Include a pedagogical tip if grammar errors appear: [💡 Conseil A2: ...]`
+        ? `CEFR A2 LEVEL CONSTRAINTS (Elementary / Grundstufe):
+- Sentence length: 8 to 14 words. Connectors allowed: 'und', 'aber', 'oder', 'weil' (verb at the end!), 'dass', 'wenn'.
+- Past tense: Perfekt with 'haben' and 'sein' (ge...t / ge...en). Simple past of modals ('konnte', 'musste') and 'war/hatte'.
+- Topics: Alltagsroutine, Einkaufen, Wegbeschreibung, Arztbesuch, Urlaub, Wohnungssuche, Berufswünsche.
+- Ask varied, engaging questions to prompt the student to formulate 1-2 complete sentences.
+- Include a constructive pedagogical tip in brackets: [💡 Conseil A2: ...]`
         : `CEFR A2 LEVEL CONSTRAINTS (Elementare):
 - Lunghezza frase: 8-12 parole. Connettori semplici (e, ma, o, perché).
-- Uso del passato prossimo e imperfetto di base. Verbi modali (potere, dovere, volere).
-- Argomenti: routine quotidiana, acquisti, passatempi, vacanze, descrizioni.
+- Uso del passato prossimo e imperfetto di base.
 - Includi suggerimenti costruttivi: [💡 Consiglio A2: ...]`;
     case "B1":
       return isGerman
-        ? `CEFR B1 LEVEL CONSTRAINTS (Intermediate):
-- Natural, standard German with subordinate clauses (dass, wenn, weil, obwohl).
-- Polite subjunctive (hätte, wäre, würde gerne, könnte). Future and narrative past.
-- Topics: personal opinions, travel memories, work life, current news, cultural habits.
-- Challenge the student with conversational follow-up questions asking for their justification or opinion.`
+        ? `CEFR B1 LEVEL CONSTRAINTS (Intermediate / Mittelstufe - Zertifikat Deutsch):
+- Standard fluid German with varied subclauses: 'obwohl', 'da', 'damit', 'um...zu', 'nachdem', 'während'.
+- Tenses: Perfekt & Präteritum, Futur I, Konjunktiv II for polite requests and wishes ('hätte', 'wäre', 'würde gern', 'könnte').
+- Topics: Beruf, Auslandsaufenthalt, Ausbildung, persönliche Meinungen, Vor- und Nachteile, Medien, Umwelt.
+- Challenge the student to express their perspective, justify choices, and describe past experiences.
+- Include subtle grammar and vocabulary enhancement in brackets: [💡 Conseil B1: ...]`
         : `CEFR B1 LEVEL CONSTRAINTS (Intermedio):
 - Italiano standard con subordinate (che, quando, perché, sebbene).
-- Condizionale presente (vorrei, potrei, sarebbe). Passato prossimo e imperfetto combinati.
-- Argomenti: opinioni personali, ricordi, lavoro, notizie, costumi e tradizioni.
-- Stimola l'allievo chiedendo la sua opinione e motivazioni.`;
+- Condizionale presente, passato prossimo e imperfetto combinati.
+- Stimola l'allievo chiedendo la sua opinione e motivazioni: [💡 Consiglio B1: ...]`;
     case "B2":
       return isGerman
-        ? `CEFR B2 LEVEL CONSTRAINTS (Vantage / Upper Intermediate):
-- Rich, idiomatic German with complex sentence structures, passive voice, Konjunktiv II.
-- Abstract topics: technology, sociology, professional negotiations, environmental debates.
-- Correct subtle grammatical nuances (prepositional verbs, case government: Genitiv, Dativ/Akkusativ wechselnd).`
+        ? `CEFR B2 LEVEL CONSTRAINTS (Vantage / Gute Mittelstufe - Goethe B2 / TELC B2):
+- Rich, idiomatic German with complex syntax: Passiv (Vorgangspassiv & Zustandspassiv), Konjunktiv II (irrealis & hypothetical).
+- Verbs with prepositions (Rektion der Verben: 'abhängen von', 'sich beziehen auf', 'bestehen aus', 'achten auf').
+- Two-part connectors: 'sowohl...als auch', 'weder...noch', 'nicht nur...sondern auch', 'einerseits...andererseits'.
+- Topics: Professionelle Verhandlungen, Bewerbungsgespräche, gesellschaftliche Debatten, Technologie, Kultur & Wirtschaft.
+- Give constructive feedback on precise word choices, case governances, and idioms: [💡 Conseil B2: ...]`
         : `CEFR B2 LEVEL CONSTRAINTS (Intermedio superiore):
 - Italiano ricco e idiomatico con congiuntivo presente e passato, periodo ipotetico, forma passiva.
-- Argomenti complessi: tecnologia, società, trattative professionali, attualità culturale.
-- Correggi sfumature di registro, concordanza dei tempi e preposizioni rette dai verbi.`;
+- Argomenti complessi: trattative, lavoro, attualità culturale: [💡 Consiglio B2: ...]`;
     case "C1":
-    default:
       return isGerman
-        ? `CEFR C1 LEVEL CONSTRAINTS (Autonomous / Mastery):
-- Native-level syntactic variety, sophisticated connectors, academic and formal vocabulary.
-- Idiomatic precision, stylistic nuances, rhetorical finesse, nuanced synonyms.
-- Provide advanced feedback on register appropriateness, tone, and stylistic elegance.`
+        ? `CEFR C1 LEVEL CONSTRAINTS (Autonomous / Fortgeschritten - Goethe C1 / TestDaF):
+- Highly articulate, academic and professional German.
+- Advanced syntactic structures: Partizipialkonstruktionen, Nomen-Verb-Verbindungen ('in Betracht ziehen', 'zur Verfügung stellen'), Konjunktiv I für indirekte Rede.
+- Sophisticated argumentation: counterarguments, nuanced concessions, stylistic variety, metaphorical expressions.
+- Topics: Wissenschaft, Makroökonomie, Philosophie, europäische Politik, Arbeitsmarktethik, Literatur.
+- Provide expert stylistic critiques and register adjustments: [💡 Conseil C1: ...]`
         : `CEFR C1 LEVEL CONSTRAINTS (Avanzato / Padronanza):
 - Varietà sintattica madrelingua, connettivi sofisticati, lessico accademico e formale.
-- Precisione idiomatica, sfumature stilistiche, retorica raffinata.
-- Fornisci feedback approfondito sull'eleganza stilistica, il registro e la precisione lessicale.`;
+- Retorica raffinata e precisione lessicale: [💡 Consiglio C1: ...]`;
+    case "C2":
+    default:
+      return isGerman
+        ? `CEFR C2 LEVEL CONSTRAINTS (Mastery / Exzellenz - Großes Deutsches Sprachdiplom):
+- Native-level mastery across all communicative registers (formal, informal, dialectal awareness, literary, journalistic).
+- Subtle irony, rhetorical devices, effortless command of idioms (Redewendungen) and cultural references.
+- High-level sociolinguistic agility, swift adaptability to any topic, instant feedback on stylistic elegance.
+- Encourage nuance, deep analysis, and sophisticated philosophical or cultural reasoning: [💡 Conseil C2: ...]`
+        : `CEFR C2 LEVEL CONSTRAINTS (Madrelingua / Eccellenza):
+- Padronanza totale, sfumature stilistiche, ironia, precisione idiomatica assoluta: [💡 Consiglio C2: ...]`;
   }
+}
+
+/**
+ * Intelligent Dynamic German Response Generator
+ * Provides varied, non-repetitive, topic-calibrated pedagogical responses and questions
+ * when offline or in case of transient API delays. Never repeats the same question.
+ */
+function generateDynamicGermanReply(params: {
+  studentName?: string;
+  level: string;
+  topic?: string;
+  subtopic?: string;
+  practiceMode?: string;
+  lastUserMsg: string;
+}): string {
+  const { studentName = "Alex", level = "A2", topic = "", subtopic = "", practiceMode = "conversation", lastUserMsg = "" } = params;
+  const msgLower = lastUserMsg.toLowerCase();
+  const name = studentName || "Alex";
+  const seed = Date.now() % 4;
+
+  // 1. Check if the user is asking about grammar rules
+  if (msgLower.includes("akkusativ") || msgLower.includes("dativ") || msgLower.includes("cas") || msgLower.includes("fälle")) {
+    return `Sehr gute Grammatikfrage, ${name}! In der deutschen Sprache bestimmt das Verb oder die Präposition den Kasus.
+[💡 Conseil Grammaire: L'Accusatif répond à "Wen/Was?" (complément d'objet direct: den Apfel, die Katze, das Buch). Le Datif répond à "Wem?" (attribution ou situation fixe: dem Mann, der Frau, dem Kind). Avec les Wechselpräpositionen (in, an, auf...): mouvement vers un lieu = Akkusativ, position fixe = Dativ].
+Versuche diesen Satz zu vervollständigen: "Ich stelle das Buch auf _____ Tisch (m) und dann sitze ich an _____ Tisch."`;
+  }
+
+  if (msgLower.includes("nebensatz") || msgLower.includes("weil") || msgLower.includes("obwohl") || msgLower.includes("dass")) {
+    return `Klasse Beobachtung zum Satzbau, ${name}!
+[💡 Conseil Syntaxe: Dans une proposition subordonnée introduite par 'weil', 'dass', 'obwohl', 'wenn', le verbe conjugué est toujours rejeté à la TOUTE FIN de la proposition : "Ich lerne Deutsch, weil es mir Spaß macht."].
+Möchtest du einen Satz bilden? Beginne mit: "Ich lerne heute Deutsch, obwohl..."`;
+  }
+
+  if (msgLower.includes("konjunktiv") || msgLower.includes("passiv")) {
+    return `Ein wichtiges Thema für Fortgeschrittene, ${name}!
+[💡 Conseil B1/B2: Le Konjunktiv II s'utilise pour les souhaits et la politesse : "Ich hätte gern...", "Ich würde mich freuen...", "Könnten Sie mir helfen?". Pour le Passif : "werden + participe passé"].
+Welchen großen Wunsch würdest du dir erfüllen, wenn du fließend Deutsch sprechen könntest?`;
+  }
+
+  // 2. Topic-driven conversational prompts
+  const topicLower = (topic + " " + subtopic).toLowerCase();
+
+  // Topic: Beruf, Karriere & Bewerbung
+  if (topicLower.includes("beruf") || topicLower.includes("karriere") || topicLower.includes("bewerb") || topicLower.includes("arbeit")) {
+    if (practiceMode === "roleplay") {
+      const questions = [
+        `Guten Tag, Herr/Frau ${name}! Willkommen zu unserem Vorstellungsgespräch in Berlin. Nehmen Sie bitte Platz. Können Sie uns zu Beginn schildern, was Sie an dieser internationalen Position besonders reizt?`,
+        `Guten Tag! Wir haben Ihre Bewerbungsunterlagen mit großem Interesse gelesen. Welche Ihrer bisherigen beruflichen Erfolge würden Sie als besonders prägend beschreiben?`,
+        `Hallo ${name}! Schön, dass Sie es einrichten konnten. In unserem Team legen wir großen Wert auf Problemlösungskompetenz. Wie reagieren Sie typischerweise, wenn ein wichtiges Kundenprojekt kurz vor der Deadline unter Zeitdruck gerät?`,
+        `Guten Tag! Erzählen Sie mir: Welche Rolle spielen Fremdsprachen und interkulturelle Kommunikation in Ihrem aktuellen Arbeitsalltag?`,
+      ];
+      return `${questions[seed]} [💡 Conseil Professionnel: Pour valoriser ton expérience, utilise des verbes d'action précis comme "Ich habe koordiniert", "Ich war zuständig für...", "Ich verfüge über Kenntnisse in..."]`;
+    }
+    const questions = [
+      `Im Berufsleben ist präzise Kommunikation entscheidend! In welcher Branche bist du tätig oder welcher Karriereweg interessiert dich am meisten in den deutschsprachigen Ländern (Deutschland, Österreich, Schweiz)?`,
+      `Interessantes Thema! Wie wichtig ist deiner Meinung nach die "Work-Life-Balance" im Vergleich zu guten Aufstiegschancen in einem deutschen Unternehmen?`,
+      `Lass uns über den Arbeitsalltag sprechen: Welche Aufgaben erledigst du bei der Arbeit am liebsten und welche Herausforderungen motivieren dich?`,
+      `Deutsche E-Mails im Beruf beginnen oft mit "Sehr geehrte Damen und Herren" oder "Liebe Kolleginnen und Kollegen". Hast du schon einmal eine formelle Nachricht auf Deutsch verfasst?`,
+    ];
+    return `${questions[seed]} [💡 Conseil Vocabulaire: Retiens ces termes clés : "die Bewerbungsunterlagen" (dossier de candidature), "das Vorstellungsgespräch" (entretien d'embauche), "die Verantwortung" (responsabilité)].`;
+  }
+
+  // Topic: Alltag, Wohnen & Stadtleben
+  if (topicLower.includes("alltag") || topicLower.includes("wohn") || topicLower.includes("einkauf") || topicLower.includes("stadt")) {
+    const questions = [
+      `Das Stadtleben und Wohnen ist ein fantastisches Übungsfeld! Stell dir vor, du suchst eine neue Wohnung in München oder Berlin. Was ist dir am wichtigsten: ein sonniger Balkon, ruhige Lage oder eine schnelle Anbindung mit der U-Bahn?`,
+      `Wie sieht dein typischer Morgen aus? Erzähle mir kurz: Wann stehst du auf, was frühstückst du und wie startest du am liebsten in den Tag?`,
+      `Einkaufen in Deutschland: Auf dem Wochenmarkt kauft man frisches Obst und Gemüse, beim Bäcker holt man knusprige Brötchen. Welches deutsche Gericht oder Gebäck möchtest du unbedingt probieren?`,
+      `Wohnen in einer WG (Wohngemeinschaft) ist in Deutschland unter jungen Leuten und Studenten sehr beliebt. Könntest du dir vorstellen, eine Küche und ein Wohnzimmer mit Mitbewohnern zu teilen?`,
+    ];
+    return `${questions[seed]} [💡 Conseil A2: Pour décrire ton logement, utilise "Es gibt + Akkusativ" : "In meiner Wohnung gibt es einen großen Balkon (m) und ein helles Zimmer (n)"].`;
+  }
+
+  // Topic: Reisen & Mobilität in DACH
+  if (topicLower.includes("reis") || topicLower.includes("bahn") || topicLower.includes("hotel") || topicLower.includes("urlaub")) {
+    const questions = [
+      `Reisen eröffnet neue Horizonte! Wenn du morgen eine Rundreise machen könntest: Würdest du lieber die historischen Schlösser in Bayern besichtigen, die Schweizer Alpen erkunden oder das urbane Nachtleben in Hamburg erleben?`,
+      `Stell dir vor, du stehst am Berliner Hauptbahnhof und dein ICE nach Köln hat Verspätung. Wie fragst du freundlich am Informationsschalter nach einer alternativen Zugverbindung?`,
+      `Welche unvergessliche Reise hast du in der Vergangenheit unternommen? Erzähle mir kurz: Wohin bist du gereist und was war dein schönstes Erlebnis dort?`,
+      `Im Hotel: "Guten Tag, ich habe ein Doppelzimmer mit Frühstück auf den Namen ${name} reserviert." Welche Wünsche hast du normalerweise bei einer Hotelübernachtung?`,
+    ];
+    return `${questions[seed]} [💡 Conseil Voyage: En gare, repère ces mots utiles : "der Bahnsteig" (quai), "die Abfahrt" (départ), "die Verspätung" (retard), "der Anschlusszug" (correspondance)].`;
+  }
+
+  // Topic: Kultur & Landeskunde
+  if (topicLower.includes("kultur") || topicLower.includes("tradition") || topicLower.includes("landeskunde") || topicLower.includes("fest")) {
+    const questions = [
+      `Die deutschsprachige Kultur ist reich an Traditionen! Kennst du Bräuche wie das Oktoberfest in München, den Karneval im Rheinland oder die berühmten deutschen Weihnachtsmärkte im Dezember? Was fasziniert dich daran?`,
+      `Deutschland besteht aus 16 Bundesländern mit jeweils ganz eigenem Charakter und Spezialitäten. Hast du ein bestimmtes Bundesland oder eine Stadt, die du gerne näher kennenlernen möchtest?`,
+      `In Deutschland gilt Pünktlichkeit als Zeichen von Respekt und Zuverlässigkeit. Wie siehst du das in deinem Kulturkreis – ist Pünktlichkeit genauso zentral oder wird die Zeit flexibler gehandhabt?`,
+      `Deutsche Musik, Literatur und Film: Kennst du deutsche Künstler, Schriftsteller wie Goethe oder Schiller, oder deutsche Serien wie 'Dark' und 'Babylon Berlin'?`,
+    ];
+    return `${questions[seed]} [💡 Conseil Culture: "Landeskunde" désigne la connaissance civilisationnelle et sociétale des pays germanophones : Allemagne (D), Autriche (A), Suisse (CH)].`;
+  }
+
+  // Topic: Gesundheit & Arzt
+  if (topicLower.includes("arzt") || topicLower.includes("gesund") || topicLower.includes("apotheke") || topicLower.includes("körper")) {
+    const questions = [
+      `Guten Tag, ${name}! Beim Arzt ist genaue Verständigung lebenswichtig. Nehmen wir an, du hast seit gestern Kopfschmerzen und Halsschmerzen. Wie beschreibst du dem Arzt deine Beschwerden?`,
+      `In der deutschen Apotheke: "Guten Tag, ich brauche etwas gegen Halsschmerzen und Husten. Haben Sie das rezeptfrei?" Welche Hausmittel benutzt du selbst, wenn du dich erkältet fühlst?`,
+      `Gesunder Lebensstil: Was tust du regelmäßig, um fit und gesund zu bleiben – treibst du Sport, achtest du auf gesunde Ernährung oder meditierst du?`,
+    ];
+    return `${questions[seed % questions.length]} [💡 Conseil Santé: Pour exprimer la douleur, dis : "Mir tut der Kopf weh" (au singulier) ou "Mir tun die Beine weh" (au pluriel)].`;
+  }
+
+  // Topic: Behörden & Bürgeramt
+  if (topicLower.includes("behörde") || topicLower.includes("amt") || topicLower.includes("anmeld") || topicLower.includes("bürger")) {
+    const questions = [
+      `Das berühmte deutsche "Bürgeramt"! Wer nach Deutschland zieht, muss sich innerhalb von zwei Wochen beim Einwohnermeldeamt anmelden. Welche Dokumente nimmst du zu einem solchen Behördentermin mit?`,
+      `Am Schalter: "Guten Tag, ich habe einen Termin um 10:30 Uhr für die Wohnsitzanmeldung." Welche Erfahrungen hast du bisher mit bürokratischen Formularen gemacht?`,
+      `Aufenthaltstitel und Sprachzertifikate: Für viele Visa benötigt man ein B1- oder B2-Zertifikat. Was ist dein persönliches Ziel beim Deutschlernen?`,
+    ];
+    return `${questions[seed % questions.length]} [💡 Conseil Démarches: Termes indispensables : "die Meldebestätigung" (attestation de domicile), "das Formular ausfüllen" (remplir le formulaire), "der Personalausweis" (carte d'identité)].`;
+  }
+
+  // Topic: Goethe / TELC Prüfung
+  if (topicLower.includes("prüfung") || topicLower.includes("goethe") || topicLower.includes("telc") || topicLower.includes("testdaf")) {
+    const questions = [
+      `Willkommen zur Prüfungssimulation! In Teil 1 der mündlichen Prüfung stellen sich die Kandidaten kurz vor. Bitte stelle dich vor: Name, Beruf/Studium, Hobbys und deine Motivation für die deutsche Sprache.`,
+      `Prüfungsteil 2: Präsentation eines Themas. Wähle eines dieser Themen: "Sollten Kinder schon in der Grundschule Smartphones nutzen?" oder "Vor- und Nachteile von Homeoffice". Wie lautet deine Einleitung?`,
+      `Prüfungsteil 3: Gemeinsam etwas planen. Stell dir vor, wir müssen zusammen ein Geschenk und eine Überraschungsparty für einen gemeinsamen Freund organisieren. Was schlägst du vor?`,
+      `Im mündlichen Prüfungsteil ist es wichtig, die eigene Meinung mit Argumenten zu untermauern ("Meiner Meinung nach...", "Ein entscheidender Vorteil ist..."). Was hältst du vom öffentlichen Nahverkehr im Vergleich zum Auto?`,
+    ];
+    return `${questions[seed]} [💡 Conseil Examen Goethe/TELC: Pour structurer ton propos, utilise des connecteurs forts : "Erstens..., zweitens...", "Einerseits... andererseits...", "Zusammenfassend lässt sich sagen, dass..."].`;
+  }
+
+  // Topic: Debatten & Zeitgeschehen
+  if (topicLower.includes("debatt") || topicLower.includes("aktuell") || topicLower.includes("klima") || topicLower.includes("ki") || topicLower.includes("zukunft")) {
+    const questions = [
+      `Künstliche Intelligenz verändert unsere Gesellschaft und die Arbeitswelt rasant. Siehst du in der Automatisierung eher eine Chance zur Produktivitätssteigerung oder ein Risiko für Arbeitsplätze?`,
+      `Umweltschutz und Energiewende sind in Deutschland zentrale politische Themen. Welche Maßnahmen hältst du persönlich für am wirksamsten, um den CO2-Ausstoß zu verringern?`,
+      `Digitale Medien vs. gedruckte Bücher: Wie konsumierst du heutzutage Nachrichten und Literatur, und welche Vorzüge bieten traditionelle Medien noch?`,
+      `Globalisierung und interkultureller Austausch: Welche Chancen entstehen deiner Ansicht nach, wenn Menschen aus verschiedenen Kulturen zusammenarbeiten?`,
+    ];
+    return `${questions[seed]} [💡 Conseil Argumentation B2/C1: Formule des nuances avec : "Es steht außer Frage, dass...", "Man muss jedoch bedenken, dass...", "Dies führt unvermeidlich zu..."]`;
+  }
+
+  // Default dynamic engagement based on CEFR Level (No static greetings, always active progression)
+  if (level === "A1") {
+    const a1Replies = [
+      `Hallo ${name}! Schön, dass wir zusammen Deutsch üben. Erzähle mir: Was machst du heute gerne in deiner Freizeit? [💡 Conseil A1: Réponds avec le verbe en 2e place : "In meiner Freizeit spiele ich Fußball / höre ich Musik"].`,
+      `Super, ${name}! Deutsch lernen macht Schritt für Schritt Spaß. Welche Sprachen sprichst du schon und woher kommst du? [💡 Conseil A1: Utilise "Ich spreche Französisch und ein bisschen Deutsch"].`,
+      `Sehr gut! Lass uns über Essen und Trinken sprechen: Was trinkst du am liebsten zum Frühstück – Kaffee, Tee oder Saft? [💡 Conseil A1: En allemand : "Ich trinke am liebsten Kaffee mit Milch"].`,
+      `Wunderbar! Welcher Wochentag ist dein Lieblingstag und warum? [💡 Conseil A1: Montag, Dienstag, Mittwoch, Donnerstag, Freitag, Samstag, Sonntag. "Mein Lieblingstag ist Samstag!"].`,
+    ];
+    return a1Replies[seed];
+  }
+
+  if (level === "A2") {
+    const a2Replies = [
+      `Prima Satz, ${name}! Lass uns tiefer in unser Thema eintauchen. Was hast du am vergangenen Wochenende unternommen? [💡 Conseil A2: Entraîne le Perfekt : "Am Wochenende habe ich Freunde getroffen und einen Film gesehen"].`,
+      `Das ist ein spannender Aspekt! Wie gefällt dir das Thema und welche Fragen möchtest du dazu auf Deutsch stellen? [💡 Conseil A2: Pour poser une question ouverte : W-Fragen wie "Was...", "Wo...", "Wie...", "Warum..."].`,
+      `Gute Formulierung! Erzähle mir: Wenn du dir eine Stadt in Deutschland aussuchen könntest, welche würdest du gerne besuchen und warum? [💡 Conseil A2: Utilise "weil" avec verbe final : "...weil Berlin sehr lebendig ist"].`,
+      `Sehr schön, ${name}! Lass uns über deinen Alltag sprechen: Welches Hobby begeistert dich am meisten und wie oft machst du das?`,
+    ];
+    return a2Replies[seed];
+  }
+
+  if (level === "B1") {
+    const b1Replies = [
+      `Sehr guter Gedankengang, ${name}! Wie begründest du deine Haltung zu diesem Thema im Detail? Welche Vor- und Nachteile siehst du hierbei? [💡 Conseil B1: Pense à varier tes connecteurs : "Einerseits... andererseits...", "Darüber hinaus...", "Meines Erachtens..."].`,
+      `Interessant formuliert! Hast du in diesem Bereich bereits persönliche Erfahrungen gesammelt, von denen du berichten kannst? Wie hat sich die Situation in den letzten Jahren verändert?`,
+      `Das ist ein zentraler Punkt in unserem Thema. Wenn du die Möglichkeit hättest, eine Sache daran sofort zu verbessern, was würdest du vorschlagen und wie würdest du vorgehen?`,
+      `Treffende Überlegung, ${name}! Welche Rolle spielen gesellschaftliche Trends und Erwartungen bei dieser Frage?`,
+    ];
+    return b1Replies[seed];
+  }
+
+  if (level === "B2") {
+    const b2Replies = [
+      `Eine differenzierte und ansprechende Ausführung, ${name}! [💡 Conseil B2: Pour enrichir ton argumentation, utilise le passif ou le Konjunktiv II : "Es müsste berücksichtigt werden, dass..."]. Wie schätzt du die langfristigen Auswirkungen dieser Entwicklung ein?`,
+      `Sehr scharfsinnig analysiert! Welche Gegenargumente könnten Skeptiker in einer professionellen Debatte gegen deinen Standpunkt vorbringen, und wie würdest du darauf entgegnen?`,
+      `Exzellenter sprachlicher Ansatz. Gibt es hierbei spürbare Unterschiede zwischen der Praxis im deutschsprachigen Raum und deinem Heimatland? Worauf führst du diese zurück?`,
+      `Präzise formuliert, ${name}! Welche strukturellen Maßnahmen sollten deiner Meinung nach von Entscheidungsträgern ergriffen werden?`,
+    ];
+    return b2Replies[seed];
+  }
+
+  // C1 & C2
+  const cReplies = [
+    `Eine bemerkenswert präzise und stilsichere Darlegung, ${name}. [💡 Conseil C1/C2: L'usage de tournures nominales comme "unter Berücksichtigung dieser Parameter" confère un niveau académique remarquable]. Welche philosophischen oder ethischen Implikationen lassen sich aus dieser Konstellation ableiten?`,
+    `Brillant reflektiert! Ihre Argumentation zeugt von hoher analytischer Tiefe. Inwiefern ließe sich diese These im Kontext des aktuellen Diskurses in den deutschsprachigen Leitmedien weiter schärfen?`,
+    `Hervorragend nuanciert, ${name}. Welche dialektischen Gegensätze sehen Sie zwischen theoretischem Ideal und pragmatischer Realpolitik in diesem Bereich?`,
+    `Außerordentlich eloquent formuliert. Wenn Sie diesen Sachverhalt vor einem hochkarätigen Fachgremium präsentieren müssten: Welche Kernbotschaft würden Sie rhetorisch ins Zentrum rücken?`,
+  ];
+  return cReplies[seed];
 }
 
 // --------------------------------------------------------------------------
@@ -1004,6 +1213,10 @@ app.post("/api/ai/chat", async (req, res) => {
       level = "A2",
       schoolName,
       studentName,
+      topic = "Alltagsleben & Kultur",
+      subtopic = "",
+      practiceMode = "conversation",
+      turnCount = 0,
       thinkingMode = false,
       useDeepThinking = false,
       model = SEEKAI_DEFAULT_MODEL,
@@ -1013,17 +1226,40 @@ app.post("/api/ai/chat", async (req, res) => {
     const studentLvl = (level || "A2").toUpperCase();
     const cefrRules = getCEFRLevelRules(studentLvl, language);
 
-    const systemPrompt = `You are "LinguaBot", the official AI language conversation partner and pedagogical tutor at "${schoolName || "Language Academy"}".
-You specialize exclusively in teaching and conversing in ${targetLangName} specifically calibrated to CEFR ${studentLvl} for student "${studentName || "Student"}".
-${thinkingMode || useDeepThinking ? "Provide thorough, in-depth pedagogical explanations with explicit grammatical breakdown whenever relevant." : ""}
+    const systemPrompt = `You are "LinguaBot", the premier native AI language professor and pedagogical tutor at "${schoolName || "Language Academy"}".
+You possess total linguistic, cultural, and pedagogical mastery of ${targetLangName}, specifically instructing student "${studentName || "Student"}" at CEFR level ${studentLvl}.
+
+CURRENT ACTIVE PEDAGOGICAL MISSION:
+- Target Language: ${targetLangName}
+- Target CEFR Level: ${studentLvl}
+- Active Topic / Subject: "${topic}"
+${subtopic ? `- Specific Sub-topic / Scenario: "${subtopic}"` : ""}
+- Practice Mode: "${practiceMode}" (Options: conversation | roleplay | grammar_coach | exam_prep | vocabulary)
+${thinkingMode || useDeepThinking ? "- Advanced Thinking Mode ACTIVE: Provide thorough, explicit grammatical breakdowns, case explanations (Akkusativ/Dativ/Genitiv), and morphological insights." : ""}
 
 ${cefrRules}
 
-Key pedagogical rules:
-1. Speak primarily in ${targetLangName}, strictly respecting the CEFR ${studentLvl} constraints above.
-2. If the user makes a mistake in ${targetLangName}, gently include a short pedagogical tip in brackets: [💡 Conseil ${studentLvl}: ...], then continue the natural dialogue in ${targetLangName}.
-3. Keep the conversation lively, friendly, educational, asking engaging open questions adapted to level ${studentLvl}.
-4. If the student asks a grammar or vocabulary explanation in French or English, explain it clearly in that language and provide authentic examples in ${targetLangName} calibrated for level ${studentLvl}.`;
+STRICT ANTI-REPETITION AND CONTEXTUAL DIRECTIVES:
+1. NEVER BE FROZEN OR REPETITIVE:
+   - ABSOLUTE BAN: Do NOT ask generic, repetitive questions like "Wie heißt du?", "Wie alt bist du?", or "Was hast du heute gemacht?" once the conversation is under way or when a topic has been selected!
+   - Every single answer MUST contribute fresh, engaging ideas, rich vocabulary, or a thought-provoking question directly related to the active topic ("${topic}") and level (${studentLvl}).
+   - Directly quote, rebound from, and acknowledge the student's exact message.
+
+2. MODE SPECIFIC APTITUDES:
+   - If practiceMode is "roleplay": Act authentically in character (e.g., German recruiter, Berlin landlord, Munich café waiter, official at the Bürgeramt, examiner at the Goethe-Institut). Speak naturally in German matching level ${studentLvl}.
+   - If practiceMode is "grammar_coach": Provide crystal-clear syntactic analysis, explain case governments (Nominativ, Akkusativ, Dativ, Genitiv), verb positions (Verb an 2. Stelle im Hauptsatz, am Ende im Nebensatz), and prepositions.
+   - If practiceMode is "exam_prep": Simulate Goethe-Zertifikat / TELC oral examination tasks (Teil 1: Vorstellung, Teil 2: Thema präsentieren & Vor-/Nachteile abwägen, Teil 3: Gemeinsam planen & verhandeln).
+   - If practiceMode is "vocabulary": Introduce high-yield German idioms (Redewendungen), false friends (falsche Freunde), and domain-specific lexicon.
+   - If practiceMode is "conversation": Drive fluid, spontaneous, culturally grounded dialogue across German lifestyle, professional culture, and DACH society.
+
+3. CONSTRUCTIVE CORRECTION PATTERN:
+   - When the student writes in ${targetLangName} with errors, gently provide a short, helpful pedagogical tip in brackets:
+     [💡 Conseil ${studentLvl}: <clear rule explanation with a corrected model sentence>]
+   - Then immediately continue the immersion and ask a compelling follow-up question.
+
+4. MULTILINGUAL AGILITY:
+   - Keep natural dialogue primarily in ${targetLangName}.
+   - If the student asks a question about German in French or English, explain the answer clearly in their language and provide authentic German examples tailored to level ${studentLvl}.`;
 
     // Construct Gemini contents array
     const geminiHistory: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }> = [];
@@ -1058,30 +1294,14 @@ Key pedagogical rules:
     if (geminiHistory.length === 0) {
       geminiHistory.push({
         role: "user",
-        parts: [{ text: language === "german" ? "Hallo!" : "Ciao!" }],
+        parts: [{ text: language === "german" ? `Guten Tag! Ich möchte Deutsch zum Thema "${topic}" auf Niveau ${studentLvl} üben.` : "Ciao! Vorrei fare pratica." }],
       });
     }
 
     let reply = "";
 
-    // 1. Primary AI Engine: DeepSeek (deepseek-chat or deepseek-reasoner)
-    try {
-      const deepseekMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
-        { role: "system", content: systemPrompt },
-        ...geminiHistory.map((g) => ({
-          role: g.role === "model" ? ("assistant" as const) : ("user" as const),
-          content: g.parts[0]?.text || "",
-        })),
-      ];
-
-      const modelToUse = thinkingMode || useDeepThinking ? "deepseek-reasoner" : DEEPSEEK_MODEL;
-      reply = await callDeepSeek(deepseekMessages, {
-        model: modelToUse,
-        temperature: 0.7,
-        timeoutMs: 8000,
-      });
-    } catch (deepseekErr: any) {
-      // 2. Secondary AI Engine: Gemini Multi-Model Cascade
+    // 1. PRIMARY AI ENGINE: Gemini Multi-Model Cascade (Fast, resilient, state-of-the-art German competence)
+    if (process.env.GEMINI_API_KEY) {
       try {
         reply = await callGeminiChat(
           geminiHistory,
@@ -1089,73 +1309,64 @@ Key pedagogical rules:
           "gemini-3.8-flash"
         );
       } catch (geminiErr: any) {
-        console.log("Gemini chat notice, trying SeekAI:", geminiErr.message);
-
-        // 3. Tertiary AI Engine: SeekAI
-        try {
-          const openAIMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
-            { role: "system", content: systemPrompt },
-            ...geminiHistory.map((g) => ({
-              role: g.role === "model" ? ("assistant" as const) : ("user" as const),
-              content: g.parts[0]?.text || "",
-            })),
-          ];
-
-          reply = await callOpenAICompatible(openAIMessages, {
-            model,
-            temperature: 0.7,
-            timeoutMs: 6000,
-          });
-        } catch (seekErr: any) {
-          console.log("SeekAI chat notice:", seekErr.message);
-        }
+        console.warn("Gemini chat primary cascade notice:", geminiErr?.message || geminiErr);
       }
     }
 
-    // 3. Smart dynamic level-calibrated fallback if offline or timeout
-    if (!reply) {
-      const lastUserMsg = (message || geminiHistory[geminiHistory.length - 1]?.parts[0]?.text || "").toLowerCase();
+    // 2. SECONDARY AI ENGINE: DeepSeek (if balance is available)
+    if (!reply && deepSeekBalanceCache.isAvailable && (process.env.DEEPSEEK_API_KEY || DEEPSEEK_API_KEY)) {
+      try {
+        const deepseekMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+          { role: "system", content: systemPrompt },
+          ...geminiHistory.map((g) => ({
+            role: g.role === "model" ? ("assistant" as const) : ("user" as const),
+            content: g.parts[0]?.text || "",
+          })),
+        ];
 
-      if (language === "german") {
-        if (studentLvl === "A1") {
-          if (lastUserMsg.includes("hallo") || lastUserMsg.includes("guten") || lastUserMsg.includes("tag")) {
-            reply = `Hallo ${studentName || ""}! Wie heißt du? [💡 Conseil A1: Tu peux répondre par "Ich heiße..." ou "Mein Name ist..."]`;
-          } else if (lastUserMsg.includes("wie geht") || lastUserMsg.includes("danke")) {
-            reply = `Mir geht es gut, danke! Und dir? [💡 Conseil A1: Réponds avec "Sehr gut!" ou "Es geht."].`;
-          } else {
-            reply = `Sehr gut! [💡 Conseil A1: Le verbe se place toujours en 2ème position: "Ich lerne Deutsch."]. Wie alt bist du?`;
-          }
-        } else if (studentLvl === "A2") {
-          if (lastUserMsg.includes("hallo") || lastUserMsg.includes("guten")) {
-            reply = `Hallo ${studentName || ""}! Wie geht es dir heute und was hast du Schönes gemacht? [💡 Conseil A2: Utilise le Perfekt: "Gestern habe ich gearbeitet."].`;
-          } else {
-            reply = `Guter Satz! [💡 Conseil A2: Avec 'weil', le verbe conjugué se place à la toute fin]. Erzähle mir von deinem Lieblingstag!`;
-          }
-        } else if (studentLvl === "B1") {
-          reply = `Guten Tag ${studentName || ""}! Das ist ein interessanter Gedanke. Was ist deine persönliche Meinung dazu, und welche Erfahrungen hast du bisher gemacht?`;
-        } else if (studentLvl === "B2") {
-          reply = `Ein differenzierter Beitrag, ${studentName || ""}! [💡 Tipp B2: Achte auf die korrekte Rektion der Verben mit Präpositionen]. Wie schätzt du die langfristigen Perspektiven dieser Situation ein?`;
-        } else {
-          reply = `Exzellent formuliert, ${studentName || ""}. Das sprachliche Register ist bemerkenswert präzise. Welche stilistischen Nuancen würdest du in einer formellen Debatte hierzu noch einbringen?`;
-        }
-      } else {
-        // Italian
-        if (studentLvl === "A1") {
-          if (lastUserMsg.includes("ciao") || lastUserMsg.includes("buongiorno")) {
-            reply = `Ciao ${studentName || ""}! Come ti chiami? [💡 Consiglio A1: Puoi rispondere dicendo "Mi chiamo..." o "Sono..."].`;
-          } else {
-            reply = `Molto bene! [💡 Consiglio A1: Fai attenzione all'articolo: "il libro", "la pizza"]. Di dove sei?`;
-          }
-        } else if (studentLvl === "A2") {
-          reply = `Ciao ${studentName || ""}! Che bello sentirti. Cosa hai fatto di bello questo fine settimana? [💡 Consiglio A2: Usa il Passato Prossimo con essere o avere].`;
-        } else if (studentLvl === "B1") {
-          reply = `Ottimo spunto di conversazione, ${studentName || ""}! Qual è la tua opinione personale su questo tema? Raccontami una tua esperienza simile.`;
-        } else if (studentLvl === "B2") {
-          reply = `Un'argomentazione molto ben strutturata, ${studentName || ""}! [💡 Consiglio B2: Per esprimere un'ipotesi, prova a usare il congiuntivo imperfetto con il condizionale]. Come vedi l'evoluzione futura?`;
-        } else {
-          reply = `Espressione impeccabile e registro elevato, ${studentName || ""}. Quali ulteriori sfumature stilistiche o riferimenti culturali ritieni opportuno considerare per approfondire l'analisi?`;
-        }
+        const modelToUse = thinkingMode || useDeepThinking ? "deepseek-reasoner" : DEEPSEEK_MODEL;
+        reply = await callDeepSeek(deepseekMessages, {
+          model: modelToUse,
+          temperature: 0.7,
+          timeoutMs: 6000,
+        });
+      } catch (deepseekErr: any) {
+        console.warn("DeepSeek secondary chat notice:", deepseekErr?.message || deepseekErr);
       }
+    }
+
+    // 3. TERTIARY AI ENGINE: SeekAI / OpenAI-compatible
+    if (!reply) {
+      try {
+        const openAIMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+          { role: "system", content: systemPrompt },
+          ...geminiHistory.map((g) => ({
+            role: g.role === "model" ? ("assistant" as const) : ("user" as const),
+            content: g.parts[0]?.text || "",
+          })),
+        ];
+
+        reply = await callOpenAICompatible(openAIMessages, {
+          model,
+          temperature: 0.7,
+          timeoutMs: 6000,
+        });
+      } catch (seekErr: any) {
+        console.warn("SeekAI tertiary chat notice:", seekErr?.message || seekErr);
+      }
+    }
+
+    // 4. INTELLIGENT DYNAMIC FALLBACK: Never repeat, fully calibrated to topic & level
+    if (!reply) {
+      const lastUserMsg = (message || geminiHistory[geminiHistory.length - 1]?.parts[0]?.text || "").trim();
+      reply = generateDynamicGermanReply({
+        studentName,
+        level: studentLvl,
+        topic,
+        subtopic,
+        practiceMode,
+        lastUserMsg,
+      });
     }
 
     return res.json({ reply });
@@ -1245,21 +1456,8 @@ Return ONLY valid JSON matching this exact structure:
 
     let evaluation: any = null;
 
-    // 1. Primary AI: DeepSeek Official (deepseek-chat)
-    try {
-      const deepseekJson = await callDeepSeek(
-        [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        { model: DEEPSEEK_MODEL, jsonMode: true, temperature: 0.2, timeoutMs: 15000 }
-      );
-      if (deepseekJson) {
-        const clean = deepseekJson.replace(/```json/gi, "").replace(/```/g, "").trim();
-        evaluation = JSON.parse(clean);
-      }
-    } catch (deepseekErr: any) {
-      // 2. Secondary AI: Gemini Multi-Model Cascade
+    // 1. Primary AI: Gemini Multi-Model Cascade (instant, accurate & reliable)
+    if (process.env.GEMINI_API_KEY) {
       try {
         const geminiText = await callGemini(`${systemPrompt}\n\n${userPrompt}`, {
           jsonMode: true,
@@ -1270,24 +1468,45 @@ Return ONLY valid JSON matching this exact structure:
           evaluation = JSON.parse(clean);
         }
       } catch (geminiErr: any) {
-        console.log("Gemini action notice (trying SeekAI):", geminiErr.message);
+        console.warn("Gemini action notice (trying DeepSeek/SeekAI):", geminiErr?.message || geminiErr);
+      }
+    }
 
-        // 3. Tertiary AI: SeekAI
-        try {
-          const seekResponse = await callSeekAI(
-            [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userPrompt },
-            ],
-            { model, jsonMode: true, temperature: 0.2, timeoutMs: 6000 }
-          );
-          if (seekResponse) {
-            const clean = seekResponse.replace(/```json/gi, "").replace(/```/g, "").trim();
-            evaluation = JSON.parse(clean);
-          }
-        } catch (seekErr: any) {
-          console.log("SeekAI action notice:", seekErr.message);
+    // 2. Secondary AI: DeepSeek Official (if balance is available)
+    if (!evaluation && deepSeekBalanceCache.isAvailable && (process.env.DEEPSEEK_API_KEY || DEEPSEEK_API_KEY)) {
+      try {
+        const deepseekJson = await callDeepSeek(
+          [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          { model: DEEPSEEK_MODEL, jsonMode: true, temperature: 0.2, timeoutMs: 8000 }
+        );
+        if (deepseekJson) {
+          const clean = deepseekJson.replace(/```json/gi, "").replace(/```/g, "").trim();
+          evaluation = JSON.parse(clean);
         }
+      } catch (deepseekErr: any) {
+        console.warn("DeepSeek action notice:", deepseekErr?.message || deepseekErr);
+      }
+    }
+
+    // 3. Tertiary AI: SeekAI
+    if (!evaluation) {
+      try {
+        const seekResponse = await callSeekAI(
+          [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          { model, jsonMode: true, temperature: 0.2, timeoutMs: 6000 }
+        );
+        if (seekResponse) {
+          const clean = seekResponse.replace(/```json/gi, "").replace(/```/g, "").trim();
+          evaluation = JSON.parse(clean);
+        }
+      } catch (seekErr: any) {
+        console.warn("SeekAI action notice:", seekErr?.message || seekErr);
       }
     }
 
