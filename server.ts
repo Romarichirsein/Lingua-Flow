@@ -84,11 +84,11 @@ function getGeminiClient(): GoogleGenAI | null {
 }
 
 const GEMINI_MODELS_CASCADE = [
-  "gemini-3.8-flash",
-  "gemini-3.6-flash",
   "gemini-3.1-flash-lite",
-  "gemini-3.1-pro-preview",
   "gemini-flash-latest",
+  "gemini-3.6-flash",
+  "gemini-3.8-flash",
+  "gemini-3.1-pro-preview",
 ];
 
 /**
@@ -168,7 +168,7 @@ async function callGemini(
 async function callGeminiChat(
   history: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }>,
   systemInstruction?: string,
-  preferredModel: string = "gemini-3.8-flash"
+  preferredModel: string = "gemini-3.1-flash-lite"
 ): Promise<string> {
   const gemini = getGeminiClient();
   if (!gemini) {
@@ -180,7 +180,8 @@ async function callGeminiChat(
     ...GEMINI_MODELS_CASCADE.filter((m) => m !== preferredModel),
   ];
 
-  const timeoutMs = 15000;
+  // Fast 6.5s timeout per model so it never blocks the user interface
+  const timeoutMs = 6500;
   let lastError: any = null;
 
   for (const modelName of modelsToTry) {
@@ -208,19 +209,8 @@ async function callGeminiChat(
       if (timer) clearTimeout(timer);
       lastError = err;
       const errMsg = err?.message || String(err);
-      if (
-        errMsg.includes("503") ||
-        errMsg.includes("high demand") ||
-        errMsg.includes("UNAVAILABLE") ||
-        errMsg.includes("RESOURCE_EXHAUSTED") ||
-        errMsg.includes("429") ||
-        errMsg.includes("404") ||
-        errMsg.includes("not found")
-      ) {
-        console.warn(`Gemini Chat on ${modelName} unavailable/busy, trying next cascade model...`);
-        continue;
-      }
-      console.warn(`Gemini Chat on ${modelName} notice: ${errMsg}`);
+      console.warn(`Gemini Chat on ${modelName} notice: ${errMsg.slice(0, 100)}, switching to next model...`);
+      continue;
     }
   }
 
@@ -1256,40 +1246,61 @@ CORE PEDAGOGICAL COMPETENCIES (ALL ACTIVE AT ALL TIMES):
    - Keep natural dialogue primarily in ${targetLangName}.
    - If the student asks a question about German in French or English, explain the answer clearly in their language and provide authentic German examples tailored to level ${studentLvl}.`;
 
-    // Construct Gemini contents array
+    // Construct and sanitize Gemini contents array:
+    // 1. Strictly alternate user -> model -> user
+    // 2. Guarantee the first turn is user
+    // 3. Guarantee the last turn is user
+    const rawTurns: Array<{ role: "user" | "model"; text: string }> = [];
+
+    const rawList: any[] = Array.isArray(history) ? history : Array.isArray(messages) ? messages : [];
+    rawList.forEach((m) => {
+      const text = (m.parts?.[0]?.text || m.content || "").trim();
+      if (text) {
+        rawTurns.push({
+          role: m.role === "assistant" || m.role === "model" ? "model" : "user",
+          text,
+        });
+      }
+    });
+
+    if (message && message.trim()) {
+      rawTurns.push({ role: "user", text: message.trim() });
+    }
+
     const geminiHistory: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }> = [];
 
-    if (Array.isArray(history)) {
-      history.forEach((m: any) => {
-        const textContent = m.parts?.[0]?.text || m.content || "";
-        if (textContent.trim()) {
+    for (const turn of rawTurns) {
+      if (geminiHistory.length === 0) {
+        if (turn.role === "model") {
+          // Prepend initial student greeting to maintain compliant user-first multi-turn structure
           geminiHistory.push({
-            role: m.role === "assistant" || m.role === "model" ? "model" : "user",
-            parts: [{ text: textContent }],
+            role: "user",
+            parts: [{ text: language === "german" ? `Guten Tag! Ich möchte mein Deutsch trainieren.` : "Ciao! Vorrei fare pratica." }],
           });
         }
-      });
-      if (message) {
-        geminiHistory.push({ role: "user", parts: [{ text: message }] });
+        geminiHistory.push({ role: turn.role, parts: [{ text: turn.text }] });
+      } else {
+        const lastTurn = geminiHistory[geminiHistory.length - 1];
+        if (lastTurn.role === turn.role) {
+          lastTurn.parts[0].text += `\n\n${turn.text}`;
+        } else {
+          geminiHistory.push({ role: turn.role, parts: [{ text: turn.text }] });
+        }
       }
-    } else if (Array.isArray(messages)) {
-      messages.forEach((m: any) => {
-        const textContent = m.content || m.parts?.[0]?.text || "";
-        if (textContent.trim()) {
-          geminiHistory.push({
-            role: m.role === "assistant" || m.role === "model" ? "model" : "user",
-            parts: [{ text: textContent }],
-          });
-        }
-      });
-    } else if (message) {
-      geminiHistory.push({ role: "user", parts: [{ text: message }] });
     }
 
     if (geminiHistory.length === 0) {
       geminiHistory.push({
         role: "user",
-        parts: [{ text: language === "german" ? `Guten Tag! Ich möchte mein Deutsch auf Niveau ${studentLvl} frei trainieren.` : "Ciao! Vorrei fare pratica." }],
+        parts: [{ text: language === "german" ? `Guten Tag! Ich möchte mein Deutsch auf Niveau ${studentLvl} frei trainieren.` : "Ciao! Vorrei fare pratique." }],
+      });
+    }
+
+    // Ensure the final turn is always from the user so the AI generates the appropriate continuation
+    if (geminiHistory[geminiHistory.length - 1].role !== "user") {
+      geminiHistory.push({
+        role: "user",
+        parts: [{ text: message?.trim() || (language === "german" ? "Was schlägst du als Nächstes vor?" : "Cosa mi suggerisci?") }],
       });
     }
 
@@ -1301,7 +1312,7 @@ CORE PEDAGOGICAL COMPETENCIES (ALL ACTIVE AT ALL TIMES):
         reply = await callGeminiChat(
           geminiHistory,
           systemPrompt,
-          "gemini-3.8-flash"
+          "gemini-3.1-flash-lite"
         );
       } catch (geminiErr: any) {
         console.warn("Gemini chat primary cascade notice:", geminiErr?.message || geminiErr);

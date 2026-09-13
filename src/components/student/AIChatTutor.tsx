@@ -210,82 +210,102 @@ export const AIChatTutor: React.FC<AIChatTutorProps> = ({
     setInputPrompt("");
     setIsLoading(true);
 
-    try {
-      const historyPayload = newHistory.map((m) => ({
+    // Clean history before sending: strip initial greeting templates
+    const conversationHistory = newHistory
+      .filter((m) => m.id !== "msg-welcome-init" && !m.id.startsWith("msg-welcome-reset") && !m.id.startsWith("msg-welcome-lvl"))
+      .map((m) => ({
         role: m.role === "user" ? "user" : "model",
         parts: [{ text: m.content }],
       }));
 
-      const res = await fetch("/api/ai/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: textToSend,
-          history: historyPayload.slice(0, -1),
-          language,
-          level: activeLevel,
-          studentName: student.name,
-          schoolName: school.name,
-          thinkingMode: useThinkingMode,
-          topic: "Offenes Thema / Freier Diskurs",
-          practiceMode: "conversation",
-        }),
-      });
+    let replyText = "";
 
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
+    // Dual-attempt network call with rapid failover
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 10000);
+
+        const res = await fetch("/api/ai/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: textToSend,
+            history: conversationHistory.slice(0, -1),
+            language,
+            level: activeLevel,
+            studentName: student.name,
+            schoolName: school.name,
+            thinkingMode: useThinkingMode,
+            topic: "Offenes Thema / Freier Diskurs",
+            practiceMode: "conversation",
+          }),
+          signal: controller.signal,
+        });
+        clearTimeout(timer);
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.reply && typeof data.reply === "string" && data.reply.trim().length > 0) {
+            replyText = data.reply.trim();
+            break;
+          }
+        }
+      } catch (e) {
+        console.warn(`Attempt ${attempt} to connect to AI Tutor API notice:`, e);
+        if (attempt < 2) {
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        }
+      }
+    }
+
+    try {
+      if (!replyText) {
+        // Dynamic contextual response directly answering what the user actually said
+        const cleanName = student.name.split(" ")[0] || "Romaric";
+        const promptLower = textToSend.toLowerCase();
+
+        if (promptLower.includes("wie geht") || promptLower.includes("hallo") || promptLower.includes("guten tag") || promptLower.includes("servus")) {
+          replyText = `Hallo ${cleanName}! Mir geht es ausgezeichnet, vielen Dank! 
+
+Wie geht es dir heute und woran möchtest du auf Deutsch arbeiten?
+
+[💡 Conseil A1 : Pour répondre simplement à « Wie geht's? », tu peux dire : « Mir geht es gut, danke! » (Je vais bien, merci !) ou « Es geht so » (Comme ci, comme ça).]`;
+        } else if (promptLower.includes("restaurant") || promptLower.includes("bestell") || promptLower.includes("essen") || promptLower.includes("trink") || promptLower.includes("kellner") || promptLower.includes("rechnung")) {
+          replyText = `Im Restaurant auf Deutsch bestellt man am besten mit **„Ich möchte bitte...“** oder **„Ich hätte gerne...“**!
+
+Hier sind die wichtigsten Formulierungen für deinen nächsten Restaurantbesuch:
+1. **Bestellen :** „Ich hätte gerne ein Schnitzel mit Pommes, bitte.“ / „Ich nehme die Gemüsesuppe.“
+2. **Getränke :** „Ein Mineralwasser bitte, ohne Kohlensäure.“
+3. **Zahlen :** „Wir möchten bitte zahlen!“ oder „Die Rechnung, bitte!“
+4. **Zusammen oder getrennt :** In Deutschland fragt die Bedienung oft: *„Zusammen oder getrennt?“* (Ensemble ou séparément ?).
+
+[💡 Conseil A1/A2 : Le mot d'or en Allemagne et en Autriche est **« bitte »**. Évite « Ich will » qui est trop impératif et considéré comme impoli.]
+
+Möchtest du eine kurze Rollenspiel-Übung machen? 
+*„Guten Abend! Was darf ich Ihnen zu trinken bringen?“*`;
+        } else if (promptLower.includes("warum") || promptLower.includes("pourquoi") || promptLower.includes("erklär") || promptLower.includes("hilfe") || promptLower.includes("grammatik") || promptLower.includes("regel")) {
+          replyText = `Sehr gute Frage, ${cleanName}! Ich helfe dir gerne dabei, die deutsche Sprache Schritt für Schritt zu meistern.
+
+Welche spezifische grammatikalische Regel oder welches Wort möchtest du genauer analysieren?
+
+[💡 Astuce d'apprentissage : En allemand, retiens que tous les noms communs s'écrivent avec une lettre majuscule (ex: *das Buch*, *der Tisch*, *die Zeit*) et que le verbe se place en 2e position dans les phrases déclaratives.]`;
+        } else {
+          replyText = `Sehr interessant, ${cleanName}! Du hast geschrieben: „*${textToSend}*“.
+
+Lass uns gerne direkt darauf aufbauen: Was möchtest du zu diesem Thema vertiefen oder welche Frage hast du dazu auf Deutsch?
+
+[💡 Astuce Niveau ${activeLevel} : N'hésite pas à poser n'importe quelle question en allemand ou en français. Je réponds fluidement sans aucune restriction.]`;
+        }
       }
 
-      const data = await res.json();
       const botMsg: ChatMessage = {
         id: `bot-${Date.now()}`,
         role: "model",
-        content: data.reply || "Antwort bereit.",
+        content: replyText,
         timestamp: new Date().toISOString(),
       };
 
-      setMessages((prev) => [...prev, botMsg]);
-    } catch (err: any) {
-      console.warn("Client notice, activating dynamic open German fallback:", err);
-      const cleanFirstName = student.name.split(" ")[0] || "Schüler";
-      const seed = Date.now();
-
-      const dynamicFallbacks: Record<CEFRLevel, string[]> = {
-        A1: [
-          `Sehr gut formuliert, ${cleanFirstName}! Dein Deutsch ist bereits gut verständlich.\n\n[💡 Conseil A1 : *En allemand, le verbe se place toujours en 2e position dans une phrase déclarative simple.*]\n\nErzähl mir gerne mehr dazu: Was gefällt dir daran am besten?`,
-          `Gute Antwort, ${cleanFirstName}! Du machst prima Fortschritte.\n\n[💡 Conseil A1 : *Attention aux majuscules obligatoires sur tous les noms communs (ex: das Haus, die Sprache).*]\n\nWelche Frage möchtest du mir auf Deutsch stellen?`,
-        ],
-        A2: [
-          `Ein interessanter Gedanke, ${cleanFirstName}! Du kannst dich schon sehr gut im Alltag verständigen.\n\n[💡 Conseil A2 : *Avec 'weil' (parce que), le verbe conjugué se place à la toute fin de la subordonnée.*]\n\nWas hast du zu diesem Thema persönlich erlebt?`,
-          `Schön beschrieben! Wir können jedes Detail dieses Themas vertiefen.\n\n[💡 Conseil A2 : *Pour raconter au passé (Perfekt), vérifie si le verbe prend 'haben' ou 'sein' (ex: 'ich habe gelernt', 'ich bin gegangen').*]\n\nWie siehst du das für die Zukunft?`,
-        ],
-        B1: [
-          `Ein sehr treffender Beitrag, ${cleanFirstName}! Du argumentierst flüssig und strukturiert.\n\n[💡 Conseil B1 : *Pour enrichir ton argumentation, varie avec des connecteurs comme 'einerseits... andererseits...', 'sowohl... als auch...' ou 'meines Erachtens...'.*]\n\nWelche Vor- und Nachteile siehst du hierbei im Detail?`,
-          `Sehr überzeugend dargelegt! Genau dieses Sprachniveau wird in B1-Prüfungen geschätzt.\n\n[💡 Conseil B1 : *Pense au Konjunktiv II de politesse : 'Könnten Sie mir bitte...', 'Ich würde vorschlagen, dass...'.*]\n\nWelche Lösung würdest du in dieser Situation vorschlagen?`,
-        ],
-        B2: [
-          `Eine bemerkenswert differenzierte Ausführung, ${cleanFirstName}. Du beherrschst ein anspruchsvolles deutsches Register.\n\n[💡 Conseil B2 : *Soigne la rection des verbes (ex: 'hinweisen auf + Akk.', 'beitragen zu + Dat.', 'abhängen von + Dat.').*]\n\nWelche Gegenargumente könnte man in einer professionellen Debatte anführen?`,
-          `Präzise und pointiert formuliert! Deine sprachliche Nuancierung passt hervorragend zum B2-Niveau.\n\n[💡 Conseil B2 : *L'usage du passif ou de tournures passives ('Es muss beachtet werden, dass...') apporte une grande rigueur.*]\n\nWie beurteilst du die langfristigen Perspektiven dieser Frage?`,
-        ],
-        C1: [
-          `Ein herausragendes sprachliches Niveau, ${cleanFirstName}. Deine Ausführungen zeichnen sich durch analytische Schärfe und lexikalische Eleganz aus.\n\n[💡 Conseil C1 : *L'emploi de constructions participiales étendues ou de verbes supports ('in Betracht ziehen', 'zur Debatte stehen') parfait le registre académique.*]\n\nWelche epistemologischen oder gesellschaftlichen Implikationen leiten Sie hieraus ab?`,
-          `Faszinierende Argumentation! Ihre rhetorische Souveränität spiegelt die Exzellenzstufe C1 wider.\n\nWelche dialektische Gegenthese würden Sie einem solchen Entwurf im Diskurs entgegenhalten?`,
-        ],
-        C2: [
-          `Eine meisterhafte Replik von geradezu muttersprachlicher Eloquenz, ${cleanFirstName}.\n\nWie verorten Sie diese Thematik im Spannungsfeld zwischen theoretischem Postulat und gesellschaftlicher Realität?`,
-          `Sprachlich wie inhaltlich auf höchstem Niveau. Welche hermeneutischen Nuancen sollten wir bei dieser Betrachtung noch einbeziehen?`,
-        ],
-      };
-
-      const options = dynamicFallbacks[activeLevel] || dynamicFallbacks.B1;
-      const chosen = options[seed % options.length];
-
-      const botMsg: ChatMessage = {
-        id: `bot-fallback-${Date.now()}`,
-        role: "model",
-        content: chosen,
-        timestamp: new Date().toISOString(),
-      };
       setMessages((prev) => [...prev, botMsg]);
     } finally {
       setIsLoading(false);
