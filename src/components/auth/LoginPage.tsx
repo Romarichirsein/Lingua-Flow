@@ -154,15 +154,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         cleanUser === "linguaflowadmin" ||
         cleanUser === "admin@linguaflow.io" ||
         cleanUser === "admin" ||
-        cleanUser === "superadmin";
+        cleanUser === "superadmin" ||
+        cleanUser === "romarichirsein@gmail.com" ||
+        cleanUser === "romarichirsein";
 
       if (isSuperAdminUser) {
         const savedSuperPass = localStorage.getItem("linguaflow_superadmin_password") || "qlac485!";
         if (cleanPass === savedSuperPass || cleanPass === "qlac485!") {
           onLoginSuccess({
             role: "super_admin",
-            userName: "Super Admin LinguaFlow",
-            userEmail: "linguaflowadmin@gmail.com",
+            userName: cleanUser.includes("romaric") ? "Romaric (Super Admin)" : "Super Admin LinguaFlow",
+            userEmail: cleanUser.includes("romaric") ? "romarichirsein@gmail.com" : "linguaflowadmin@gmail.com",
           });
           return;
         } else {
@@ -334,6 +336,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   onClick={() => {
                     setSelectedRoleTab("super_admin");
                     setErrorMessage(null);
+                    setUsername("linguaflowadmin@gmail.com");
+                    setPassword("qlac485!");
                   }}
                   className={`flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2 px-1 rounded-lg text-[11px] sm:text-xs font-semibold transition cursor-pointer ${
                     selectedRoleTab === "super_admin"
@@ -349,6 +353,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   onClick={() => {
                     setSelectedRoleTab("school_admin");
                     setErrorMessage(null);
+                    if (schools.length > 0) {
+                      setUsername(schools[0].managerEmail || schools[0].slug);
+                      setPassword(schools[0].password || "school123");
+                    }
                   }}
                   className={`flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2 px-1 rounded-lg text-[11px] sm:text-xs font-semibold transition cursor-pointer ${
                     selectedRoleTab === "school_admin"
@@ -364,6 +372,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   onClick={() => {
                     setSelectedRoleTab("student");
                     setErrorMessage(null);
+                    if (students.length > 0) {
+                      setUsername(students[0].email);
+                      setPassword(students[0].password || "student123");
+                    }
                   }}
                   className={`flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2 px-1 rounded-lg text-[11px] sm:text-xs font-semibold transition cursor-pointer ${
                     selectedRoleTab === "student"
@@ -376,7 +388,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 </button>
               </div>
 
-              <div className="mb-6">
+              <div className="mb-4">
                 <h2 className="text-xl font-bold text-slate-900 dark:text-white">
                   {selectedRoleTab === "super_admin"
                     ? (locale === "en" ? "Super Admin Portal Login" : "Connexion Super Administrateur")
@@ -390,6 +402,38 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     : "Saisissez vos identifiants pour ouvrir votre tableau de bord personnel."}
                 </p>
               </div>
+
+              {/* Super Admin Quick Access Info Card */}
+              {selectedRoleTab === "super_admin" && (
+                <div className="mb-4 p-3 rounded-xl bg-[#6D5DFC]/10 border border-[#6D5DFC]/25 text-xs text-slate-700 dark:text-white/80 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-[#6D5DFC] dark:text-[#a399ff] flex items-center gap-1.5">
+                      <Shield size={14} />
+                      {locale === "en" ? "Super Admin Credentials" : "Identifiants Super Administrateur"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUsername("linguaflowadmin@gmail.com");
+                        setPassword("qlac485!");
+                      }}
+                      className="text-[11px] px-2 py-0.5 rounded-md bg-[#6D5DFC]/20 hover:bg-[#6D5DFC]/30 text-[#6D5DFC] dark:text-white font-medium transition cursor-pointer"
+                    >
+                      {locale === "en" ? "Auto-fill" : "Pré-remplir"}
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
+                    <div className="bg-white/60 dark:bg-black/20 p-1.5 rounded-lg border border-slate-200 dark:border-white/5">
+                      <span className="text-slate-400 dark:text-white/40 block text-[10px]">Identifiant / Email</span>
+                      <code className="font-mono text-[#6D5DFC] dark:text-[#00D9FF]">linguaflowadmin@gmail.com</code>
+                    </div>
+                    <div className="bg-white/60 dark:bg-black/20 p-1.5 rounded-lg border border-slate-200 dark:border-white/5">
+                      <span className="text-slate-400 dark:text-white/40 block text-[10px]">Mot de passe</span>
+                      <code className="font-mono text-[#6D5DFC] dark:text-[#00D9FF]">qlac485!</code>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Error Banner if any */}
               {errorMessage && (

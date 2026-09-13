@@ -580,7 +580,9 @@ app.post("/api/auth/login", async (req, res) => {
       loginUser === "linguaflowadmin" ||
       loginUser === "admin@linguaflow.io" ||
       loginUser === "admin" ||
-      loginUser === "superadmin";
+      loginUser === "superadmin" ||
+      loginUser === "romarichirsein@gmail.com" ||
+      loginUser === "romarichirsein";
 
     const SUPERADMIN_PASS = process.env.SUPERADMIN_PASSWORD || "qlac485!";
 
@@ -591,7 +593,7 @@ app.post("/api/auth/login", async (req, res) => {
           role: "super_admin",
           user: {
             name: "Super Admin LinguaFlow",
-            email: "linguaflowadmin@gmail.com",
+            email: loginUser === "romarichirsein@gmail.com" ? "romarichirsein@gmail.com" : "linguaflowadmin@gmail.com",
             role: "super_admin",
           },
           token: `lf_super_${Date.now()}`,
