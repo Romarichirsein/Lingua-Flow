@@ -220,83 +220,48 @@ export const AIChatTutor: React.FC<AIChatTutorProps> = ({
 
     let replyText = "";
 
-    // Dual-attempt network call with rapid failover
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      try {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 10000);
+    try {
+      // Prior turns sent as history (clean, omitting welcome headers)
+      const historyPayload = messages
+        .filter((m) => m.id !== "msg-welcome-init" && !m.id.startsWith("msg-welcome-reset") && !m.id.startsWith("msg-welcome-lvl"))
+        .map((m) => ({
+          role: m.role === "user" ? "user" : "model",
+          parts: [{ text: m.content }],
+        }));
 
-        const res = await fetch("/api/ai/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message: textToSend,
-            history: conversationHistory.slice(0, -1),
-            language,
-            level: activeLevel,
-            studentName: student.name,
-            schoolName: school.name,
-            thinkingMode: useThinkingMode,
-            topic: "Offenes Thema / Freier Diskurs",
-            practiceMode: "conversation",
-          }),
-          signal: controller.signal,
-        });
-        clearTimeout(timer);
+      const res = await fetch("/api/ai/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: textToSend,
+          history: historyPayload,
+          language,
+          level: activeLevel,
+          studentName: student.name,
+          schoolName: school.name,
+          thinkingMode: useThinkingMode,
+          topic: "Offenes Thema / Freier Diskurs",
+          practiceMode: "conversation",
+        }),
+      });
 
-        if (res.ok) {
-          const data = await res.json();
-          if (data?.reply && typeof data.reply === "string" && data.reply.trim().length > 0) {
-            replyText = data.reply.trim();
-            break;
-          }
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.reply && typeof data.reply === "string" && data.reply.trim().length > 0) {
+          replyText = data.reply.trim();
         }
-      } catch (e) {
-        console.warn(`Attempt ${attempt} to connect to AI Tutor API notice:`, e);
-        if (attempt < 2) {
-          await new Promise((resolve) => setTimeout(resolve, 500));
-        }
+      } else {
+        const errText = await res.text();
+        console.warn("[AIChatTutor] Server returned status", res.status, errText);
       }
+    } catch (e) {
+      console.warn("[AIChatTutor] Error calling /api/ai/chat:", e);
     }
 
     try {
       if (!replyText) {
-        // Dynamic contextual response directly answering what the user actually said
         const cleanName = student.name.split(" ")[0] || "Romaric";
-        const promptLower = textToSend.toLowerCase();
-
-        if (promptLower.includes("wie geht") || promptLower.includes("hallo") || promptLower.includes("guten tag") || promptLower.includes("servus")) {
-          replyText = `Hallo ${cleanName}! Mir geht es ausgezeichnet, vielen Dank! 
-
-Wie geht es dir heute und woran möchtest du auf Deutsch arbeiten?
-
-[💡 Conseil A1 : Pour répondre simplement à « Wie geht's? », tu peux dire : « Mir geht es gut, danke! » (Je vais bien, merci !) ou « Es geht so » (Comme ci, comme ça).]`;
-        } else if (promptLower.includes("restaurant") || promptLower.includes("bestell") || promptLower.includes("essen") || promptLower.includes("trink") || promptLower.includes("kellner") || promptLower.includes("rechnung")) {
-          replyText = `Im Restaurant auf Deutsch bestellt man am besten mit **„Ich möchte bitte...“** oder **„Ich hätte gerne...“**!
-
-Hier sind die wichtigsten Formulierungen für deinen nächsten Restaurantbesuch:
-1. **Bestellen :** „Ich hätte gerne ein Schnitzel mit Pommes, bitte.“ / „Ich nehme die Gemüsesuppe.“
-2. **Getränke :** „Ein Mineralwasser bitte, ohne Kohlensäure.“
-3. **Zahlen :** „Wir möchten bitte zahlen!“ oder „Die Rechnung, bitte!“
-4. **Zusammen oder getrennt :** In Deutschland fragt die Bedienung oft: *„Zusammen oder getrennt?“* (Ensemble ou séparément ?).
-
-[💡 Conseil A1/A2 : Le mot d'or en Allemagne et en Autriche est **« bitte »**. Évite « Ich will » qui est trop impératif et considéré comme impoli.]
-
-Möchtest du eine kurze Rollenspiel-Übung machen? 
-*„Guten Abend! Was darf ich Ihnen zu trinken bringen?“*`;
-        } else if (promptLower.includes("warum") || promptLower.includes("pourquoi") || promptLower.includes("erklär") || promptLower.includes("hilfe") || promptLower.includes("grammatik") || promptLower.includes("regel")) {
-          replyText = `Sehr gute Frage, ${cleanName}! Ich helfe dir gerne dabei, die deutsche Sprache Schritt für Schritt zu meistern.
-
-Welche spezifische grammatikalische Regel oder welches Wort möchtest du genauer analysieren?
-
-[💡 Astuce d'apprentissage : En allemand, retiens que tous les noms communs s'écrivent avec une lettre majuscule (ex: *das Buch*, *der Tisch*, *die Zeit*) et que le verbe se place en 2e position dans les phrases déclaratives.]`;
-        } else {
-          replyText = `Sehr interessant, ${cleanName}! Du hast geschrieben: „*${textToSend}*“.
-
-Lass uns gerne direkt darauf aufbauen: Was möchtest du zu diesem Thema vertiefen oder welche Frage hast du dazu auf Deutsch?
-
-[💡 Astuce Niveau ${activeLevel} : N'hésite pas à poser n'importe quelle question en allemand ou en français. Je réponds fluidement sans aucune restriction.]`;
-        }
+        replyText = `⚠️ Entschuldigung ${cleanName}! Die Verbindung zum KI-Tutor hat kurzzeitig verzögert reagiert. Bitte sende deine Frage noch einmal ab oder klicke auf Senden.`;
       }
 
       const botMsg: ChatMessage = {
@@ -400,8 +365,9 @@ Lass uns gerne direkt darauf aufbauen: Was möchtest du zu diesem Thema vertiefe
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                   {isGerman ? "DACH 🇩🇪 🇦🇹 🇨🇭" : "IT 🇮🇹"}
                 </span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
-                  {locale === "en" ? "Universal AI" : "IA Universelle & Sans Limites"}
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                  <span>Gemini 3 Flash • Connecté</span>
                 </span>
               </h3>
 

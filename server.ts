@@ -85,10 +85,8 @@ function getGeminiClient(): GoogleGenAI | null {
 
 const GEMINI_MODELS_CASCADE = [
   "gemini-3.1-flash-lite",
-  "gemini-flash-latest",
   "gemini-3.6-flash",
   "gemini-3.8-flash",
-  "gemini-3.1-pro-preview",
 ];
 
 /**
@@ -169,7 +167,7 @@ async function callGeminiChat(
   history: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }>,
   systemInstruction?: string,
   preferredModel: string = "gemini-3.1-flash-lite"
-): Promise<string> {
+): Promise<{ text: string; model: string }> {
   const gemini = getGeminiClient();
   if (!gemini) {
     throw new Error("Gemini client is not configured");
@@ -180,8 +178,7 @@ async function callGeminiChat(
     ...GEMINI_MODELS_CASCADE.filter((m) => m !== preferredModel),
   ];
 
-  // Fast 6.5s timeout per model so it never blocks the user interface
-  const timeoutMs = 6500;
+  const timeoutMs = 10000;
   let lastError: any = null;
 
   for (const modelName of modelsToTry) {
@@ -203,7 +200,7 @@ async function callGeminiChat(
       if (timer) clearTimeout(timer);
 
       if (response?.text) {
-        return response.text;
+        return { text: response.text, model: modelName };
       }
     } catch (err: any) {
       if (timer) clearTimeout(timer);
@@ -1305,15 +1302,23 @@ CORE PEDAGOGICAL COMPETENCIES (ALL ACTIVE AT ALL TIMES):
     }
 
     let reply = "";
+    let engineUsed = "dynamic-pedagogical";
+    let modelUsed = "local-expert";
+    const startTime = Date.now();
 
     // 1. PRIMARY AI ENGINE: Gemini Multi-Model Cascade (Fast, resilient, state-of-the-art German competence)
     if (process.env.GEMINI_API_KEY) {
       try {
-        reply = await callGeminiChat(
+        const geminiResult = await callGeminiChat(
           geminiHistory,
           systemPrompt,
           "gemini-3.1-flash-lite"
         );
+        if (geminiResult?.text) {
+          reply = geminiResult.text;
+          engineUsed = "gemini";
+          modelUsed = geminiResult.model;
+        }
       } catch (geminiErr: any) {
         console.warn("Gemini chat primary cascade notice:", geminiErr?.message || geminiErr);
       }
@@ -1336,6 +1341,10 @@ CORE PEDAGOGICAL COMPETENCIES (ALL ACTIVE AT ALL TIMES):
           temperature: 0.7,
           timeoutMs: 6000,
         });
+        if (reply) {
+          engineUsed = "deepseek";
+          modelUsed = modelToUse;
+        }
       } catch (deepseekErr: any) {
         console.warn("DeepSeek secondary chat notice:", deepseekErr?.message || deepseekErr);
       }
@@ -1357,6 +1366,10 @@ CORE PEDAGOGICAL COMPETENCIES (ALL ACTIVE AT ALL TIMES):
           temperature: 0.7,
           timeoutMs: 6000,
         });
+        if (reply) {
+          engineUsed = "seekai";
+          modelUsed = model || SEEKAI_DEFAULT_MODEL;
+        }
       } catch (seekErr: any) {
         console.warn("SeekAI tertiary chat notice:", seekErr?.message || seekErr);
       }
@@ -1373,9 +1386,18 @@ CORE PEDAGOGICAL COMPETENCIES (ALL ACTIVE AT ALL TIMES):
         practiceMode,
         lastUserMsg,
       });
+      engineUsed = "pedagogical-engine";
+      modelUsed = "cefr-adaptive";
     }
 
-    return res.json({ reply });
+    console.log(`[API /api/ai/chat] Generated reply for "${studentName}" in ${Date.now() - startTime}ms via ${engineUsed} (${modelUsed})`);
+
+    return res.json({
+      reply,
+      engine: engineUsed,
+      model: modelUsed,
+      latencyMs: Date.now() - startTime,
+    });
   } catch (error) {
     console.error("AI Chat error:", error);
     res.status(500).json({ error: "Failed to generate AI chat response" });
