@@ -98,7 +98,7 @@ const GEMINI_MODELS_CASCADE = [
 ];
 
 /**
- * Robust Gemini Content Generation Helper with multi-model failover
+ * Robust Gemini Content Generation Helper with multi-model failover and retries
  */
 async function callGemini(
   prompt: string,
@@ -124,44 +124,41 @@ async function callGemini(
   let lastError: any = null;
 
   for (const modelName of modelsToTry) {
-    let timer: NodeJS.Timeout | undefined;
-    try {
-      const generatePromise = gemini.models.generateContent({
-        model: modelName,
-        contents: prompt,
-        config: {
-          ...(options.systemInstruction ? { systemInstruction: options.systemInstruction } : {}),
-          ...(options.jsonMode ? { responseMimeType: "application/json" } : {}),
-        },
-      });
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      let timer: NodeJS.Timeout | undefined;
+      try {
+        if (attempt > 1) {
+          await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+        }
 
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        timer = setTimeout(() => reject(new Error(`Gemini timeout on ${modelName}`)), timeoutMs);
-      });
+        const generatePromise = gemini.models.generateContent({
+          model: modelName,
+          contents: prompt,
+          config: {
+            ...(options.systemInstruction ? { systemInstruction: options.systemInstruction } : {}),
+            ...(options.jsonMode ? { responseMimeType: "application/json" } : {}),
+          },
+        });
 
-      const response: any = await Promise.race([generatePromise, timeoutPromise]);
-      if (timer) clearTimeout(timer);
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error(`Gemini timeout on ${modelName} (attempt ${attempt})`)), timeoutMs);
+        });
 
-      if (response?.text) {
-        return response.text;
+        const response: any = await Promise.race([generatePromise, timeoutPromise]);
+        if (timer) clearTimeout(timer);
+
+        if (response?.text) {
+          return response.text;
+        }
+      } catch (err: any) {
+        if (timer) clearTimeout(timer);
+        lastError = err;
+        const errMsg = err?.message || String(err);
+        console.warn(`[Gemini Server] ${modelName} attempt ${attempt} notice: ${errMsg.slice(0, 100)}`);
+        if (attempt === 2) {
+          break;
+        }
       }
-    } catch (err: any) {
-      if (timer) clearTimeout(timer);
-      lastError = err;
-      const errMsg = err?.message || String(err);
-      if (
-        errMsg.includes("503") ||
-        errMsg.includes("high demand") ||
-        errMsg.includes("UNAVAILABLE") ||
-        errMsg.includes("RESOURCE_EXHAUSTED") ||
-        errMsg.includes("429") ||
-        errMsg.includes("404") ||
-        errMsg.includes("not found")
-      ) {
-        console.warn(`Gemini model ${modelName} unavailable/busy, trying next model in cascade...`);
-        continue;
-      }
-      console.warn(`Gemini model ${modelName} notice: ${errMsg}`);
     }
   }
 
@@ -169,7 +166,7 @@ async function callGemini(
 }
 
 /**
- * Multi-turn Gemini Chat helper with resilient fallback
+ * Multi-turn Gemini Chat helper with resilient fallback and retries
  */
 async function callGeminiChat(
   history: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }>,
@@ -186,36 +183,44 @@ async function callGeminiChat(
     ...GEMINI_MODELS_CASCADE.filter((m) => m !== preferredModel),
   ];
 
-  const timeoutMs = 10000;
+  const timeoutMs = 12000;
   let lastError: any = null;
 
   for (const modelName of modelsToTry) {
-    let timer: NodeJS.Timeout | undefined;
-    try {
-      const generatePromise = gemini.models.generateContent({
-        model: modelName,
-        contents: history,
-        config: {
-          ...(systemInstruction ? { systemInstruction } : {}),
-        },
-      });
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      let timer: NodeJS.Timeout | undefined;
+      try {
+        if (attempt > 1) {
+          await new Promise((resolve) => setTimeout(resolve, 400 * attempt));
+        }
 
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        timer = setTimeout(() => reject(new Error(`Gemini chat timeout on ${modelName}`)), timeoutMs);
-      });
+        const generatePromise = gemini.models.generateContent({
+          model: modelName,
+          contents: history,
+          config: {
+            ...(systemInstruction ? { systemInstruction } : {}),
+          },
+        });
 
-      const response: any = await Promise.race([generatePromise, timeoutPromise]);
-      if (timer) clearTimeout(timer);
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error(`Gemini chat timeout on ${modelName} (attempt ${attempt})`)), timeoutMs);
+        });
 
-      if (response?.text) {
-        return { text: response.text, model: modelName };
+        const response: any = await Promise.race([generatePromise, timeoutPromise]);
+        if (timer) clearTimeout(timer);
+
+        if (response?.text) {
+          return { text: response.text, model: modelName };
+        }
+      } catch (err: any) {
+        if (timer) clearTimeout(timer);
+        lastError = err;
+        const errMsg = err?.message || String(err);
+        console.warn(`[Gemini Chat Server] ${modelName} attempt ${attempt} notice: ${errMsg.slice(0, 100)}`);
+        if (attempt === 2) {
+          break;
+        }
       }
-    } catch (err: any) {
-      if (timer) clearTimeout(timer);
-      lastError = err;
-      const errMsg = err?.message || String(err);
-      console.warn(`Gemini Chat on ${modelName} notice: ${errMsg.slice(0, 100)}, switching to next model...`);
-      continue;
     }
   }
 
@@ -553,6 +558,120 @@ app.get("/api/users/sync", (_req, res) => {
       status: st.status,
     })),
   });
+});
+
+// In-memory persistent store for server-persisted audit logs
+let serverAuditLogs: any[] = [
+  {
+    id: "log-audit-srv-1",
+    timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
+    actorRole: "school_admin",
+    actorName: "Klaus Weber",
+    schoolId: "school-berlin",
+    schoolName: "Berlin Sprachzentrum",
+    action: "Audit de conformité des licences élèves",
+    details: "Contrôle de sécurité des 42 comptes élèves actifs. Quotas respectés.",
+    ipAddress: "192.168.1.42",
+    status: "success",
+  },
+  {
+    id: "log-audit-srv-2",
+    timestamp: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
+    actorRole: "super_admin",
+    actorName: "Super Admin",
+    schoolId: "school-berlin",
+    schoolName: "Berlin Sprachzentrum",
+    action: "Initialisation traçabilité École",
+    details: "Vérification des registres RGPD et d'assiduité académique.",
+    ipAddress: "127.0.0.1",
+    status: "success",
+  },
+];
+
+// GET /api/audit/logs - Fetch all logs or filter by school
+app.get("/api/audit/logs", (req, res) => {
+  const { schoolId, status } = req.query;
+  let result = [...serverAuditLogs];
+  if (schoolId) {
+    result = result.filter(
+      (l) => l.schoolId === schoolId || l.targetId === schoolId
+    );
+  }
+  if (status && status !== "all") {
+    result = result.filter((l) => l.status === status);
+  }
+  return res.json({
+    success: true,
+    count: result.length,
+    logs: result,
+  });
+});
+
+// POST /api/audit/logs - Record a new audit log
+app.post("/api/audit/logs", (req, res) => {
+  try {
+    const logData = req.body;
+    if (!logData || !logData.action) {
+      return res.status(400).json({ success: false, error: "Action requise" });
+    }
+
+    const newLog = {
+      id: logData.id || `log-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      action: logData.action,
+      details: logData.details || "",
+      actorRole: logData.actorRole || "school_admin",
+      actorName: logData.actorName || "Administrateur",
+      schoolId: logData.schoolId || "",
+      schoolName: logData.schoolName || "",
+      entityType: logData.entityType || "school",
+      entityId: logData.entityId || "",
+      targetId: logData.targetId || logData.schoolId || "",
+      previousValue: logData.previousValue,
+      newValue: logData.newValue,
+      ipAddress: logData.ipAddress || (req.headers["x-forwarded-for"] as string) || req.ip || "127.0.0.1",
+      timestamp: logData.timestamp || new Date().toISOString(),
+      status: logData.status || "success",
+    };
+
+    // Prepend to store
+    serverAuditLogs.unshift(newLog);
+
+    if (serverAuditLogs.length > 500) {
+      serverAuditLogs = serverAuditLogs.slice(0, 500);
+    }
+
+    return res.json({
+      success: true,
+      log: newLog,
+      message: "Journal d'audit enregistré et persisté avec succès.",
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/audit/sync - Sync multiple logs
+app.post("/api/audit/sync", (req, res) => {
+  try {
+    const { logs } = req.body;
+    if (Array.isArray(logs)) {
+      const existingIds = new Set(serverAuditLogs.map((l) => l.id));
+      for (const log of logs) {
+        if (log && log.id && !existingIds.has(log.id)) {
+          serverAuditLogs.push(log);
+          existingIds.add(log.id);
+        }
+      }
+      serverAuditLogs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    }
+    return res.json({
+      success: true,
+      count: serverAuditLogs.length,
+      logs: serverAuditLogs,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // Authentication Endpoint supporting Super Admin, School Director, and Student

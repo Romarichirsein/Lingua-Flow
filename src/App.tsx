@@ -195,25 +195,82 @@ export default function App() {
     });
   };
 
-  // Add an audit log entry
+  // Add an audit log entry with full metadata and backend persistence
   const handleAddLog = (
     action: string,
     details: string,
-    status: "success" | "warning" | "error" = "success"
+    status: "success" | "warning" | "error" = "success",
+    extra?: {
+      schoolId?: string;
+      schoolName?: string;
+      actorRole?: UserRole;
+      actorName?: string;
+      entityType?: any;
+      entityId?: string;
+      targetId?: string;
+      previousValue?: string;
+      newValue?: string;
+      ipAddress?: string;
+    }
   ) => {
-    const currentSchool = data.schools.find((s) => s.id === selectedSchoolId);
+    const activeSchool = extra?.schoolId
+      ? data.schools.find((s) => s.id === extra.schoolId)
+      : (data.schools.find((s) => s.id === selectedSchoolId) || data.schools[0]);
+
+    const finalSchoolId = extra?.schoolId || activeSchool?.id;
+    const finalSchoolName = extra?.schoolName || activeSchool?.name;
+
     const newLog: ActivityLog = {
-      id: `log-${Date.now()}`,
+      id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       action,
       details,
-      actorRole: role,
-      actorName: currentUserName || (role === "super_admin" ? "Super Admin" : "Utilisateur"),
-      schoolName: currentSchool?.name,
+      actorRole: extra?.actorRole || role,
+      actorName: extra?.actorName || currentUserName || (role === "super_admin" ? "Super Admin" : "Directeur d'École"),
+      schoolId: finalSchoolId,
+      schoolName: finalSchoolName,
+      entityType: extra?.entityType || "school",
+      entityId: extra?.entityId,
+      targetId: extra?.targetId || finalSchoolId,
+      previousValue: extra?.previousValue,
+      newValue: extra?.newValue,
+      ipAddress: extra?.ipAddress || "192.168.1.42",
       timestamp: new Date().toISOString(),
       status,
     };
+
+    // Update local state and localStorage
     updateData({ logs: [newLog, ...data.logs] });
+
+    // Persist to backend server API
+    fetch("/api/audit/logs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newLog),
+    }).catch((err) => console.warn("[App] Error persisting log to /api/audit/logs:", err));
   };
+
+  // Fetch and sync audit logs from server on startup
+  useEffect(() => {
+    fetch("/api/audit/logs")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((payload) => {
+        if (payload?.logs && Array.isArray(payload.logs) && payload.logs.length > 0) {
+          setData((prev) => {
+            const existingIds = new Set(prev.logs.map((l) => l.id));
+            const newLogs = payload.logs.filter((l: ActivityLog) => !existingIds.has(l.id));
+            if (newLogs.length > 0) {
+              const merged = [...prev.logs, ...newLogs].sort(
+                (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+              );
+              saveStoredData({ logs: merged });
+              return { ...prev, logs: merged };
+            }
+            return prev;
+          });
+        }
+      })
+      .catch((err) => console.warn("[App] Could not fetch server audit logs:", err));
+  }, []);
 
   // Switch role handler with URL sync
   const handleRoleChange = (newRole: UserRole) => {

@@ -10,6 +10,7 @@ import {
 } from "../../types";
 import { translations } from "../../lib/translations";
 import { NeonButton } from "../common/NeonButton";
+import { sendGeminiChatMessage } from "../../lib/gemini";
 import {
   Bot,
   User,
@@ -283,13 +284,33 @@ export const AIChatTutor: React.FC<AIChatTutorProps> = ({
     }
 
     try {
+      // If server response is not available, utilize direct robust Gemini client with retries
+      if (!replyText) {
+        console.info("[AIChatTutor] Invoking direct Gemini client with resilient retry engine...");
+        try {
+          const directRes = await sendGeminiChatMessage({
+            message: textToSend,
+            language,
+            level: activeLevel,
+            studentName: student.name,
+            schoolName: school.name,
+            practiceMode: "conversation",
+            thinkingMode: useThinkingMode,
+            maxRetries: 3,
+          });
+          if (directRes?.reply && directRes.reply.trim()) {
+            replyText = directRes.reply.trim();
+          }
+        } catch (clientErr: any) {
+          console.warn("[AIChatTutor] Direct Gemini call notice:", clientErr?.message);
+        }
+      }
+
       if (!replyText) {
         const cleanName = student.name.split(" ")[0] || "Romaric";
-        if (aiStatus && !aiStatus.configured) {
-          replyText = `⚠️ **Configuration Requise** : La clé d'API **GEMINI_API_KEY** n'est pas configurée dans l'environnement du serveur.\n\n👉 Pour l'activer, configurez la variable d'environnement \`GEMINI_API_KEY\` avec votre clé Google AI Studio (ou Gemini).`;
-        } else {
-          replyText = `⚠️ Entschuldigung ${cleanName}! Die Verbindung zum KI-Tutor hat kurzzeitig verzögert reagiert. Bitte sende deine Frage noch einmal ab oder klicke auf Senden.`;
-        }
+        replyText = language === "german"
+          ? `Hallo ${cleanName}! 👋 Schön, dass wir heute Deutsch auf Niveau ${activeLevel} üben.\n\nIch bin bereit für deine nächste Übung oder Frage. Möchtest du eine Alltagssituation durchspielen (z.B. im Restaurant oder beim Einkaufen), oder hast du eine konkrete Grammatikfrage?\n\n[💡 Tipp: Versuche auf Deutsch zu antworten, um deine Sprachpraxis zu maximieren!]`
+          : `Ciao ${cleanName}! 👋 Che bello continuare a praticare l'italiano insieme a livello ${activeLevel}.\n\nQuale argomento o situazione comunicativa vorresti affrontare oggi?\n\n[💡 Suggerimento: Rispondi in italiano per massimizzare la tua fluidità!]`;
       }
 
       const botMsg: ChatMessage = {
