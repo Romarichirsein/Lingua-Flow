@@ -45,7 +45,7 @@ export const SchoolLogo: React.FC<SchoolLogoProps> = ({
   const sizeClass = SIZE_MAP[size] || SIZE_MAP.md;
 
   return (
-    <div
+    <span
       className={`inline-flex items-center justify-center overflow-hidden shrink-0 select-none bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 ${sizeClass} ${className}`}
       title={name}
     >
@@ -62,6 +62,6 @@ export const SchoolLogo: React.FC<SchoolLogoProps> = ({
           {logo && logo.length <= 6 ? logo : fallback}
         </span>
       )}
-    </div>
+    </span>
   );
 };

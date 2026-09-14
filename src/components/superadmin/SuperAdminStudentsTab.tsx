@@ -275,7 +275,7 @@ export const SuperAdminStudentsTab: React.FC<SuperAdminStudentsTabProps> = ({
                       <td className="py-3.5 px-4">
                         {school ? (
                           <div>
-                            <p className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            <div className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
                               <SchoolLogo
                                 logo={school.logo}
                                 name={school.name}
@@ -283,7 +283,7 @@ export const SuperAdminStudentsTab: React.FC<SuperAdminStudentsTabProps> = ({
                                 size="xs"
                               />
                               <span>{school.name}</span>
-                            </p>
+                            </div>
                             <span className="text-[10px] text-slate-400">
                               {school.language === "german" ? (isEn ? "German 🇩🇪" : "Allemand 🇩🇪") : (isEn ? "Italian 🇮🇹" : "Italien 🇮🇹")}
                             </span>
