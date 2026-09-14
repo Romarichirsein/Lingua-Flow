@@ -22,6 +22,7 @@ import {
   Bell,
   Check,
   ChevronRight,
+  Sparkles,
 } from "lucide-react";
 
 interface StudentDashboardTabProps {
@@ -352,19 +353,19 @@ export const StudentDashboardTab: React.FC<StudentDashboardTabProps> = ({
             {/* AI Tutor card */}
             <div
               onClick={onOpenChat}
-              className="group bg-gradient-to-br from-cyan-500/5 to-emerald-500/5 hover:from-cyan-500/10 hover:to-emerald-500/10 border border-cyan-500/20 rounded-3xl p-5 transition cursor-pointer shadow-xs space-y-2"
+              className="group bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-amber-500/10 hover:from-indigo-500/20 hover:to-purple-500/20 border border-indigo-500/30 rounded-3xl p-5 transition cursor-pointer shadow-xs space-y-2"
             >
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-cyan-500">
-                  <MessageCircle size={18} />
-                  <span className="font-bold text-xs">{t.student.tabs.chat.label}</span>
+                <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
+                  <Sparkles size={18} className="text-amber-400" />
+                  <span className="font-extrabold text-xs">LinguaFlow AI (DACH 🇩🇪 🇦🇹 🇨🇭)</span>
                 </div>
-                <ArrowRight size={14} className="text-cyan-400 group-hover:translate-x-1 transition" />
+                <ArrowRight size={14} className="text-indigo-400 group-hover:translate-x-1 transition" />
               </div>
               <p className="text-xs text-slate-600 dark:text-slate-300">
                 {locale === "en"
-                  ? "Converse in native immersion with LinguaBot and practice listening with real-time audio playback."
-                  : "Dialoguez en immersion native avec LinguaBot et bénéficiez de l'écoute audio en direct."}
+                  ? "Converse with LinguaFlow AI, your specialized German language agent for grammar, cases (Akk/Dat), roleplay, and CEFR exams."
+                  : "Entraînez-vous avec LinguaFlow AI, votre agent IA spécialisé en allemand : cas, déclinaisons, simulations DACH et examens CECRL."}
               </p>
             </div>
           </div>

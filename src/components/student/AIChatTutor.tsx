@@ -61,7 +61,7 @@ export const AIChatTutor: React.FC<AIChatTutorProps> = ({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Open-ended initial welcome message emphasizing total freedom of topic
+  // Open-ended initial welcome message emphasizing LinguaFlow AI specialized German agent
   const getOpenInitialWelcome = (
     lvl: CEFRLevel,
     lang: SupportedLanguage,
@@ -71,21 +71,21 @@ export const AIChatTutor: React.FC<AIChatTutorProps> = ({
     if (lang === "german") {
       switch (lvl) {
         case "A1":
-          return `Hallo ${name}! 👋 Willkommen bei deinem persönlichen KI-Sprachtutor an der ${schName}.\n\nIch bin voll einsatzbereit und habe keinerlei Themenbeschränkungen: Wir können über alles sprechen, was dich interessiert (dein Alltag, Hobbys, Familie, Urlaub, Essen), einfache Fragen üben oder deutsche Vokabeln lernen.\n\nIch passe meine Sprache an dein A1-Niveau an (kurze Sätze, klare Wörter). Worüber möchtest du heute sprechen?`;
+          return `Hallo ${name}! 👋 Ich bin **LinguaFlow AI**, dein spezialisierter KI-Sprachagent für Deutsch an der ${schName}.\n\nAls dedizierter Experte für die deutsche Sprache (Deutschland 🇩🇪, Österreich 🇦🇹, Schweiz 🇨🇭) begleite ich dich gezielt auf Niveau A1:\n• Einfache Alltagsdialoge & Begrüßungen\n• Die 4 Fälle (Nominativ, Akkusativ, Dativ) klar und einfach erklärt\n• Satzbau & wichtige Verben (sein, haben, möchten, gehen)\n• Praktische Alltagssimulationen (im Café, beim Bäcker, im Hotel)\n\nIch passe mich deinem Tempo und Niveau an. Worüber möchtest du heute sprechen oder welche Frage hast du?`;
         case "A2":
-          return `Hallo ${name}! 🌟 Schön, dich zu sehen an der ${schName}.\n\nAls dein KI-Tutor stehe ich dir für jedes beliebige Thema zur Verfügung: Gespräche über deine Pläne, praktische Lebenssituationen in Deutschland, Vergangenheitsformen (Perfekt) oder die Erklärung von Regeln.\n\nDu hast die freie Wahl! Worüber möchtest du dich heute austauschen?`;
+          return `Hallo ${name}! 🌟 Schön, dich zu sehen. Ich bin **LinguaFlow AI**, dein spezialisierter KI-Sprachagent für Deutsch an der ${schName}.\n\nAuf Niveau A2 erweitern wir deine sprachliche Souveränität für den DACH-Raum:\n• Flüssiges Erzählen in der Vergangenheit (Perfekt mit haben/sein)\n• Trennbare Verben, Modalverben und Wechselpräpositionen (an, auf, in...)\n• Praktische Situationen (Arztbesuch, Fahrkartenkauf, Wegbeschreibung)\n• Erste Vorbereitung auf Prüfungsformate (Goethe / TELC A2)\n\nStelle mir jede beliebige Grammatikfrage oder starte ein freies Gespräch!`;
         case "B1":
-          return `Guten Tag ${name}! 🚀 Willkommen bei deinem KI-Sprachtutor an der ${schName}.\n\nIch verfüge über alle didaktischen und sprachlichen Fähigkeiten, um dich zu begleiten – ganz ohne Limitierung. Wir können über jedes gesellschaftliche, berufliche oder persönliche Thema debattieren, Goethe/TELC-Prüfungsformate trainieren, deine Grammatik perfektionieren oder ein realistisches Rollenspiel starten.\n\nWelches Thema liegt dir heute auf dem Herzen?`;
+          return `Guten Tag ${name}! 🚀 Willkommen bei **LinguaFlow AI**, deinem spezialisierten Sprach- und Prüfungscoach für Deutsch an der ${schName}.\n\nAuf Niveau B1 trainieren wir deine selbstständige Sprachverwendung für Alltag, Beruf und Zertifikate:\n• Eigene Meinungen überzeugend begründen & diskutieren\n• Nebensätze mit 'weil', 'obwohl', 'dass' sowie Konjunktiv II (Wünsche & Höflichkeit)\n• Realistische Simulationen: Vorstellungsgespräch, Bürgeramt oder offizielle E-Mails\n• Intensivtraining für das Goethe-Zertifikat B1 / TELC Deutsch B1\n\nWelches Thema, welche Grammatikregel oder welches Prüfungsszenario gehen wir heute an?`;
         case "B2":
-          return `Herzlich willkommen, ${name}! 💼 Als dein fortgeschrittener Sprachcoach an der ${schName} trainieren wir auf Niveau B2.\n\nOb anspruchsvolle Fachdiskussionen, geschäftliche Verhandlungen, differenzierte Argumentation, idiomatische Wendungen oder komplexe Satzstrukturen (Konjunktiv II, Passiv): Ich passe mich jedem Thema an, das du anschneidest.\n\nWelche Fragestellung oder welches Szenario möchtest du heute angehen?`;
+          return `Herzlich willkommen, ${name}! 💼 **LinguaFlow AI** steht dir als spezialisierter Sprachagent für fortgeschrittenes Deutsch (B2) zur Seite.\n\nWir perfektionieren deine berufsbezogene und akademische Ausdrucksfähigkeit im deutschsprachigen Raum:\n• Wirtschaftsdeutsch & anspruchsvolle Verhandlungsgespräche\n• Passivkonstruktionen (Vorgangspassiv / Zustandspassiv) und feste Verben mit Präpositionen\n• Differenzierte Satzverknüpfungen (einerseits/andererseits, je... desto, insofern als)\n• Gezielte Vorbereitung auf Goethe B2 und TELC B2 Beruf\n\nWelche Fragestellung, Textkorrektur oder Diskussion möchtest du eröffnen?`;
         case "C1":
-          return `Guten Tag ${name}. 🎓 Willkommen im C1-Exzellenzcoaching an der ${schName}.\n\nIch begleite dich mit vollständiger muttersprachlicher und akademischer Kompetenz durch alle Sphären: philosophischer Diskurs, Wirtschaft, Politik, Literatur, stilistische Feinheiten oder anspruchsvolle Debatten.\n\nWelchen Diskurs oder welche linguistische Herausforderung möchtest du heute eröffnen?`;
+          return `Guten Tag ${name}. 🎓 Willkommen im C1-Exzellenztraining mit **LinguaFlow AI** an der ${schName}.\n\nAls spezialisierter linguistischer Agent führe ich dich durch anspruchsvollste Sphären der deutschen Sprache:\n• Akademischer, wirtschaftlicher und politischer Diskurs\n• Komplexe Nominal- und Partizipialstrukturen, Konjunktiv I (indirekte Rede)\n• Subtile idiomatische Wendungen und länderspezifische DACH-Feinheiten\n• Exzellenztraining für TestDaF, DSH, Goethe C1 und TELC C1 Hochschule\n\nWelche intellektuelle oder linguistische Herausforderung möchtest du heute analysieren?`;
         case "C2":
         default:
-          return `Willkommen ${name}. 🏛️ Als KI-Sprachcoach auf C2-Exzellenzniveau stehe ich dir mit unbegrenzter sprachlicher und intellektueller Bandbreite zur Seite.\n\nVon rhetorischen Finessen und stilistischer Virtuosität bis hin zu profundem Diskurs zu jedem denkbaren Sujet: Du führst das Gespräch nach Belieben.\n\nWelches Thema explorieren wir heute?`;
+          return `Willkommen ${name}. 🏛️ Als hochspezialisierter KI-Sprachagent für die deutsche Sprache steht dir **LinguaFlow AI** auf muttersprachlichem C2-Niveau zur Seite.\n\nVon rhetorischer Virtuosität, literarischen Registern und philosophischen Abhandlungen bis hin zu feinster stilistischer Präzision: Du führst den Diskurs ohne jegliche thematische oder stilistische Begrenzung.\n\nWelches Sujet explorieren wir heute?`;
       }
     } else {
-      return `Ciao ${name}! 👋 Benvenuto al tuo tutor linguistico AI presso ${schName}.\n\nHo tutte le mie facoltà attive e senza limiti di argomento: possiamo conversare liberamente di qualunque tema desideri, esercitarci sulla grammatica, preparare una situazione reale o arricchire il tuo vocabolario al livello ${lvl}.\n\nDi cosa vorresti parlare oggi?`;
+      return `Ciao ${name}! 👋 Benvenuto a **LinguaFlow AI**, il tuo agente linguistico AI specializzato presso ${schName}.\n\nPossiedo tutte le facoltà pedagogiche attive: possiamo conversare liberamente, analizzare la grammatica, preparare una situazione reale o sviluppare il tuo vocabolario al livello ${lvl}.\n\nDi cosa vorresti parlare oggi?`;
     }
   };
 
@@ -355,19 +355,24 @@ export const AIChatTutor: React.FC<AIChatTutorProps> = ({
       {/* Header: Identity, CEFR Level Selector, Thinking Mode, Reset */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white shadow-md shrink-0">
-            <Bot size={24} />
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-amber-500 text-white shadow-md shadow-indigo-500/20 shrink-0 ring-2 ring-white/10">
+            <Sparkles size={22} className="text-amber-200" />
           </div>
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
-                <span>{isGerman ? "KI-Sprachtutor Deutsch" : "Tutor Linguistico AI"}</span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              <h3 className="font-extrabold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
+                <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 bg-clip-text text-transparent dark:from-indigo-400 dark:via-purple-300 dark:to-pink-400">
+                  LinguaFlow AI
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                  {isGerman ? "Agent IA Spécialisé Allemand" : "Specialized Language AI"}
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/25">
                   {isGerman ? "DACH 🇩🇪 🇦🇹 🇨🇭" : "IT 🇮🇹"}
                 </span>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                  <span>Gemini 3 Flash • Connecté</span>
+                  <span>En ligne • Gemini 3 Flash</span>
                 </span>
               </h3>
 
@@ -421,8 +426,8 @@ export const AIChatTutor: React.FC<AIChatTutorProps> = ({
             }`}
             title={
               locale === "en"
-                ? "Deep pedagogical reasoning for syntax and grammar breakdown"
-                : "Raisonnement linguistique approfondi pour l'analyse syntaxique et grammaticale"
+                ? "Deep pedagogical reasoning for German syntax, cases, and grammar breakdown"
+                : "Raisonnement linguistique approfondi pour l'analyse des cas (Akk/Dat/Gen), de la syntaxe et de la grammaire"
             }
           >
             <Brain size={14} className={useThinkingMode ? "text-violet-500 animate-pulse" : ""} />
@@ -456,10 +461,10 @@ export const AIChatTutor: React.FC<AIChatTutorProps> = ({
                 className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-xs font-bold ${
                   isUser
                     ? "bg-indigo-600 text-white shadow-sm"
-                    : "bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-sm"
+                    : "bg-gradient-to-br from-indigo-600 via-purple-600 to-amber-500 text-white shadow-sm"
                 }`}
               >
-                {isUser ? <User size={14} /> : <Bot size={14} />}
+                {isUser ? <User size={14} /> : <Sparkles size={14} className="text-amber-200" />}
               </div>
 
               <div
@@ -469,6 +474,17 @@ export const AIChatTutor: React.FC<AIChatTutorProps> = ({
                     : "bg-slate-50 text-slate-900 dark:bg-slate-800/90 dark:text-slate-100 rounded-tl-none border border-slate-200/70 dark:border-slate-700/60 shadow-xs"
                 }`}
               >
+                {!isUser && (
+                  <div className="flex items-center gap-1.5 mb-1.5 pb-1 border-b border-slate-200/50 dark:border-slate-700/50">
+                    <span className="font-extrabold text-[11px] text-indigo-600 dark:text-indigo-400">
+                      LinguaFlow AI
+                    </span>
+                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-md bg-indigo-500/10 text-indigo-500 dark:text-indigo-300 border border-indigo-500/20">
+                      DACH 🇩🇪 🇦🇹 🇨🇭
+                    </span>
+                  </div>
+                )}
+
                 {renderMessageContent(m.content)}
 
                 {/* Voice Speak button for Bot with level-adapted speech rate */}
@@ -497,11 +513,11 @@ export const AIChatTutor: React.FC<AIChatTutorProps> = ({
             <span>
               {useThinkingMode
                 ? (locale === "en"
-                    ? `In-depth pedagogical reasoning for CEFR ${activeLevel}...`
-                    : `Analyse et formulation approfondie (CECRL ${activeLevel})...`)
+                    ? `LinguaFlow AI: In-depth German grammatical analysis for CEFR ${activeLevel}...`
+                    : `LinguaFlow AI : Analyse approfondie de la syntaxe et des déclinaisons (CECRL ${activeLevel})...`)
                 : (locale === "en"
-                    ? `Formulating level-${activeLevel} German reply...`
-                    : `Le tuteur rédige une réponse adaptée au niveau ${activeLevel}...`)}
+                    ? `LinguaFlow AI is formulating a specialized level-${activeLevel} German response...`
+                    : `LinguaFlow AI rédige une réponse pédagogique adaptée au niveau ${activeLevel}...`)}
             </span>
           </div>
         )}
@@ -512,9 +528,9 @@ export const AIChatTutor: React.FC<AIChatTutorProps> = ({
       {/* Spontaneous Impulse Suggestions (Purely open inspirations, never restricting) */}
       {messages.length <= 3 && (
         <div className="py-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar border-t border-slate-100 dark:border-slate-800/60">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
+          <span className="text-[10px] font-extrabold text-indigo-500 dark:text-indigo-400 uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
             <Sparkles size={11} className="text-amber-500" />
-            {isEn ? "Inspirations:" : "Idées d'échanges :"}
+            {isEn ? "Specialized Modes:" : "Entraînements DACH :"}
           </span>
 
           {openInspirations.map((s, idx) => (
@@ -524,7 +540,7 @@ export const AIChatTutor: React.FC<AIChatTutorProps> = ({
               onClick={() => handleSendMessage(s)}
               className="shrink-0 rounded-full bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 dark:bg-slate-800 dark:hover:bg-slate-700 text-[11px] px-3 py-1 text-slate-700 dark:text-slate-300 transition border border-slate-200/60 dark:border-slate-700/60 cursor-pointer truncate max-w-[320px]"
             >
-              💬 {s}
+              🇩🇪 {s}
             </button>
           ))}
         </div>
@@ -545,8 +561,8 @@ export const AIChatTutor: React.FC<AIChatTutorProps> = ({
           onChange={(e) => setInputPrompt(e.target.value)}
           placeholder={
             isGerman
-              ? `Écris ou pose n'importe quelle question en allemand (${activeLevel}) : sujet libre, grammaire, discussion...`
-              : `Scrivi qualsiasi messaggio o domanda in italiano (${activeLevel})...`
+              ? `Pose une question à LinguaFlow AI (${activeLevel}) : déclinaisons, cas, grammaire, simulation DACH, examen...`
+              : `Scrivi qualsiasi messaggio o domanda a LinguaFlow AI (${activeLevel})...`
           }
           className="flex-1 h-11 rounded-2xl border border-slate-200 bg-slate-50/90 px-4 text-xs text-slate-900 outline-none focus:border-indigo-500 focus:bg-white dark:border-white/10 dark:bg-slate-900 dark:text-white transition shadow-inner"
         />
