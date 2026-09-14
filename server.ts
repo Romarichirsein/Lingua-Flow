@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express from "express";
 import path from "path";
 import { GoogleGenAI } from "@google/genai";
@@ -106,7 +107,7 @@ async function callGemini(
     throw new Error("Gemini client is not initialized (missing API key)");
   }
 
-  const primaryModel = options.model || "gemini-3.8-flash";
+  const primaryModel = options.model || "gemini-3.1-flash-lite";
   const modelsToTry = [
     primaryModel,
     ...GEMINI_MODELS_CASCADE.filter((m) => m !== primaryModel),
@@ -434,7 +435,7 @@ app.get("/api/health", async (_req, res) => {
       },
       gemini: {
         configured: !!process.env.GEMINI_API_KEY,
-        model: "gemini-3.8-flash",
+        model: "gemini-3.1-flash-lite",
       },
       seekAI: {
         configured: !!SEEKAI_API_KEY,

@@ -54,6 +54,29 @@ export const AIChatTutor: React.FC<AIChatTutorProps> = ({
   const [inputPrompt, setInputPrompt] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [useThinkingMode, setUseThinkingMode] = useState(false);
+  const [aiStatus, setAiStatus] = useState<{ configured: boolean; connected: boolean; model: string } | null>(null);
+
+  // Probe real backend AI connectivity
+  useEffect(() => {
+    fetch("/api/health")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.aiEngine?.gemini) {
+          setAiStatus({
+            configured: !!data.aiEngine.gemini.configured,
+            connected: true,
+            model: data.aiEngine.gemini.model || "gemini-3.1-flash-lite",
+          });
+        }
+      })
+      .catch(() => {
+        setAiStatus({
+          configured: false,
+          connected: false,
+          model: "Non connecté",
+        });
+      });
+  }, []);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -251,17 +274,22 @@ export const AIChatTutor: React.FC<AIChatTutorProps> = ({
           replyText = data.reply.trim();
         }
       } else {
-        const errText = await res.text();
-        console.warn("[AIChatTutor] Server returned status", res.status, errText);
+        const errJson = await res.json().catch(() => null);
+        const errMsg = errJson?.error || `Erreur serveur (${res.status})`;
+        console.warn("[AIChatTutor] Server returned status", res.status, errMsg);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.warn("[AIChatTutor] Error calling /api/ai/chat:", e);
     }
 
     try {
       if (!replyText) {
         const cleanName = student.name.split(" ")[0] || "Romaric";
-        replyText = `⚠️ Entschuldigung ${cleanName}! Die Verbindung zum KI-Tutor hat kurzzeitig verzögert reagiert. Bitte sende deine Frage noch einmal ab oder klicke auf Senden.`;
+        if (aiStatus && !aiStatus.configured) {
+          replyText = `⚠️ **Configuration Requise** : La clé d'API **GEMINI_API_KEY** n'est pas configurée dans l'environnement du serveur.\n\n👉 Pour l'activer, configurez la variable d'environnement \`GEMINI_API_KEY\` avec votre clé Google AI Studio (ou Gemini).`;
+        } else {
+          replyText = `⚠️ Entschuldigung ${cleanName}! Die Verbindung zum KI-Tutor hat kurzzeitig verzögert reagiert. Bitte sende deine Frage noch einmal ab oder klicke auf Senden.`;
+        }
       }
 
       const botMsg: ChatMessage = {
@@ -370,9 +398,29 @@ export const AIChatTutor: React.FC<AIChatTutorProps> = ({
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/25">
                   {isGerman ? "DACH 🇩🇪 🇦🇹 🇨🇭" : "IT 🇮🇹"}
                 </span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                  <span>En ligne • Gemini 3 Flash</span>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold border flex items-center gap-1.5 ${
+                    aiStatus === null
+                      ? "bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20"
+                      : aiStatus.configured
+                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                      : "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30"
+                  }`}
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                      aiStatus?.configured
+                        ? "bg-emerald-500 animate-pulse"
+                        : "bg-amber-500"
+                    }`}
+                  />
+                  <span>
+                    {aiStatus === null
+                      ? "Connexion..."
+                      : aiStatus.configured
+                      ? `En ligne • ${aiStatus.model || "Gemini"}`
+                      : "Clé GEMINI_API_KEY requise"}
+                  </span>
                 </span>
               </h3>
 
