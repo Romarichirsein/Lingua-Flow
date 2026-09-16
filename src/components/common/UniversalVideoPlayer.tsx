@@ -104,8 +104,12 @@ export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
 
   const parsed = parseVideoSource(resolvedUrl);
 
-  const handleVideoError = (e: any) => {
-    console.warn("Video playback error on URL:", resolvedUrl, e);
+  const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
+    // Extract only primitive details to avoid circular structure errors with HTMLVideoElement / FiberNode in console loggers
+    const mediaError = e.currentTarget?.error;
+    const errorCode = mediaError?.code;
+    const errorMsg = mediaError?.message || "Format vidéo non supporté ou flux inaccessible";
+    console.warn("Video playback error on URL:", resolvedUrl, { errorCode, errorMsg });
     setHasError(true);
     setErrorMessage("Le format ou l'accès à ce flux vidéo n'a pas pu être chargé par le navigateur.");
   };
@@ -188,7 +192,7 @@ export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
           controlsList="nodownload"
           playsInline
           onError={handleVideoError}
-          onEnded={onEnded}
+          onEnded={() => onEnded?.()}
           className="h-full w-full object-contain bg-black select-none"
         />
       )}

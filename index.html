@@ -73,6 +73,52 @@
           }
         } catch (_) {}
       })();
+
+      // Circular structure protection: Prevents unhandled TypeError when serializing DOM nodes or cyclical structures
+      (function() {
+        try {
+          if (typeof window !== "undefined" && typeof JSON !== "undefined") {
+            const nativeStringify = JSON.stringify;
+
+            function createSafeReplacer(customReplacer) {
+              const seen = new WeakSet();
+              return function(key, val) {
+                let value = val;
+                if (typeof customReplacer === "function") {
+                  value = customReplacer.call(this, key, val);
+                }
+                if (value !== null && typeof value === "object") {
+                  if (typeof Node !== "undefined" && value instanceof Node) {
+                    return "[DOM " + (value.nodeName || "Node") + "]";
+                  }
+                  if (typeof Event !== "undefined" && value instanceof Event) {
+                    return "[Event " + (value.type || "") + "]";
+                  }
+                  if (typeof Window !== "undefined" && value instanceof Window) {
+                    return "[Window]";
+                  }
+                  if (seen.has(value)) {
+                    return "[Circular]";
+                  }
+                  seen.add(value);
+                }
+                return value;
+              };
+            }
+
+            JSON.stringify = function(value, replacer, space) {
+              try {
+                return nativeStringify.call(JSON, value, replacer, space);
+              } catch (err) {
+                if (err && err.message && (err.message.includes("circular") || err.message.includes("cyclic"))) {
+                  return nativeStringify.call(JSON, value, createSafeReplacer(replacer), space);
+                }
+                throw err;
+              }
+            };
+          }
+        } catch (_) {}
+      })();
     </script>
   </head>
   <body>
