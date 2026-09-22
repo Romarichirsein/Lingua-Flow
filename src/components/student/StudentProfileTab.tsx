@@ -49,53 +49,10 @@ export const StudentProfileTab: React.FC<StudentProfileTabProps> = ({
   // Calculate days remaining safely
   const daysRemaining = computeDaysRemaining(student.endDate);
 
-  // Password update form state
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [passwordSuccess, setPasswordSuccess] = useState(false);
-  const [passwordError, setPasswordError] = useState<string | null>(null);
-
   // Notification toggles state
   const [whatsappAlerts, setWhatsappAlerts] = useState(true);
   const [emailAlerts, setEmailAlerts] = useState(true);
   const [inactivityAlerts, setInactivityAlerts] = useState(false);
-
-  const handlePasswordSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setPasswordError(null);
-    setPasswordSuccess(false);
-
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      setPasswordError(locale === "en" ? "All password fields are required." : "Tous les champs de mot de passe sont obligatoires.");
-      return;
-    }
-
-    if (newPassword.length < 6) {
-      setPasswordError(locale === "en" ? "New password must be at least 6 characters." : "Le nouveau mot de passe doit contenir au moins 6 caractères.");
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setPasswordError(locale === "en" ? "Password confirmation does not match." : "La confirmation du mot de passe ne correspond pas.");
-      return;
-    }
-
-    // Save updated password
-    const updatedStudent: Student = {
-      ...student,
-      password: newPassword,
-    };
-
-    onUpdateStudent(updatedStudent);
-    onAddLog("Changement de mot de passe", `L'élève ${student.name} a mis à jour son mot de passe.`);
-    setPasswordSuccess(true);
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
-
-    setTimeout(() => setPasswordSuccess(false), 4000);
-  };
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
@@ -145,7 +102,7 @@ export const StudentProfileTab: React.FC<StudentProfileTabProps> = ({
               <div className="flex justify-between py-1">
                 <span className="text-slate-500">{locale === "en" ? "Enrollment Date:" : "Date d'inscription :"}</span>
                 <span className="font-medium text-slate-900 dark:text-white">
-                  {student.accessStartDate || (locale === "en" ? "Active session" : "Session active")}
+                  {student.accessStartDate || student.startDate || (locale === "en" ? "Active session" : "Session active")}
                 </span>
               </div>
               <div className="flex justify-between py-1">
@@ -205,73 +162,45 @@ export const StudentProfileTab: React.FC<StudentProfileTabProps> = ({
 
         {/* Right Column: Security Password & Language / UI Preferences */}
         <div className="md:col-span-6 space-y-6">
-          {/* Security & Password */}
+          {/* Security & Access Management (Managed exclusively by School Admin) */}
           <div className="bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 rounded-3xl p-6 shadow-xs space-y-4">
-            <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-              <KeyRound size={16} className="text-amber-500" />
-              {t.student.securityPassword}
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                <Shield size={16} className="text-emerald-500" />
+                {locale === "en" ? "Account Security & Credentials" : "Sécurité & Accès au Compte"}
+              </h3>
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                <Lock size={11} />
+                {locale === "en" ? "School Managed" : "Géré par votre école"}
+              </span>
+            </div>
 
-            <form onSubmit={handlePasswordSubmit} className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  {t.student.currentPassword}
-                </label>
-                <input
-                  type="password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs dark:border-white/10 dark:bg-white/5 text-slate-900 dark:text-white outline-none focus:border-indigo-500"
-                  placeholder="••••••••"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  {t.student.newPassword}
-                </label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs dark:border-white/10 dark:bg-white/5 text-slate-900 dark:text-white outline-none focus:border-indigo-500"
-                  placeholder={locale === "en" ? "Minimum 6 characters" : "Minimum 6 caractères"}
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  {t.student.confirmPassword}
-                </label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs dark:border-white/10 dark:bg-white/5 text-slate-900 dark:text-white outline-none focus:border-indigo-500"
-                  placeholder={locale === "en" ? "Repeat new password" : "Répétez le nouveau mot de passe"}
-                />
-              </div>
-
-              {passwordError && (
-                <div className="p-3 rounded-xl bg-rose-500/10 text-rose-500 border border-rose-500/20 text-xs flex items-center gap-2">
-                  <AlertCircle size={15} />
-                  <span>{passwordError}</span>
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/5 space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center shrink-0 mt-0.5">
+                  <KeyRound size={16} />
                 </div>
-              )}
-
-              {passwordSuccess && (
-                <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-xs flex items-center gap-2">
-                  <CheckCircle2 size={15} />
-                  <span>{t.student.passwordUpdatedSuccess}</span>
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-slate-900 dark:text-white">
+                    {locale === "en" ? "Password Modification Restricted" : "Modification de mot de passe restreinte"}
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                    {locale === "en"
+                      ? `For institutional security and compliance, student login credentials and passwords are strictly managed by your partner school administration (${school.name}). Students cannot alter passwords directly.`
+                      : `Pour des raisons de sécurité académique et de conformité, vos identifiants et mot de passe sont exclusivement gérés et administrés par l'administration de votre école partenaire (${school.name}). L'élève ne peut pas modifier son mot de passe directement.`}
+                  </p>
                 </div>
-              )}
-
-              <div className="pt-2">
-                <NeonButton variant="primary" size="sm" type="submit">
-                  {t.student.changePassword}
-                </NeonButton>
               </div>
-            </form>
+
+              <div className="pt-2 border-t border-slate-200/60 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                <span className="text-slate-500">
+                  {locale === "en" ? "Need a password reset?" : "Besoin d'une réinitialisation ?"}
+                </span>
+                <span className="font-semibold text-indigo-500 dark:text-indigo-400">
+                  {school.managerEmail || school.professionalEmail || school.name}
+                </span>
+              </div>
+            </div>
           </div>
 
           {/* Preferences (Language, Notifications) */}

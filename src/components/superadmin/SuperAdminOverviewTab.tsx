@@ -1,6 +1,7 @@
 import React from "react";
 import { School, Student, Program, ActivityLog, Announcement, UILocale } from "../../types";
 import { ProgressBar } from "../common/ProgressBar";
+import { SchoolLogo } from "../common/SchoolLogo";
 import {
   Building2,
   Users,
@@ -69,12 +70,77 @@ export const SuperAdminOverviewTab: React.FC<SuperAdminOverviewTabProps> = ({
     return diffDays >= 0 && diffDays <= 30;
   });
 
+  // Urgent expiring schools within 5 days (contract renewal alert)
+  const urgentExpiringSchools = schools.filter((s) => {
+    if (s.status === "archived" || s.status === "blocked") return false;
+    const end = new Date(s.endDate);
+    const diffDays = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    return diffDays >= 0 && diffDays <= 5;
+  });
+
   // Total Quota capacity
   const totalQuota = schools.reduce((acc, s) => acc + (s.studentQuota || 0), 0);
   const quotaUtilizationPct = Math.min(100, Math.round((totalStudents / Math.max(1, totalQuota)) * 100));
 
   return (
     <div className="space-y-6">
+      {/* Critical Alert: School Subscriptions Expiring within 5 Days (J-5) */}
+      {urgentExpiringSchools.length > 0 && (
+        <div className="p-4 sm:p-5 rounded-3xl bg-rose-500/10 border-2 border-rose-500/40 text-rose-700 dark:text-rose-300 shadow-lg space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5">
+              <AlertTriangle className="text-rose-500 shrink-0 animate-bounce" size={22} />
+              <span className="font-extrabold text-sm sm:text-base text-rose-600 dark:text-rose-400">
+                {isEn
+                  ? `🚨 URGENT SUPER ADMIN: ${urgentExpiringSchools.length} partner school(s) expiring within 5 days (J-5)`
+                  : `🚨 ALERTE CRITIQUE SUPER ADMIN : ${urgentExpiringSchools.length} école(s) partenaire(s) à échéance dans moins de 5 jours (J-5)`}
+              </span>
+            </div>
+            <span className="px-3 py-1 rounded-full bg-rose-500/20 text-rose-600 dark:text-rose-300 text-xs font-black uppercase tracking-wider self-start sm:self-auto">
+              {isEn ? "Action Required" : "Renouvellement Requis"}
+            </span>
+          </div>
+
+          <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+            {isEn
+              ? "The following schools have their institutional SaaS contracts expiring soon. Contact their management to issue renewal quotes and prevent platform service interruptions."
+              : "Les contrats d'accès des établissements suivants arrivent à leur terme. Contactez la direction pour émettre la facture de renouvellement et éviter l'interruption des cours pour leurs élèves."}
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-1">
+            {urgentExpiringSchools.map((sch) => {
+              const days = Math.max(
+                0,
+                Math.ceil((new Date(sch.endDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+              );
+              return (
+                <div
+                  key={sch.id}
+                  className="bg-white/80 dark:bg-[#0D1220]/80 p-3 rounded-2xl border border-rose-500/30 flex items-center justify-between gap-2 shadow-xs"
+                >
+                  <div className="min-w-0">
+                    <p className="font-bold text-slate-900 dark:text-white text-xs truncate">
+                      {sch.name}
+                    </p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                      {sch.managerName || "Directeur"} • {sch.managerEmail || sch.professionalEmail || "Email non renseigné"}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className="font-black text-rose-500 text-xs font-mono block">
+                      {days === 0 ? "Aujourd'hui" : `J-${days}`}
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      {sch.endDate}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Top 8 Key Metrics Bento Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Metric 1: Total Schools */}
@@ -223,9 +289,12 @@ export const SuperAdminOverviewTab: React.FC<SuperAdminOverviewTabProps> = ({
                     className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 flex items-center justify-between gap-3 text-xs hover:border-[#6D5DFC]/40 transition"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="text-2xl p-2 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 shrink-0">
-                        {school.logo || (school.language === "german" ? "🇩🇪" : "🇮🇹")}
-                      </div>
+                      <SchoolLogo
+                        logo={school.logo}
+                        name={school.name}
+                        language={school.language}
+                        size="md"
+                      />
                       <div>
                         <div className="flex items-center gap-2">
                           <h4 className="font-bold text-sm text-slate-900 dark:text-white">
@@ -339,6 +408,52 @@ export const SuperAdminOverviewTab: React.FC<SuperAdminOverviewTabProps> = ({
 
         {/* Right Column (1 span): Live Activity Stream & System Alerts */}
         <div className="space-y-6">
+          {/* Urgent School Contract Expiration Alert (<= 5 days) */}
+          {urgentExpiringSchools.length > 0 && (
+            <div className="p-4 rounded-3xl bg-rose-500/10 border border-rose-500/40 text-rose-500 space-y-3 animate-pulse">
+              <div className="flex items-center justify-between font-bold text-xs">
+                <span className="flex items-center gap-2 text-rose-600 dark:text-rose-400">
+                  <AlertTriangle size={16} />
+                  {isEn ? "Urgent: School Expiry Alert (<= 5 days)" : "Alerte Échéance École (<= 5 jours)"}
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-600 dark:text-rose-400 text-[10px]">
+                  {urgentExpiringSchools.length} {isEn ? "school(s)" : "école(s)"}
+                </span>
+              </div>
+              <div className="space-y-2">
+                {urgentExpiringSchools.map((sch) => {
+                  const daysLeft = Math.max(
+                    0,
+                    Math.ceil((new Date(sch.endDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+                  );
+                  return (
+                    <div
+                      key={sch.id}
+                      className="text-xs bg-white/70 dark:bg-[#0D1220]/70 p-2.5 rounded-2xl border border-rose-500/20 text-slate-800 dark:text-white flex items-center justify-between gap-2"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold truncate">{sch.name}</p>
+                        <p className="text-[10px] text-slate-500 dark:text-white/60 truncate">
+                          {sch.managerName || "Directeur"} • {sch.managerEmail || sch.professionalEmail}
+                        </p>
+                      </div>
+                      <span className="shrink-0 font-bold text-rose-500 text-[11px] bg-rose-500/10 px-2 py-1 rounded-lg">
+                        J-{daysLeft}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+              <button
+                type="button"
+                onClick={() => onNavigateToTab("schools")}
+                className="w-full py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs transition cursor-pointer text-center"
+              >
+                {isEn ? "Renew School Subscriptions" : "Gérer les abonnements écoles"} &rarr;
+              </button>
+            </div>
+          )}
+
           {/* Active System Announcements Alert Box */}
           {announcements.length > 0 && (
             <div className="p-4 rounded-3xl bg-amber-500/10 border border-amber-500/30 text-amber-500 space-y-2">

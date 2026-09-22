@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { School, Student, UILocale } from "../../types";
+import { School, Student, Program, UILocale } from "../../types";
 import { translations } from "../../lib/translations";
 import {
   LayoutDashboard,
@@ -12,8 +12,11 @@ import {
   Copy,
   Check,
   MessageCircle,
+  History,
+  ShieldCheck,
 } from "lucide-react";
 import { SidebarTabs, TabDefinition } from "../common/SidebarTabs";
+import { SchoolLogo } from "../common/SchoolLogo";
 
 export type SchoolTab =
   | "dashboard"
@@ -22,11 +25,14 @@ export type SchoolTab =
   | "courses"
   | "evaluations"
   | "pedagogy"
+  | "audit"
   | "settings";
 
 interface SchoolLayoutProps {
   school: School;
   students: Student[];
+  programs?: Program[];
+  auditLogs?: any[];
   activeTab: SchoolTab;
   onTabChange: (tab: SchoolTab) => void;
   children: React.ReactNode;
@@ -36,6 +42,8 @@ interface SchoolLayoutProps {
 export const SchoolLayout: React.FC<SchoolLayoutProps> = ({
   school,
   students,
+  programs,
+  auditLogs = [],
   activeTab,
   onTabChange,
   children,
@@ -45,6 +53,12 @@ export const SchoolLayout: React.FC<SchoolLayoutProps> = ({
   const [copiedLink, setCopiedLink] = useState(false);
 
   const schoolStudents = students.filter((s) => s.schoolId === school.id);
+  const schoolLogs = auditLogs.filter(
+    (l) =>
+      l.schoolId === school.id ||
+      l.targetId === school.id ||
+      (l.schoolName && l.schoolName.toLowerCase() === school.name.toLowerCase())
+  );
   const quotaUsedPercent = Math.min(
     100,
     Math.round((schoolStudents.length / Math.max(1, school.studentQuota)) * 100)
@@ -96,6 +110,15 @@ export const SchoolLayout: React.FC<SchoolLayoutProps> = ({
       icon: <TrendingUp size={18} />,
     },
     {
+      id: "audit",
+      label: (t.schoolAdmin.tabs as any).audit?.label || (locale === "en" ? "Audit & Traceability" : "Audit & Traçabilité"),
+      shortLabel: locale === "en" ? "Audit" : "Audit",
+      description: (t.schoolAdmin.tabs as any).audit?.desc || (locale === "en" ? "Security logs and administrative traceability" : "Traçabilité des actions et journal de sécurité"),
+      icon: <History size={18} />,
+      badge: schoolLogs.length > 0 ? `${schoolLogs.length}` : undefined,
+      badgeColor: "cyan",
+    },
+    {
       id: "settings",
       label: t.schoolAdmin.tabs.settings.label,
       shortLabel: locale === "en" ? "Settings" : "Paramètres",
@@ -116,9 +139,13 @@ export const SchoolLayout: React.FC<SchoolLayoutProps> = ({
       {/* School Header Identity Bar */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white/90 dark:bg-[#0D1220]/90 backdrop-blur-md p-4 sm:p-5 rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm">
         <div className="flex items-center gap-3.5 sm:gap-4">
-          <div className="text-3xl p-2.5 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 shrink-0">
-            {school.logo || (school.language === "german" ? "🇩🇪" : "🇮🇹")}
-          </div>
+          <SchoolLogo
+            logo={school.logo}
+            name={school.name}
+            language={school.language}
+            size="lg"
+            className="shadow-sm"
+          />
 
           <div>
             <div className="flex flex-wrap items-center gap-2 mb-1">

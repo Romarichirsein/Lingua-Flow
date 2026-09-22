@@ -91,12 +91,20 @@ export const SchoolOverviewTab: React.FC<SchoolOverviewTabProps> = ({
     });
   });
 
-  // Students nearing expiration (< 15 days)
+  // Urgent students subscription expiry (<= 5 days)
+  const urgentExpiringStudents = schoolStudents.filter((s) => {
+    if (s.status === "expired" || s.status === "blocked") return false;
+    const end = new Date(s.endDate);
+    const diffDays = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    return diffDays >= 0 && diffDays <= 5;
+  });
+
+  // Students nearing expiration (6 to 15 days)
   const expiringSoonStudents = schoolStudents.filter((s) => {
     if (s.status === "expired" || s.status === "blocked") return false;
     const end = new Date(s.endDate);
     const diffDays = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    return diffDays >= 0 && diffDays <= 15;
+    return diffDays > 5 && diffDays <= 15;
   });
 
   // Inactive students (> 7 days without login or low progress)
@@ -180,7 +188,7 @@ export const SchoolOverviewTab: React.FC<SchoolOverviewTabProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="px-4 py-2 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-right">
             <span className="text-[11px] text-slate-500 dark:text-white/50 block font-medium">
               {isEn ? "Days Remaining" : "Jours restants"}
@@ -213,6 +221,61 @@ export const SchoolOverviewTab: React.FC<SchoolOverviewTabProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Alerts Column */}
         <div className="space-y-4">
+          {urgentExpiringStudents.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/40 flex items-start gap-3 animate-pulse"
+            >
+              <AlertTriangle className="text-rose-500 shrink-0 mt-0.5" size={18} />
+              <div className="flex-1 text-xs space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-rose-600 dark:text-rose-400 block">
+                    {isEn
+                      ? `⚠️ URGENT: ${urgentExpiringStudents.length} student(s) expiring within 5 days`
+                      : `⚠️ URGENT : ${urgentExpiringStudents.length} élève(s) expire(nt) dans moins de 5 jours`}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-500 text-[10px] font-bold">
+                    J-5
+                  </span>
+                </div>
+                <div className="space-y-1 max-h-32 overflow-y-auto pr-1">
+                  {urgentExpiringStudents.map((st) => {
+                    const days = Math.max(
+                      0,
+                      Math.ceil((new Date(st.endDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+                    );
+                    return (
+                      <div
+                        key={st.id}
+                        className="bg-white/70 dark:bg-[#0D1220]/70 p-2 rounded-xl border border-rose-500/20 flex items-center justify-between"
+                      >
+                        <span className="font-semibold text-slate-800 dark:text-white">
+                          {st.name} ({st.level})
+                        </span>
+                        <span className="font-bold text-rose-500 font-mono text-[11px]">
+                          {days === 0 ? "Aujourd'hui" : `dans ${days}j`} ({st.endDate})
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-slate-600 dark:text-white/70 text-[11px]">
+                  {isEn
+                    ? "Renew their subscription to prevent access suspension to lessons and AI tutoring."
+                    : "Renouvelez leur abonnement pour éviter l'interruption des cours et du tuteur IA."}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab("students")}
+                  className="mt-1 text-[11px] font-bold text-rose-600 dark:text-rose-400 hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  {isEn ? "Renew student licenses" : "Prolonger les abonnements élèves"} &rarr;
+                </button>
+              </div>
+            </motion.div>
+          )}
+
           {expiringSoonStudents.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 8 }}
@@ -300,7 +363,7 @@ export const SchoolOverviewTab: React.FC<SchoolOverviewTabProps> = ({
                 <div
                   key={ann.id}
                   className={`p-3 rounded-2xl text-xs space-y-1 ${
-                    ann.priority === "high"
+                    ann.priority === "urgent" || ann.priority === "warning"
                       ? "bg-indigo-500/5 border border-indigo-500/20"
                       : "bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5"
                   }`}
@@ -327,7 +390,7 @@ export const SchoolOverviewTab: React.FC<SchoolOverviewTabProps> = ({
       </div>
 
       {/* 3. Primary KPI Cards Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Total Students & Quota */}
         <div className="bg-white dark:bg-[#0D1220] p-4 sm:p-5 rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm relative overflow-hidden group">
           <div className="flex items-center justify-between mb-3">
@@ -402,7 +465,7 @@ export const SchoolOverviewTab: React.FC<SchoolOverviewTabProps> = ({
             </span>
           </div>
           <div className="mt-3">
-            <ProgressBar progress={avgProgress} color="purple" size="sm" />
+            <ProgressBar progress={avgProgress} color="violet" size="sm" />
           </div>
         </div>
 

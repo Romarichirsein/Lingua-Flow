@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Program, School, UILocale } from "../../types";
 import { Modal } from "../common/Modal";
+import { SchoolLogo } from "../common/SchoolLogo";
 import {
   GraduationCap,
   BookOpen,
@@ -29,6 +30,7 @@ export const SuperAdminProgramsTab: React.FC<SuperAdminProgramsTabProps> = ({
   onUpdatePrograms,
   onAddLog,
 }) => {
+  const isEn = locale === "en";
   const [searchTerm, setSearchTerm] = useState("");
   const [schoolFilter, setSchoolFilter] = useState<string>("all");
   const [levelFilter, setLevelFilter] = useState<string>("all");
@@ -60,8 +62,10 @@ export const SuperAdminProgramsTab: React.FC<SuperAdminProgramsTabProps> = ({
     );
     onUpdatePrograms(updated);
     onAddLog(
-      "Statut Programme Modifié",
-      `Le programme '${program.title}' est maintenant ${!program.isPublished ? "publié" : "en brouillon"}.`,
+      isEn ? "Program Status Modified" : "Statut Programme Modifié",
+      isEn
+        ? `Program '${program.title}' is now ${!program.isPublished ? "published" : "draft"}.`
+        : `Le programme '${program.title}' est maintenant ${!program.isPublished ? "publié" : "en brouillon"}.`,
       "success"
     );
     if (selectedProgram && selectedProgram.id === program.id) {
@@ -79,7 +83,7 @@ export const SuperAdminProgramsTab: React.FC<SuperAdminProgramsTabProps> = ({
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Rechercher par titre de cours, description, école..."
+            placeholder={isEn ? "Search by course title, description, school..." : "Rechercher par titre de cours, description, école..."}
             className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#00D9FF]"
           />
         </div>
@@ -90,7 +94,7 @@ export const SuperAdminProgramsTab: React.FC<SuperAdminProgramsTabProps> = ({
             onChange={(e) => setSchoolFilter(e.target.value)}
             className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-800 dark:text-white focus:outline-none cursor-pointer min-h-[40px]"
           >
-            <option value="all">Toutes les écoles ({schools.length})</option>
+            <option value="all">{isEn ? "All schools" : "Toutes les écoles"} ({schools.length})</option>
             {schools.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name} ({s.language === "german" ? "🇩🇪" : "🇮🇹"})
@@ -103,7 +107,7 @@ export const SuperAdminProgramsTab: React.FC<SuperAdminProgramsTabProps> = ({
             onChange={(e) => setLevelFilter(e.target.value)}
             className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-800 dark:text-white focus:outline-none cursor-pointer min-h-[40px]"
           >
-            <option value="all">Tous niveaux</option>
+            <option value="all">{isEn ? "All levels" : "Tous niveaux"}</option>
             <option value="A1">A1</option>
             <option value="A2">A2</option>
             <option value="B1">B1</option>
@@ -116,9 +120,9 @@ export const SuperAdminProgramsTab: React.FC<SuperAdminProgramsTabProps> = ({
             onChange={(e) => setStatusFilter(e.target.value)}
             className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-800 dark:text-white focus:outline-none cursor-pointer min-h-[40px]"
           >
-            <option value="all">Tous statuts</option>
-            <option value="published">Publiés</option>
-            <option value="draft">Brouillons</option>
+            <option value="all">{isEn ? "All statuses" : "Tous statuts"}</option>
+            <option value="published">{isEn ? "Published" : "Publiés"}</option>
+            <option value="draft">{isEn ? "Drafts" : "Brouillons"}</option>
           </select>
         </div>
       </div>
@@ -127,7 +131,7 @@ export const SuperAdminProgramsTab: React.FC<SuperAdminProgramsTabProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredPrograms.length === 0 ? (
           <div className="col-span-full p-12 text-center rounded-3xl bg-white/90 dark:bg-[#0D1220]/90 border border-slate-200 dark:border-white/10 text-slate-400 text-xs">
-            Aucun programme pédagogique trouvé.
+            {isEn ? "No educational programs found." : "Aucun programme pédagogique trouvé."}
           </div>
         ) : (
           filteredPrograms.map((prog) => {
@@ -152,11 +156,11 @@ export const SuperAdminProgramsTab: React.FC<SuperAdminProgramsTabProps> = ({
                       </span>
                       {prog.isPublished ? (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#20E3A2]/15 text-[#20E3A2]">
-                          Publié
+                          {isEn ? "Published" : "Publié"}
                         </span>
                       ) : (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-500">
-                          Brouillon
+                          {isEn ? "Draft" : "Brouillon"}
                         </span>
                       )}
                     </div>
@@ -164,7 +168,7 @@ export const SuperAdminProgramsTab: React.FC<SuperAdminProgramsTabProps> = ({
                     {isIncomplete && (
                       <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/10 text-rose-400 flex items-center gap-1">
                         <AlertTriangle size={11} />
-                        <span>Incomplet</span>
+                        <span>{isEn ? "Incomplete" : "Incomplet"}</span>
                       </span>
                     )}
                   </div>
@@ -177,8 +181,13 @@ export const SuperAdminProgramsTab: React.FC<SuperAdminProgramsTabProps> = ({
                   </p>
 
                   <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-white/80 mt-3 pt-3 border-t border-slate-100 dark:border-white/5">
-                    <span>{school?.logo || "🏫"}</span>
-                    <span className="truncate">{school?.name || "École Partenaire"}</span>
+                    <SchoolLogo
+                      logo={school?.logo}
+                      name={school?.name}
+                      language={school?.language}
+                      size="xs"
+                    />
+                    <span className="truncate">{school?.name || (isEn ? "Partner School" : "École Partenaire")}</span>
                   </div>
                 </div>
 
@@ -186,11 +195,11 @@ export const SuperAdminProgramsTab: React.FC<SuperAdminProgramsTabProps> = ({
                   <div className="grid grid-cols-2 gap-2 text-[11px] bg-slate-50 dark:bg-white/[0.02] p-2.5 rounded-2xl font-mono">
                     <div className="flex items-center gap-1.5 text-slate-600 dark:text-white/70">
                       <ListOrdered size={14} className="text-[#6D5DFC]" />
-                      <span>{prog.modules.length} modules</span>
+                      <span>{prog.modules.length} {isEn ? "modules" : "modules"}</span>
                     </div>
                     <div className="flex items-center gap-1.5 text-slate-600 dark:text-white/70">
                       <Film size={14} className="text-[#00D9FF]" />
-                      <span>{totalVideos} vidéos</span>
+                      <span>{totalVideos} {isEn ? "videos" : "vidéos"}</span>
                     </div>
                   </div>
 
@@ -200,7 +209,7 @@ export const SuperAdminProgramsTab: React.FC<SuperAdminProgramsTabProps> = ({
                       onClick={() => setSelectedProgram(prog)}
                       className="flex-1 py-2.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-800 dark:text-white text-xs font-bold transition min-h-[40px] cursor-pointer"
                     >
-                      Détails Syllabus
+                      {isEn ? "Syllabus Details" : "Détails Syllabus"}
                     </button>
                     <button
                       type="button"
@@ -211,7 +220,7 @@ export const SuperAdminProgramsTab: React.FC<SuperAdminProgramsTabProps> = ({
                           : "bg-[#20E3A2]/10 text-[#20E3A2] hover:bg-[#20E3A2]/20"
                       }`}
                     >
-                      {prog.isPublished ? "Masquer" : "Publier"}
+                      {prog.isPublished ? (isEn ? "Hide" : "Masquer") : (isEn ? "Publish" : "Publier")}
                     </button>
                   </div>
                 </div>
@@ -225,14 +234,14 @@ export const SuperAdminProgramsTab: React.FC<SuperAdminProgramsTabProps> = ({
       <Modal
         isOpen={!!selectedProgram}
         onClose={() => setSelectedProgram(null)}
-        title={`Programme • ${selectedProgram?.title}`}
+        title={`${isEn ? "Program" : "Programme"} • ${selectedProgram?.title}`}
         maxWidth="max-w-2xl"
       >
         {selectedProgram && (
           <div className="space-y-4 text-xs">
             <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 space-y-1">
               <div className="flex items-center justify-between">
-                <span className="font-bold text-[#6D5DFC]">Niveau {selectedProgram.level}</span>
+                <span className="font-bold text-[#6D5DFC]">{isEn ? "Level" : "Niveau"} {selectedProgram.level}</span>
                 <span className="text-slate-400 font-mono">
                   {schools.find((s) => s.id === selectedProgram.schoolId)?.name}
                 </span>
@@ -242,7 +251,7 @@ export const SuperAdminProgramsTab: React.FC<SuperAdminProgramsTabProps> = ({
 
             <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1">
               <h5 className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[11px]">
-                Structure des Modules ({selectedProgram.modules.length})
+                {isEn ? "Module Structure" : "Structure des Modules"} ({selectedProgram.modules.length})
               </h5>
 
               {selectedProgram.modules.map((mod, idx) => (
@@ -252,10 +261,10 @@ export const SuperAdminProgramsTab: React.FC<SuperAdminProgramsTabProps> = ({
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-slate-900 dark:text-white">
-                      Module {idx + 1} : {mod.title}
+                      {isEn ? "Module" : "Module"} {idx + 1} : {mod.title}
                     </span>
                     <span className="text-slate-400 font-mono text-[10px]">
-                      {mod.lessons.length} cours
+                      {mod.lessons.length} {isEn ? "lessons" : "cours"}
                     </span>
                   </div>
                   <div className="space-y-1 pl-2 border-l-2 border-[#6D5DFC]/30">
@@ -281,7 +290,7 @@ export const SuperAdminProgramsTab: React.FC<SuperAdminProgramsTabProps> = ({
                 onClick={() => setSelectedProgram(null)}
                 className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-800 dark:text-white font-bold min-h-[40px] cursor-pointer"
               >
-                Fermer
+                {isEn ? "Close" : "Fermer"}
               </button>
             </div>
           </div>

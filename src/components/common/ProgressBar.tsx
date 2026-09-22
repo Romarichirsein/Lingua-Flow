@@ -5,7 +5,7 @@ interface ProgressBarProps {
   value?: number;
   progress?: number; // alias for value
   max?: number;
-  color?: "cyan" | "violet" | "emerald" | "amber" | "rose";
+  color?: "cyan" | "violet" | "emerald" | "amber" | "rose" | "primary" | "indigo" | "blue" | "green";
   showLabel?: boolean;
   height?: "sm" | "md" | "lg";
   size?: "sm" | "md" | "lg"; // alias for height
@@ -26,13 +26,19 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   const safeMax = typeof max === "number" && !isNaN(max) && max > 0 ? max : 100;
   const percentage = Math.min(100, Math.max(0, Math.round((safeValue / safeMax) * 100)));
 
-  const colorGradients = {
+  const colorGradients: Record<string, string> = {
     cyan: "from-[#00D9FF] to-blue-500 shadow-[0_0_8px_rgba(0,217,255,0.6)]",
+    blue: "from-[#00D9FF] to-blue-500 shadow-[0_0_8px_rgba(0,217,255,0.6)]",
     violet: "from-[#6D5DFC] to-[#5548eb] shadow-[0_0_8px_rgba(109,93,252,0.6)]",
+    primary: "from-[#6D5DFC] to-[#5548eb] shadow-[0_0_8px_rgba(109,93,252,0.6)]",
+    indigo: "from-[#6D5DFC] to-[#5548eb] shadow-[0_0_8px_rgba(109,93,252,0.6)]",
     emerald: "from-[#20E3A2] to-emerald-600 shadow-[0_0_8px_rgba(32,227,162,0.6)]",
+    green: "from-[#20E3A2] to-emerald-600 shadow-[0_0_8px_rgba(32,227,162,0.6)]",
     amber: "from-amber-400 to-orange-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]",
     rose: "from-[#FF4D8D] to-pink-600 shadow-[0_0_8px_rgba(255,77,141,0.6)]",
   };
+
+  const resolvedGradient = colorGradients[color] || colorGradients.cyan;
 
   const heightClasses = {
     sm: "h-1.5",
@@ -47,7 +53,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
           initial={{ width: 0 }}
           animate={{ width: `${percentage}%` }}
           transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-          className={`h-full rounded-full bg-gradient-to-r ${colorGradients[color]}`}
+          className={`h-full rounded-full bg-gradient-to-r ${resolvedGradient}`}
         />
       </div>
       {showLabel && (

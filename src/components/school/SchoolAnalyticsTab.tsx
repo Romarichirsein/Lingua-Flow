@@ -80,7 +80,7 @@ export const SchoolAnalyticsTab: React.FC<SchoolAnalyticsTabProps> = ({
       s.email,
       s.progressPercent || 0,
       s.status,
-      s.lastLoginAt || "Jamais",
+      s.lastLoginAt || s.lastLoginDate || "Jamais",
     ]);
 
     const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
@@ -159,7 +159,7 @@ export const SchoolAnalyticsTab: React.FC<SchoolAnalyticsTabProps> = ({
           <div className="text-3xl font-black text-slate-900 dark:text-white font-mono">
             {avgProgress}%
           </div>
-          <ProgressBar progress={avgProgress} color="cyan" height={6} />
+          <ProgressBar progress={avgProgress} color="cyan" height="sm" />
         </div>
 
         <div className="p-5 rounded-3xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 space-y-2">
@@ -252,9 +252,9 @@ export const SchoolAnalyticsTab: React.FC<SchoolAnalyticsTabProps> = ({
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {student.whatsappNumber && (
+                    {(student.whatsappNumber || student.phone) && (
                       <a
-                        href={`https://wa.me/${student.whatsappNumber.replace(/[^0-9]/g, "")}?text=Bonjour%20${encodeURIComponent(student.name)},%20votre%20école%20${encodeURIComponent(school.name)}%20vous%20invite%20à%20poursuivre%20votre%20programme.`}
+                        href={`https://wa.me/${(student.whatsappNumber || student.phone || "").replace(/[^0-9]/g, "")}?text=Bonjour%20${encodeURIComponent(student.name)},%20votre%20école%20${encodeURIComponent(school.name)}%20vous%20invite%20à%20poursuivre%20votre%20programme.`}
                         target="_blank"
                         rel="noreferrer"
                         className="px-2.5 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 text-[11px] font-bold transition flex items-center gap-1"
@@ -315,7 +315,7 @@ export const SchoolAnalyticsTab: React.FC<SchoolAnalyticsTabProps> = ({
                       {count} élèves ({pAvg}% moy.)
                     </span>
                   </div>
-                  <ProgressBar progress={pAvg} color="purple" height={5} />
+                  <ProgressBar progress={pAvg} color="violet" height="sm" />
                 </div>
               );
             })}

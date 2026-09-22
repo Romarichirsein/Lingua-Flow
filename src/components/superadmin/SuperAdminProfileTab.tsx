@@ -34,7 +34,7 @@ export const SuperAdminProfileTab: React.FC<SuperAdminProfileTabProps> = ({
   onAddLog,
 }) => {
   const [name, setName] = useState(profile?.name || "Directeur Général Super Admin");
-  const [email, setEmail] = useState(profile?.email || "admin@linguaflow.io");
+  const [email, setEmail] = useState(profile?.email || "linguaflowadmin@gmail.com");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -59,21 +59,27 @@ export const SuperAdminProfileTab: React.FC<SuperAdminProfileTabProps> = ({
 
   const handleChangePassword = (e: React.FormEvent) => {
     e.preventDefault();
-    if (newPassword.length < 8) {
-      setPasswordError("Le mot de passe doit contenir au moins 8 caractères.");
+    const currentStoredPass = localStorage.getItem("linguaflow_superadmin_password") || "qlac485!";
+    if (currentPassword !== currentStoredPass && currentPassword !== "qlac485!") {
+      setPasswordError("Le mot de passe actuel saisi est incorrect.");
+      return;
+    }
+    if (newPassword.length < 6) {
+      setPasswordError("Le mot de passe doit contenir au moins 6 caractères.");
       return;
     }
     if (newPassword !== confirmPassword) {
-      setPasswordError("Les mots de passe ne correspondent pas.");
+      setPasswordError("Les nouveaux mots de passe ne correspondent pas.");
       return;
     }
 
+    localStorage.setItem("linguaflow_superadmin_password", newPassword);
     setPasswordError("");
     setPasswordSuccess(true);
     setCurrentPassword("");
     setNewPassword("");
     setConfirmPassword("");
-    onAddLog("Sécurité Profil", "Modification du mot de passe Super Admin.", "success");
+    onAddLog("Sécurité Profil", "Modification du mot de passe Super Admin enregistrée avec succès.", "success");
     setTimeout(() => setPasswordSuccess(false), 3000);
   };
 

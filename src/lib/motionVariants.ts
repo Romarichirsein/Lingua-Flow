@@ -1,10 +1,12 @@
+import type { Variants } from "motion/react";
+
 // Helper to check if the user prefers reduced motion (safely checked in browser)
 export const isReducedMotion = (): boolean => {
   if (typeof window === "undefined" || !window.matchMedia) return false;
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 };
 
-export const pageTransition = {
+export const pageTransition: Variants = {
   initial: {
     opacity: 0,
     y: 12,
@@ -14,7 +16,7 @@ export const pageTransition = {
     y: 0,
     transition: {
       duration: 0.38,
-      ease: [0.16, 1, 0.3, 1],
+      ease: [0.16, 1, 0.3, 1] as const,
     },
   },
   exit: {
@@ -26,7 +28,7 @@ export const pageTransition = {
   },
 };
 
-export const cardReveal = {
+export const cardReveal: Variants = {
   hidden: {
     opacity: 0,
     y: 18,
@@ -38,12 +40,12 @@ export const cardReveal = {
     scale: 1,
     transition: {
       duration: 0.4,
-      ease: [0.16, 1, 0.3, 1],
+      ease: [0.16, 1, 0.3, 1] as const,
     },
   },
 };
 
-export const staggerContainer = {
+export const staggerContainer: Variants = {
   hidden: {},
   visible: {
     transition: {
@@ -53,7 +55,7 @@ export const staggerContainer = {
   },
 };
 
-export const modalAnimation = {
+export const modalAnimation: Variants = {
   hidden: {
     opacity: 0,
     scale: 0.96,
@@ -64,7 +66,7 @@ export const modalAnimation = {
     scale: 1,
     y: 0,
     transition: {
-      type: "spring",
+      type: "spring" as const,
       stiffness: 340,
       damping: 28,
     },
@@ -84,7 +86,7 @@ export const modalAnimation = {
  * Combined scale and opacity fade-in (0.95 to 1 scale).
  * Checks prefers-reduced-motion to disable scaling/animations for accessibility.
  */
-export const unlockedModule = {
+export const unlockedModule: Variants = {
   hidden: {
     opacity: 0,
     scale: isReducedMotion() ? 1 : 0.95,
@@ -96,7 +98,7 @@ export const unlockedModule = {
       ? { duration: 0 }
       : {
           duration: 0.45,
-          ease: [0.16, 1, 0.3, 1],
+          ease: [0.16, 1, 0.3, 1] as const,
         },
   },
   exit: {
@@ -113,7 +115,7 @@ export const unlockedModule = {
  * Includes a spring-based bounce effect.
  * Checks prefers-reduced-motion to disable bounce animations for accessibility.
  */
-export const quizSuccess = {
+export const quizSuccess: Variants = {
   hidden: {
     opacity: 0,
     scale: isReducedMotion() ? 1 : 0.8,
@@ -126,7 +128,7 @@ export const quizSuccess = {
     transition: isReducedMotion()
       ? { duration: 0 }
       : {
-          type: "spring",
+          type: "spring" as const,
           stiffness: 450,
           damping: 18,
           bounce: 0.4,
@@ -140,7 +142,7 @@ export const quizSuccess = {
       : {
           duration: 0.6,
           repeat: 2,
-          ease: "easeInOut",
+          ease: "easeInOut" as const,
         },
   },
 };
@@ -150,7 +152,7 @@ export const quizSuccess = {
  * Provides a gentle fade-in with a scale pop effect and shimmer.
  * Respects prefers-reduced-motion.
  */
-export const lessonUnlockVariant = {
+export const lessonUnlockVariant: Variants = {
   locked: {
     opacity: 0.65,
     scale: 0.97,
@@ -162,7 +164,7 @@ export const lessonUnlockVariant = {
     filter: "grayscale(0%)",
     transition: {
       duration: 0.55,
-      ease: [0.175, 0.885, 0.32, 1.275], // bouncy spring ease
+      ease: [0.175, 0.885, 0.32, 1.275] as const,
     },
   },
   unlockedReduced: {
@@ -179,7 +181,7 @@ export const lessonUnlockVariant = {
  * Framer Motion variant for quiz completion success celebrations.
  * Produces an energetic pulse and badge pop.
  */
-export const quizSuccessCelebration = {
+export const quizSuccessCelebration: Variants = {
   initial: {
     opacity: 0,
     scale: 0.85,
@@ -190,7 +192,7 @@ export const quizSuccessCelebration = {
     scale: 1,
     y: 0,
     transition: {
-      type: "spring",
+      type: "spring" as const,
       stiffness: 400,
       damping: 22,
       mass: 0.8,
@@ -213,7 +215,7 @@ export const quizSuccessCelebration = {
 /**
  * Score Badge Pop animation for quiz score display.
  */
-export const scoreBadgePop = {
+export const scoreBadgePop: Variants = {
   hidden: {
     opacity: 0,
     scale: 0.5,
@@ -224,7 +226,7 @@ export const scoreBadgePop = {
     scale: 1,
     rotate: 0,
     transition: {
-      type: "spring",
+      type: "spring" as const,
       stiffness: 500,
       damping: 25,
       delay: 0.15,
@@ -235,7 +237,7 @@ export const scoreBadgePop = {
 /**
  * Confetti particles or star celebration pop variant.
  */
-export const celebrationParticle = {
+export const celebrationParticle: Variants = {
   initial: {
     opacity: 0,
     scale: 0,
@@ -249,7 +251,7 @@ export const celebrationParticle = {
     transition: {
       duration: 0.85,
       delay: i * 0.08,
-      ease: "easeOut",
+      ease: "easeOut" as const,
     },
   }),
 };

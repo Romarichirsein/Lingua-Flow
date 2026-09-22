@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { School, Student, Program, ActivityLog, EntityStatus, UILocale } from "../../types";
 import { Modal } from "../common/Modal";
 import { ProgressBar } from "../common/ProgressBar";
+import { SchoolLogo } from "../common/SchoolLogo";
 import {
   Building2,
   Users,
@@ -51,6 +52,7 @@ export const SuperAdminSchoolDetailModal: React.FC<SuperAdminSchoolDetailModalPr
   onChangeStatus,
   onDelete,
 }) => {
+  const isEn = locale === "en";
   const [activeTab, setActiveTab] = useState<"overview" | "students" | "programs" | "history">("overview");
 
   if (!school) return null;
@@ -71,23 +73,26 @@ export const SuperAdminSchoolDetailModal: React.FC<SuperAdminSchoolDetailModalPr
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`Fiche Détaillée • ${school.name}`}
-      maxWidth="max-w-4xl"
+      title={`${isEn ? "School File" : "Fiche Détaillée"} • ${school.name}`}
+      maxWidth="4xl"
     >
       <div className="space-y-5">
         {/* Header Hero Card */}
         <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-slate-100 to-slate-200/50 dark:from-white/[0.04] dark:to-white/[0.02] border border-slate-200 dark:border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
-            <div className="text-3xl p-3 rounded-2xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 shrink-0">
-              {school.logo || (school.language === "german" ? "🇩🇪" : "🇮🇹")}
-            </div>
+            <SchoolLogo
+              logo={school.logo}
+              name={school.name}
+              language={school.language}
+              size="lg"
+            />
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white">
                   {school.name}
                 </h3>
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#6D5DFC]/10 text-[#6D5DFC] dark:text-[#a399ff] border border-[#6D5DFC]/30">
-                  {school.language === "german" ? "Allemand 🇩🇪" : "Italien 🇮🇹"}
+                  {school.language === "german" ? (isEn ? "German 🇩🇪" : "Allemand 🇩🇪") : (isEn ? "Italian 🇮🇹" : "Italien 🇮🇹")}
                 </span>
                 <span
                   className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
@@ -101,18 +106,18 @@ export const SuperAdminSchoolDetailModal: React.FC<SuperAdminSchoolDetailModalPr
                   }`}
                 >
                   {school.status === "active"
-                    ? "Active"
+                    ? (isEn ? "Active" : "Active")
                     : school.status === "suspended"
-                    ? "Suspendue"
+                    ? (isEn ? "Suspended" : "Suspendue")
                     : school.status === "blocked"
-                    ? "Bloquée"
+                    ? (isEn ? "Blocked" : "Bloquée")
                     : school.status === "archived"
-                    ? "Archivée"
-                    : "Expirée"}
+                    ? (isEn ? "Archived" : "Archivée")
+                    : (isEn ? "Expired" : "Expirée")}
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-white/50 mt-1 font-mono">
-                Slug : /{school.slug} • Créée le {school.createdAt}
+                {isEn ? "Slug" : "Slug"} : /{school.slug} • {isEn ? "Created on" : "Créée le"} {school.createdAt}
               </p>
             </div>
           </div>
@@ -127,7 +132,7 @@ export const SuperAdminSchoolDetailModal: React.FC<SuperAdminSchoolDetailModalPr
               className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-200 dark:bg-white/10 hover:bg-slate-300 dark:hover:bg-white/20 text-slate-800 dark:text-white text-xs font-bold transition min-h-[40px] cursor-pointer"
             >
               <Edit2 size={14} />
-              <span>Modifier</span>
+              <span>{isEn ? "Edit" : "Modifier"}</span>
             </button>
             <button
               type="button"
@@ -138,7 +143,7 @@ export const SuperAdminSchoolDetailModal: React.FC<SuperAdminSchoolDetailModalPr
               className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-[#00D9FF]/10 hover:bg-[#00D9FF]/20 text-[#00D9FF] border border-[#00D9FF]/30 text-xs font-bold transition min-h-[40px] cursor-pointer"
             >
               <Clock3 size={14} />
-              <span>Prolonger</span>
+              <span>{isEn ? "Extend Access" : "Prolonger"}</span>
             </button>
           </div>
         </div>
@@ -146,20 +151,20 @@ export const SuperAdminSchoolDetailModal: React.FC<SuperAdminSchoolDetailModalPr
         {/* Sub-tabs inside modal */}
         <div className="flex items-center gap-1 border-b border-slate-200 dark:border-white/10 pb-2">
           {[
-            { id: "overview", label: "Vue d'ensemble", icon: <Building2 size={15} /> },
+            { id: "overview", label: isEn ? "Overview" : "Vue d'ensemble", icon: <Building2 size={15} /> },
             {
               id: "students",
-              label: `Élèves (${schoolStudents.length})`,
+              label: `${isEn ? "Students" : "Élèves"} (${schoolStudents.length})`,
               icon: <Users size={15} />,
             },
             {
               id: "programs",
-              label: `Programmes (${schoolPrograms.length})`,
+              label: `${isEn ? "Programs" : "Programmes"} (${schoolPrograms.length})`,
               icon: <GraduationCap size={15} />,
             },
             {
               id: "history",
-              label: `Historique (${schoolLogs.length})`,
+              label: `${isEn ? "Logs" : "Historique"} (${schoolLogs.length})`,
               icon: <Clock size={15} />,
             },
           ].map((tab) => (
@@ -185,7 +190,7 @@ export const SuperAdminSchoolDetailModal: React.FC<SuperAdminSchoolDetailModalPr
             {/* Quick Metrics Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10">
-                <p className="text-[11px] font-semibold text-slate-400">Élèves inscrits</p>
+                <p className="text-[11px] font-semibold text-slate-400">{isEn ? "Enrolled students" : "Élèves inscrits"}</p>
                 <p className="text-xl font-extrabold text-slate-900 dark:text-white mt-1">
                   {schoolStudents.length} / {school.studentQuota}
                 </p>
@@ -195,37 +200,37 @@ export const SuperAdminSchoolDetailModal: React.FC<SuperAdminSchoolDetailModalPr
               </div>
 
               <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10">
-                <p className="text-[11px] font-semibold text-slate-400">Accès SaaS restant</p>
+                <p className="text-[11px] font-semibold text-slate-400">{isEn ? "Remaining license" : "Accès SaaS restant"}</p>
                 <p
                   className={`text-xl font-extrabold mt-1 ${
                     daysRemaining <= 15 ? "text-rose-500" : daysRemaining <= 30 ? "text-amber-500" : "text-[#20E3A2]"
                   }`}
                 >
-                  {daysRemaining > 0 ? `${daysRemaining} jours` : "Expiré"}
+                  {daysRemaining > 0 ? `${daysRemaining} ${isEn ? "days" : "jours"}` : (isEn ? "Expired" : "Expiré")}
                 </p>
                 <p className="text-[10px] text-slate-400 mt-1 font-mono">
-                  Fin : {school.endDate}
+                  {isEn ? "End:" : "Fin :"} {school.endDate}
                 </p>
               </div>
 
               <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10">
-                <p className="text-[11px] font-semibold text-slate-400">Programmes créés</p>
+                <p className="text-[11px] font-semibold text-slate-400">{isEn ? "Created programs" : "Programmes créés"}</p>
                 <p className="text-xl font-extrabold text-slate-900 dark:text-white mt-1">
                   {schoolPrograms.length}
                 </p>
                 <p className="text-[10px] text-slate-400 mt-1">
-                  {school.language === "german" ? "Filières Allemand" : "Filières Italien"}
+                  {school.language === "german" ? (isEn ? "German Tracks" : "Filières Allemand") : (isEn ? "Italian Tracks" : "Filières Italien")}
                 </p>
               </div>
 
               <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10">
-                <p className="text-[11px] font-semibold text-slate-400">Dernière activité</p>
+                <p className="text-[11px] font-semibold text-slate-400">{isEn ? "Last activity" : "Dernière activité"}</p>
                 <p className="text-sm font-bold text-slate-800 dark:text-white mt-1">
-                  {school.lastActiveDate || "Aujourd'hui"}
+                  {school.lastActiveDate || (isEn ? "Today" : "Aujourd'hui")}
                 </p>
                 <p className="text-[10px] text-[#20E3A2] mt-1 flex items-center gap-1 font-medium">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#20E3A2] inline-block" />
-                  En ligne
+                  {isEn ? "Online" : "En ligne"}
                 </p>
               </div>
             </div>
@@ -234,35 +239,35 @@ export const SuperAdminSchoolDetailModal: React.FC<SuperAdminSchoolDetailModalPr
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 space-y-3">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-white/40">
-                  Coordonnées Pédagogiques & Direction
+                  {isEn ? "Academic & Director Details" : "Coordonnées Pédagogiques & Direction"}
                 </h4>
 
                 <div className="space-y-2 text-xs">
                   <div className="flex items-center justify-between py-1 border-b border-slate-200/50 dark:border-white/5">
-                    <span className="text-slate-500">Responsable légal :</span>
+                    <span className="text-slate-500">{isEn ? "Director name:" : "Responsable légal :"}</span>
                     <span className="font-bold text-slate-900 dark:text-white">{school.managerName}</span>
                   </div>
                   <div className="flex items-center justify-between py-1 border-b border-slate-200/50 dark:border-white/5">
-                    <span className="text-slate-500">E-mail responsable :</span>
+                    <span className="text-slate-500">{isEn ? "Director email:" : "E-mail responsable :"}</span>
                     <a href={`mailto:${school.managerEmail}`} className="text-[#00D9FF] hover:underline font-mono">
                       {school.managerEmail}
                     </a>
                   </div>
                   {school.managerPhone && (
                     <div className="flex items-center justify-between py-1 border-b border-slate-200/50 dark:border-white/5">
-                      <span className="text-slate-500">Téléphone responsable :</span>
+                      <span className="text-slate-500">{isEn ? "Director phone:" : "Téléphone responsable :"}</span>
                       <span className="font-mono text-slate-800 dark:text-white">{school.managerPhone}</span>
                     </div>
                   )}
                   {school.professionalEmail && (
                     <div className="flex items-center justify-between py-1 border-b border-slate-200/50 dark:border-white/5">
-                      <span className="text-slate-500">E-mail professionnel :</span>
+                      <span className="text-slate-500">{isEn ? "Professional email:" : "E-mail professionnel :"}</span>
                       <span className="font-mono text-slate-800 dark:text-white">{school.professionalEmail}</span>
                     </div>
                   )}
                   {school.phone && (
                     <div className="flex items-center justify-between py-1 border-b border-slate-200/50 dark:border-white/5">
-                      <span className="text-slate-500">Standard téléphonique :</span>
+                      <span className="text-slate-500">{isEn ? "Main phone:" : "Standard téléphonique :"}</span>
                       <span className="font-mono text-slate-800 dark:text-white">{school.phone}</span>
                     </div>
                   )}
@@ -271,24 +276,24 @@ export const SuperAdminSchoolDetailModal: React.FC<SuperAdminSchoolDetailModalPr
 
               <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 space-y-3">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-white/40">
-                  Localisation & Support WhatsApp
+                  {isEn ? "Location & WhatsApp Support" : "Localisation & Support WhatsApp"}
                 </h4>
 
                 <div className="space-y-2 text-xs">
                   <div className="flex items-center justify-between py-1 border-b border-slate-200/50 dark:border-white/5">
-                    <span className="text-slate-500">Adresse :</span>
+                    <span className="text-slate-500">{isEn ? "Address:" : "Adresse :"}</span>
                     <span className="font-medium text-slate-800 dark:text-white">
-                      {school.address || "Centre-ville"}
+                      {school.address || (isEn ? "Downtown" : "Centre-ville")}
                     </span>
                   </div>
                   <div className="flex items-center justify-between py-1 border-b border-slate-200/50 dark:border-white/5">
-                    <span className="text-slate-500">Ville / Pays :</span>
+                    <span className="text-slate-500">{isEn ? "City / Country:" : "Ville / Pays :"}</span>
                     <span className="font-bold text-slate-900 dark:text-white">
                       {school.city || "—"}, {school.country || "Europe"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between py-1 border-b border-slate-200/50 dark:border-white/5">
-                    <span className="text-slate-500">Groupe Promo WhatsApp :</span>
+                    <span className="text-slate-500">{isEn ? "Promo WhatsApp Group:" : "Groupe Promo WhatsApp :"}</span>
                     {school.whatsappSupportUrl ? (
                       <a
                         href={school.whatsappSupportUrl}
@@ -297,14 +302,14 @@ export const SuperAdminSchoolDetailModal: React.FC<SuperAdminSchoolDetailModalPr
                         className="text-emerald-500 font-bold hover:underline flex items-center gap-1"
                       >
                         <MessageCircle size={13} />
-                        <span>Ouvrir WhatsApp</span>
+                        <span>{isEn ? "Open WhatsApp" : "Ouvrir WhatsApp"}</span>
                       </a>
                     ) : (
-                      <span className="text-slate-400">Non configuré</span>
+                      <span className="text-slate-400">{isEn ? "Not configured" : "Non configuré"}</span>
                     )}
                   </div>
                   <div className="flex items-center justify-between py-1">
-                    <span className="text-slate-500">Période de licence :</span>
+                    <span className="text-slate-500">{isEn ? "License Period:" : "Période de licence :"}</span>
                     <span className="font-mono text-slate-800 dark:text-white">
                       {school.startDate} → {school.endDate}
                     </span>
@@ -326,7 +331,7 @@ export const SuperAdminSchoolDetailModal: React.FC<SuperAdminSchoolDetailModalPr
                       }}
                       className="px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/30 text-xs font-bold transition min-h-[40px] cursor-pointer"
                     >
-                      Suspendre l'école
+                      {isEn ? "Suspend School" : "Suspendre l'école"}
                     </button>
                     <button
                       type="button"
@@ -336,7 +341,7 @@ export const SuperAdminSchoolDetailModal: React.FC<SuperAdminSchoolDetailModalPr
                       }}
                       className="px-3 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/30 text-xs font-bold transition min-h-[40px] cursor-pointer"
                     >
-                      Bloquer l'école
+                      {isEn ? "Block School" : "Bloquer l'école"}
                     </button>
                   </>
                 ) : (
@@ -348,7 +353,7 @@ export const SuperAdminSchoolDetailModal: React.FC<SuperAdminSchoolDetailModalPr
                     }}
                     className="px-3 py-2 rounded-xl bg-[#20E3A2]/15 hover:bg-[#20E3A2]/25 text-[#20E3A2] border border-[#20E3A2]/30 text-xs font-bold transition min-h-[40px] cursor-pointer"
                   >
-                    Réactiver l'école
+                    {isEn ? "Reactivate School" : "Réactiver l'école"}
                   </button>
                 )}
 
@@ -361,7 +366,7 @@ export const SuperAdminSchoolDetailModal: React.FC<SuperAdminSchoolDetailModalPr
                   className="px-3 py-2 rounded-xl bg-slate-200 dark:bg-white/10 hover:bg-slate-300 dark:hover:bg-white/20 text-slate-700 dark:text-white/80 text-xs font-bold transition min-h-[40px] cursor-pointer flex items-center gap-1.5"
                 >
                   <Archive size={14} />
-                  <span>Archiver</span>
+                  <span>{isEn ? "Archive" : "Archiver"}</span>
                 </button>
               </div>
 
@@ -374,7 +379,7 @@ export const SuperAdminSchoolDetailModal: React.FC<SuperAdminSchoolDetailModalPr
                 className="px-3 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold transition min-h-[40px] cursor-pointer flex items-center gap-1.5 shadow-sm"
               >
                 <Trash2 size={14} />
-                <span>Supprimer définitivement</span>
+                <span>{isEn ? "Delete School Permanently" : "Supprimer définitivement"}</span>
               </button>
             </div>
           </div>
@@ -385,7 +390,7 @@ export const SuperAdminSchoolDetailModal: React.FC<SuperAdminSchoolDetailModalPr
           <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
             {schoolStudents.length === 0 ? (
               <div className="p-8 text-center text-slate-400 dark:text-white/40 text-xs">
-                Aucun élève n'a encore été inscrit dans cette école.
+                {isEn ? "No students registered yet for this school." : "Aucun élève n'a encore été inscrit dans cette école."}
               </div>
             ) : (
               <div className="space-y-2">
@@ -406,11 +411,11 @@ export const SuperAdminSchoolDetailModal: React.FC<SuperAdminSchoolDetailModalPr
 
                     <div className="flex items-center gap-4">
                       <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-[#6D5DFC]/10 text-[#6D5DFC]">
-                        Niveau {st.level}
+                        {isEn ? "Level" : "Niveau"} {st.level}
                       </span>
                       <div className="w-24 text-right">
                         <div className="flex justify-between text-[10px] font-bold mb-1">
-                          <span className="text-slate-400">Progrès</span>
+                          <span className="text-slate-400">{isEn ? "Progress" : "Progrès"}</span>
                           <span className="text-[#00D9FF]">{st.progressPercent}%</span>
                         </div>
                         <ProgressBar value={st.progressPercent} color="cyan" height="sm" />
@@ -437,7 +442,7 @@ export const SuperAdminSchoolDetailModal: React.FC<SuperAdminSchoolDetailModalPr
           <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
             {schoolPrograms.length === 0 ? (
               <div className="p-8 text-center text-slate-400 dark:text-white/40 text-xs">
-                Aucun programme pédagogique n'a encore été créé par cette école.
+                {isEn ? "No educational program created yet by this school." : "Aucun programme pédagogique n'a encore été créé par cette école."}
               </div>
             ) : (
               <div className="space-y-2.5">
@@ -454,11 +459,11 @@ export const SuperAdminSchoolDetailModal: React.FC<SuperAdminSchoolDetailModalPr
                         <h5 className="font-bold text-slate-900 dark:text-white">{prog.title}</h5>
                         {prog.isPublished ? (
                           <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-[#20E3A2]/10 text-[#20E3A2]">
-                            Publié
+                            {isEn ? "Published" : "Publié"}
                           </span>
                         ) : (
                           <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-500">
-                            Brouillon
+                            {isEn ? "Draft" : "Brouillon"}
                           </span>
                         )}
                       </div>
@@ -466,9 +471,9 @@ export const SuperAdminSchoolDetailModal: React.FC<SuperAdminSchoolDetailModalPr
                     </div>
 
                     <div className="text-right font-mono text-[11px] text-slate-400 shrink-0">
-                      <p>{prog.modules.length} Modules</p>
+                      <p>{prog.modules.length} {isEn ? "Modules" : "Modules"}</p>
                       <p>
-                        {prog.modules.reduce((acc, m) => acc + m.lessons.length, 0)} Leçons
+                        {prog.modules.reduce((acc, m) => acc + m.lessons.length, 0)} {isEn ? "Lessons" : "Leçons"}
                       </p>
                     </div>
                   </div>
@@ -483,7 +488,7 @@ export const SuperAdminSchoolDetailModal: React.FC<SuperAdminSchoolDetailModalPr
           <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
             {schoolLogs.length === 0 ? (
               <div className="p-8 text-center text-slate-400 dark:text-white/40 text-xs">
-                Aucune entrée de journal spécifique à cette école.
+                {isEn ? "No specific audit log for this school yet." : "Aucune entrée de journal spécifique à cette école."}
               </div>
             ) : (
               <div className="space-y-2">

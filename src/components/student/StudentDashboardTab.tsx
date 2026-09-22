@@ -7,7 +7,7 @@ import { ProgressBar } from "../common/ProgressBar";
 import { NeonButton } from "../common/NeonButton";
 import {
   BookOpen,
-  Sparkles,
+  PenTool,
   CheckCircle2,
   PlayCircle,
   Clock,
@@ -22,6 +22,7 @@ import {
   Bell,
   Check,
   ChevronRight,
+  Sparkles,
 } from "lucide-react";
 
 interface StudentDashboardTabProps {
@@ -33,7 +34,7 @@ interface StudentDashboardTabProps {
   announcements: Announcement[];
   onResumeCourse: (lessonId?: string) => void;
   onOpenPrograms: () => void;
-  onOpenWriting: () => void;
+  onOpenEvaluations?: () => void;
   onOpenChat: () => void;
 }
 
@@ -46,7 +47,7 @@ export const StudentDashboardTab: React.FC<StudentDashboardTabProps> = ({
   announcements,
   onResumeCourse,
   onOpenPrograms,
-  onOpenWriting,
+  onOpenEvaluations,
   onOpenChat,
 }) => {
   const t = translations[locale];
@@ -57,6 +58,11 @@ export const StudentDashboardTab: React.FC<StudentDashboardTabProps> = ({
 
   const completedLessons = student.completedLessons || [];
   const safeLessons = allLessons || [];
+  const completedLessonsCount = completedLessons.length;
+  const totalLessonsCount = safeLessons.length;
+  const realProgressPercent = totalLessonsCount > 0
+    ? Math.min(100, Math.round((completedLessonsCount / totalLessonsCount) * 100))
+    : (student.progressPercent || 0);
 
   // Active or Next Lesson
   const lastActiveLesson =
@@ -149,7 +155,7 @@ export const StudentDashboardTab: React.FC<StudentDashboardTabProps> = ({
       </div>
 
       {/* 2. KEY METRICS GRID */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Metric 1: Overall Progress */}
         <div className="bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 rounded-3xl p-5 shadow-xs space-y-3">
           <div className="flex items-center justify-between">
@@ -162,11 +168,11 @@ export const StudentDashboardTab: React.FC<StudentDashboardTabProps> = ({
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
-              {student.progressPercent}%
+              {realProgressPercent}%
             </span>
             <span className="text-xs text-slate-400">{locale === "en" ? "completed" : "complété"}</span>
           </div>
-          <ProgressBar value={student.progressPercent} color="cyan" height="sm" />
+          <ProgressBar value={realProgressPercent} color="cyan" height="sm" />
         </div>
 
         {/* Metric 2: Completed Lessons */}
@@ -330,41 +336,41 @@ export const StudentDashboardTab: React.FC<StudentDashboardTabProps> = ({
         <div className="lg:col-span-5 space-y-6">
           {/* AI Tools Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
-            {/* AI Writing card */}
+            {/* Prüfung & Certification card */}
             <div
-              onClick={onOpenWriting}
-              className="group bg-gradient-to-br from-indigo-500/5 to-cyan-500/5 hover:from-indigo-500/10 hover:to-cyan-500/10 border border-indigo-500/20 rounded-3xl p-5 transition cursor-pointer shadow-xs space-y-2"
+              onClick={onOpenEvaluations}
+              className="group bg-gradient-to-br from-[#6D5DFC]/5 to-[#00D9FF]/5 hover:from-[#6D5DFC]/10 hover:to-[#00D9FF]/10 border border-[#6D5DFC]/20 rounded-3xl p-5 transition cursor-pointer shadow-xs space-y-2"
             >
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-indigo-500">
-                  <Sparkles size={18} />
-                  <span className="font-bold text-xs">{t.student.tabs.writing.label}</span>
+                <div className="flex items-center gap-2 text-[#6D5DFC] dark:text-[#a399ff]">
+                  <Award size={18} />
+                  <span className="font-bold text-xs">Prüfung & Certification ({student.level})</span>
                 </div>
-                <ArrowRight size={14} className="text-indigo-400 group-hover:translate-x-1 transition" />
+                <ArrowRight size={14} className="text-[#6D5DFC] group-hover:translate-x-1 transition" />
               </div>
               <p className="text-xs text-slate-600 dark:text-slate-300">
                 {locale === "en"
-                  ? "Write texts and receive instant feedback, corrections, and CEFR-aligned scoring."
-                  : "Rédigez des paragraphes et recevez une correction immédiate des fautes avec score CECRL."}
+                  ? `Simulate official CEFR exams (Lesen, Hören, Schreiben, Sprechen) calibrated for your level ${student.level}.`
+                  : `Entraînez-vous aux épreuves officielles CECRL (Lesen, Hören, Schreiben, Sprechen) adaptées à votre niveau ${student.level}.`}
               </p>
             </div>
 
             {/* AI Tutor card */}
             <div
               onClick={onOpenChat}
-              className="group bg-gradient-to-br from-cyan-500/5 to-emerald-500/5 hover:from-cyan-500/10 hover:to-emerald-500/10 border border-cyan-500/20 rounded-3xl p-5 transition cursor-pointer shadow-xs space-y-2"
+              className="group bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-amber-500/10 hover:from-indigo-500/20 hover:to-purple-500/20 border border-indigo-500/30 rounded-3xl p-5 transition cursor-pointer shadow-xs space-y-2"
             >
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-cyan-500">
-                  <MessageCircle size={18} />
-                  <span className="font-bold text-xs">{t.student.tabs.chat.label}</span>
+                <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
+                  <Sparkles size={18} className="text-amber-400" />
+                  <span className="font-extrabold text-xs">LinguaFlow AI (DACH 🇩🇪 🇦🇹 🇨🇭)</span>
                 </div>
-                <ArrowRight size={14} className="text-cyan-400 group-hover:translate-x-1 transition" />
+                <ArrowRight size={14} className="text-indigo-400 group-hover:translate-x-1 transition" />
               </div>
               <p className="text-xs text-slate-600 dark:text-slate-300">
                 {locale === "en"
-                  ? "Converse in native immersion with LinguaBot and practice listening with real-time audio playback."
-                  : "Dialoguez en immersion native avec LinguaBot et bénéficiez de l'écoute audio en direct."}
+                  ? "Converse with LinguaFlow AI, your specialized German language agent for grammar, cases (Akk/Dat), roleplay, and CEFR exams."
+                  : "Entraînez-vous avec LinguaFlow AI, votre agent IA spécialisé en allemand : cas, déclinaisons, simulations DACH et examens CECRL."}
               </p>
             </div>
           </div>
@@ -389,7 +395,7 @@ export const StudentDashboardTab: React.FC<StudentDashboardTabProps> = ({
                   <div
                     key={ann.id}
                     className={`p-3 rounded-2xl text-xs space-y-1 ${
-                      ann.priority === "high"
+                      ann.priority === "urgent" || ann.priority === "warning"
                         ? "bg-indigo-500/5 border border-indigo-500/20"
                         : "bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5"
                     }`}

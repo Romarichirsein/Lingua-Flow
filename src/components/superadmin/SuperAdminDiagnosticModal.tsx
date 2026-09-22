@@ -107,40 +107,40 @@ export const SuperAdminDiagnosticModal: React.FC<SuperAdminDiagnosticModalProps>
         className="relative w-full max-w-4xl max-h-[90vh] bg-slate-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col text-slate-100 font-sans"
       >
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-white/10 bg-slate-950/60">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 py-4 sm:py-5 border-b border-white/10 bg-slate-950/60">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-gradient-to-tr from-[#6D5DFC] to-[#00D9FF] text-white shadow-[0_0_15px_rgba(109,93,252,0.4)]">
-              <Activity size={22} className="animate-pulse" />
+            <div className="p-2.5 rounded-2xl bg-gradient-to-tr from-[#6D5DFC] to-[#00D9FF] text-white shadow-[0_0_15px_rgba(109,93,252,0.4)] shrink-0">
+              <Activity size={20} className="animate-pulse" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-extrabold text-lg text-white">
-                  {isEn ? "Super Admin School Management Diagnostic" : "Diagnostic du Flux de Gestion Écoles Super Admin"}
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="font-extrabold text-base sm:text-lg text-white">
+                  {isEn ? "Super Admin Diagnostic" : "Diagnostic Super Admin"}
                 </h3>
                 <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-[#00D9FF]/20 text-[#00D9FF] border border-[#00D9FF]/30 uppercase tracking-wider">
                   Live Engine
                 </span>
               </div>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-400 truncate">
                 {isEn
-                  ? "Verifies school creation, student assignment, status cascades & real-time synchronization"
-                  : "Vérifie la création d'écoles, l'assignation d'élèves, les cascades de statuts et la synchronisation en temps réel"}
+                  ? "Verifies school creation, student assignment, status cascades & sync"
+                  : "Vérifie les flux d'écoles, élèves, statuts et synchronisation"}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
             <button
               onClick={handleRunDiagnostic}
               disabled={isRunning}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#6D5DFC] to-[#00D9FF] text-white text-xs font-bold shadow-lg shadow-[#6D5DFC]/20 hover:opacity-90 active:scale-95 transition disabled:opacity-50 cursor-pointer"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#6D5DFC] to-[#00D9FF] text-white text-xs font-bold shadow-lg shadow-[#6D5DFC]/20 hover:opacity-90 active:scale-95 transition disabled:opacity-50 cursor-pointer min-h-[40px]"
             >
               <RefreshCw size={14} className={isRunning ? "animate-spin" : ""} />
-              <span>{isRunning ? (isEn ? "Running..." : "Exécution...") : (isEn ? "Rerun Test Suite" : "Relancer le Diagnostic")}</span>
+              <span>{isRunning ? (isEn ? "Running..." : "En cours...") : (isEn ? "Rerun Tests" : "Relancer le test")}</span>
             </button>
             <button
               onClick={onClose}
-              className="p-2 rounded-xl hover:bg-white/10 text-slate-400 hover:text-white transition cursor-pointer"
+              className="p-2 rounded-xl hover:bg-white/10 text-slate-400 hover:text-white transition cursor-pointer min-h-[40px] min-w-[40px] flex items-center justify-center"
             >
               <X size={20} />
             </button>

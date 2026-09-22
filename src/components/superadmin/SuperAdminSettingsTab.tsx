@@ -312,10 +312,13 @@ export const SuperAdminSettingsTab: React.FC<SuperAdminSettingsTabProps> = ({
                 onChange={(e) => setForm({ ...form, aiModel: e.target.value })}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white font-bold focus:outline-none focus:ring-2 focus:ring-[#00D9FF]"
               >
+                <option value="orcarouter/auto">OrcaRouter Auto (Routage IA Optimal Ultra-Rapide)</option>
+                <option value="orcarouter/free">OrcaRouter Free (Accès Gratuit & Haute Résilience)</option>
+                <option value="deepseek/deepseek-v4-flash-free">DeepSeek V4 Flash Free [OrcaRouter] (Haute Vitesse & Raisonnement)</option>
+                <option value="claude-opus-4-7">Claude Opus 4.7 [SeekAI] (Raisonnement Linguistique Avancé)</option>
+                <option value="deepseek-v4-flash">DeepSeek V4 Flash Direct (Raisonnement)</option>
                 <option value="gemini-3-1-pro">Gemini 3.1 Pro (Multimodal & Pédagogie Avancée)</option>
                 <option value="gpt-5-4">GPT-5.4 (Excellence Rédactionnelle & Grammaire)</option>
-                <option value="deepseek-v4-flash">DeepSeek V4 Flash (Haute Vitesse & Raisonnement)</option>
-                <option value="claude-sonnet-5">Claude Sonnet 5 (Nuances Linguistiques)</option>
               </select>
             </div>
 

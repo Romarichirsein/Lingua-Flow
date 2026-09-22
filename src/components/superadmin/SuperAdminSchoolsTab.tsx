@@ -4,6 +4,7 @@ import { School, Student, Program, ActivityLog, EntityStatus, SupportedLanguage,
 import { Modal } from "../common/Modal";
 import { ProgressBar } from "../common/ProgressBar";
 import { SuperAdminSchoolDetailModal } from "./SuperAdminSchoolDetailModal";
+import { SchoolLogo } from "../common/SchoolLogo";
 import {
   Building2,
   Users,
@@ -27,6 +28,14 @@ import {
   Check,
   Globe,
   Activity,
+  KeyRound,
+  Copy,
+  EyeOff,
+  RefreshCw,
+  Share2,
+  Send,
+  Sparkles,
+  ShieldCheck,
 } from "lucide-react";
 
 interface SuperAdminSchoolsTabProps {
@@ -77,6 +86,11 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
   const [extendSchool, setExtendSchool] = useState<School | null>(null);
   const [extensionMonths, setExtensionMonths] = useState(6);
 
+  // Credentials Modal State (View / Copy / Send to School Director)
+  const [credentialsSchool, setCredentialsSchool] = useState<School | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [showPasswordInForm, setShowPasswordInForm] = useState(false);
+
   // Form State for Create/Edit
   const [formData, setFormData] = useState({
     name: "",
@@ -93,11 +107,38 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
     managerName: "",
     managerEmail: "",
     managerPhone: "",
+    username: "",
+    password: "",
     startDate: new Date().toISOString().split("T")[0],
     endDate: "2027-08-25",
     whatsappSupportUrl: "https://wa.me/491512345678",
     studentQuota: 200,
   });
+
+  const generateStrongPassword = () => {
+    const chars = "abcdefghjkmnpqrstuvwxyz23456789";
+    let res = "";
+    for (let i = 0; i < 8; i++) {
+      res += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return res;
+  };
+
+  const handleSuggestUsername = (name: string, managerName: string) => {
+    if (managerName.trim()) {
+      return managerName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, ".")
+        .replace(/(^\.|\.$)+/g, "");
+    }
+    if (name.trim()) {
+      return name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "_")
+        .replace(/(^_|_$)+/g, "");
+    }
+    return "admin_ecole";
+  };
 
   // Filter & Sort Logic
   const filteredSchools = schools
@@ -142,6 +183,7 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
 
   // Handlers
   const handleOpenCreate = () => {
+    const defaultPassword = generateStrongPassword();
     setFormData({
       name: "",
       slug: "",
@@ -157,11 +199,14 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
       managerName: "",
       managerEmail: "",
       managerPhone: "",
+      username: "",
+      password: defaultPassword,
       startDate: new Date().toISOString().split("T")[0],
       endDate: "2027-08-25",
       whatsappSupportUrl: "https://wa.me/491512345678",
       studentQuota: 200,
     });
+    setShowPasswordInForm(false);
     setIsCreateModalOpen(true);
   };
 
@@ -182,11 +227,14 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
       managerName: school.managerName,
       managerEmail: school.managerEmail,
       managerPhone: school.managerPhone || "",
+      username: school.username || (school.managerEmail ? school.managerEmail.split("@")[0] : school.slug || ""),
+      password: school.password || "school123",
       startDate: school.startDate,
       endDate: school.endDate,
       whatsappSupportUrl: school.whatsappSupportUrl || "",
       studentQuota: school.studentQuota,
     });
+    setShowPasswordInForm(false);
   };
 
   const handleSaveCreate = (e: React.FormEvent) => {
@@ -197,6 +245,14 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/(^-|-$)+/g, "");
+
+    const finalUsername =
+      formData.username.trim() ||
+      (formData.managerEmail ? formData.managerEmail.split("@")[0] : "") ||
+      generatedSlug ||
+      `school_${Date.now()}`;
+
+    const finalPassword = formData.password.trim() || generateStrongPassword();
 
     const newSchool: School = {
       id: `school-${Date.now()}`,
@@ -214,6 +270,8 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
       managerName: formData.managerName,
       managerEmail: formData.managerEmail,
       managerPhone: formData.managerPhone,
+      username: finalUsername,
+      password: finalPassword,
       startDate: formData.startDate,
       endDate: formData.endDate,
       status: "active",
@@ -227,15 +285,25 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
     onUpdateSchools([newSchool, ...schools]);
     onAddLog(
       "Création d'école",
-      `Création de l'école partenaire '${newSchool.name}' (${newSchool.language}) avec quota de ${newSchool.studentQuota} élèves.`,
+      `Création de l'école partenaire '${newSchool.name}' (${newSchool.language}) avec identifiant '${newSchool.username}' et quota de ${newSchool.studentQuota} élèves.`,
       "success"
     );
     setIsCreateModalOpen(false);
+    // Directly open the credentials share modal for the Super Admin
+    setCredentialsSchool(newSchool);
   };
 
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingSchool) return;
+
+    const finalUsername =
+      formData.username.trim() ||
+      editingSchool.username ||
+      formData.managerEmail.split("@")[0];
+
+    const finalPassword =
+      formData.password.trim() || editingSchool.password || "school123";
 
     const updatedSchools = schools.map((s) =>
       s.id === editingSchool.id
@@ -255,6 +323,8 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
             managerName: formData.managerName,
             managerEmail: formData.managerEmail,
             managerPhone: formData.managerPhone,
+            username: finalUsername,
+            password: finalPassword,
             startDate: formData.startDate,
             endDate: formData.endDate,
             whatsappSupportUrl: formData.whatsappSupportUrl,
@@ -266,7 +336,7 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
     onUpdateSchools(updatedSchools);
     onAddLog(
       "Modification d'école",
-      `Mise à jour des informations pour l'école '${formData.name}'.`,
+      `Mise à jour des informations et identifiants pour l'école '${formData.name}'.`,
       "success"
     );
     setEditingSchool(null);
@@ -532,9 +602,12 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
                       {/* School & Language */}
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="text-2xl p-2 rounded-xl bg-slate-100 dark:bg-white/5 shrink-0">
-                            {school.logo || (school.language === "german" ? "🇩🇪" : "🇮🇹")}
-                          </div>
+                          <SchoolLogo
+                            logo={school.logo}
+                            name={school.name}
+                            language={school.language}
+                            size="md"
+                          />
                           <div>
                             <button
                               type="button"
@@ -620,6 +693,26 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
                       {/* Actions */}
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          {onSelectSchoolTab && (
+                            <button
+                              type="button"
+                              onClick={() => onSelectSchoolTab(school.id)}
+                              className="p-2 rounded-xl text-slate-500 hover:text-[#6D5DFC] hover:bg-[#6D5DFC]/10 transition cursor-pointer"
+                              title={isEn ? "Open school portal" : "Accéder directement à l'espace école"}
+                            >
+                              <ExternalLink size={15} />
+                            </button>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => setCredentialsSchool(school)}
+                            className="p-2 rounded-xl text-slate-500 hover:text-amber-500 hover:bg-amber-500/10 transition cursor-pointer"
+                            title={isEn ? "View & send login credentials" : "Voir & transmettre les identifiants de connexion"}
+                          >
+                            <KeyRound size={15} />
+                          </button>
+
                           <button
                             type="button"
                             onClick={() => setDetailSchool(school)}
@@ -709,9 +802,12 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
                 {/* Header */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <div className="text-2xl p-2 rounded-xl bg-slate-100 dark:bg-white/5 shrink-0">
-                      {school.logo || (school.language === "german" ? "🇩🇪" : "🇮🇹")}
-                    </div>
+                    <SchoolLogo
+                      logo={school.logo}
+                      name={school.name}
+                      language={school.language}
+                      size="md"
+                    />
                     <div>
                       <h4 className="font-bold text-sm text-slate-900 dark:text-white leading-tight">
                         {school.name}
@@ -760,7 +856,27 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
                 </div>
 
                 {/* Mobile Action Buttons (min 44px touch targets) */}
-                <div className="grid grid-cols-4 gap-2 pt-1">
+                <div className="grid grid-cols-6 gap-1.5 pt-1">
+                  {onSelectSchoolTab && (
+                    <button
+                      type="button"
+                      onClick={() => onSelectSchoolTab(school.id)}
+                      className="flex items-center justify-center p-2.5 rounded-xl bg-[#6D5DFC]/10 hover:bg-[#6D5DFC]/20 text-[#6D5DFC] dark:text-[#a399ff] text-xs font-bold transition min-h-[44px] cursor-pointer"
+                      title={isEn ? "Open portal" : "Accéder"}
+                    >
+                      <ExternalLink size={16} />
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setCredentialsSchool(school)}
+                    className="flex items-center justify-center p-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 text-xs font-bold transition min-h-[44px] cursor-pointer"
+                    title={isEn ? "Credentials" : "Identifiants"}
+                  >
+                    <KeyRound size={16} />
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => setDetailSchool(school)}
@@ -864,7 +980,7 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="ex: Berlin Sprachzentrum"
+                placeholder="ex: Académie des Langues"
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#00D9FF]"
               />
             </div>
@@ -900,7 +1016,7 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
                 required
                 value={formData.managerName}
                 onChange={(e) => setFormData({ ...formData, managerName: e.target.value })}
-                placeholder="ex: Klaus Weber"
+                placeholder={isEn ? "ex: John Smith" : "ex: Jean Dupont"}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#00D9FF]"
               />
             </div>
@@ -914,7 +1030,7 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
                 required
                 value={formData.managerEmail}
                 onChange={(e) => setFormData({ ...formData, managerEmail: e.target.value })}
-                placeholder="klaus@ecole.de"
+                placeholder="directeur@exemple.com"
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#00D9FF]"
               />
             </div>
@@ -927,7 +1043,7 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
                 type="tel"
                 value={formData.managerPhone}
                 onChange={(e) => setFormData({ ...formData, managerPhone: e.target.value })}
-                placeholder="+49 151 2345678"
+                placeholder="+33 6 00 00 00 00"
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#00D9FF]"
               />
             </div>
@@ -1004,6 +1120,93 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
             </div>
           </div>
 
+          {/* Identifiants d'accès & Connexion Super Admin -> École */}
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-50/80 to-cyan-50/80 dark:from-indigo-950/30 dark:to-cyan-950/30 border border-indigo-200/80 dark:border-indigo-800/60 space-y-3.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-indigo-950 dark:text-indigo-200 font-bold text-xs">
+                <KeyRound size={16} className="text-[#6D5DFC] dark:text-[#00D9FF]" />
+                <span>Identifiants d'accès de l'école (Login & Mot de passe)</span>
+              </div>
+              <span className="text-[10px] bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 px-2.5 py-0.5 rounded-full font-bold">
+                Défini par le Super Admin
+              </span>
+            </div>
+
+            <p className="text-[11px] text-slate-600 dark:text-white/70 leading-relaxed">
+              Ces identifiants permettront au responsable de l'école de se connecter à son tableau de bord SaaS. Vous pourrez lui transmettre directement par WhatsApp ou E-mail.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold text-slate-700 dark:text-white/80">
+                    Nom d'utilisateur (Username) *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData({
+                        ...formData,
+                        username: handleSuggestUsername(formData.name, formData.managerName),
+                      })
+                    }
+                    className="text-[10px] text-[#6D5DFC] dark:text-[#00D9FF] font-semibold hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <Sparkles size={11} /> Suggérer
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    required
+                    value={formData.username}
+                    onChange={(e) => setFormData({ ...formData, username: e.target.value.toLowerCase().replace(/\s+/g, "_") })}
+                    placeholder={isEn ? "e.g. director_academy or school_main" : "ex: direction_ecole ou responsable"}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#6D5DFC]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold text-slate-700 dark:text-white/80">
+                    Mot de passe (Password) *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData({
+                        ...formData,
+                        password: generateStrongPassword(),
+                      })
+                    }
+                    className="text-[10px] text-[#6D5DFC] dark:text-[#00D9FF] font-semibold hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <RefreshCw size={11} /> Régénérer
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    type={showPasswordInForm ? "text" : "password"}
+                    required
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    placeholder="Mot de passe sécurisé..."
+                    className="w-full pl-3.5 pr-10 py-2.5 rounded-xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#6D5DFC]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswordInForm(!showPasswordInForm)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+                    title={showPasswordInForm ? "Masquer" : "Afficher"}
+                  >
+                    {showPasswordInForm ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-white/80 mb-1">
               Lien Groupe WhatsApp Promo (Élèves & Enseignants)
@@ -1048,7 +1251,12 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
         {statusActionSchool && (
           <div className="space-y-4">
             <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 flex items-center gap-3">
-              <span className="text-2xl">{statusActionSchool.school.logo || "🏫"}</span>
+              <SchoolLogo
+                logo={statusActionSchool.school.logo}
+                name={statusActionSchool.school.name}
+                language={statusActionSchool.school.language}
+                size="md"
+              />
               <div>
                 <h4 className="font-bold text-sm text-slate-900 dark:text-white">
                   {statusActionSchool.school.name}
@@ -1207,6 +1415,131 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
                 className="px-5 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold shadow-md disabled:opacity-40 min-h-[40px] cursor-pointer"
               >
                 Supprimer Définitivement
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+      {/* Credentials Share Modal (Super Admin -> School Director) */}
+      <Modal
+        isOpen={!!credentialsSchool}
+        onClose={() => {
+          setCredentialsSchool(null);
+          setCopiedKey(null);
+        }}
+        title="Identifiants de Connexion École"
+        maxWidth="max-w-lg"
+      >
+        {credentialsSchool && (
+          <div className="space-y-4">
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-[#6D5DFC]/10 to-[#00D9FF]/10 border border-[#6D5DFC]/20 flex items-start gap-3">
+              <div className="p-2.5 rounded-xl bg-[#6D5DFC] text-white shrink-0 shadow-md">
+                <ShieldCheck size={20} />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                  Identifiants créés par le Super Admin pour {credentialsSchool.name}
+                </h4>
+                <p className="text-[11px] text-slate-600 dark:text-white/70 leading-relaxed">
+                  Ces informations d'authentification permettent au responsable ({credentialsSchool.managerName}) d'accéder à son espace administration école en toute sécurité.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Nom d'utilisateur / Login
+                  </span>
+                  <div className="font-mono text-sm font-bold text-slate-900 dark:text-white">
+                    {credentialsSchool.username || credentialsSchool.managerEmail.split("@")[0]}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const user = credentialsSchool.username || credentialsSchool.managerEmail.split("@")[0];
+                    navigator.clipboard.writeText(user);
+                    setCopiedKey("user");
+                    setTimeout(() => setCopiedKey(null), 2000);
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-white hover:bg-slate-100 flex items-center gap-1.5 transition cursor-pointer"
+                >
+                  {copiedKey === "user" ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                  <span>{copiedKey === "user" ? "Copié" : "Copier"}</span>
+                </button>
+              </div>
+
+              <div className="h-px bg-slate-200 dark:bg-white/10" />
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Mot de passe
+                  </span>
+                  <div className="font-mono text-sm font-bold text-[#6D5DFC] dark:text-[#00D9FF]">
+                    {credentialsSchool.password || "school123"}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const pwd = credentialsSchool.password || "school123";
+                    navigator.clipboard.writeText(pwd);
+                    setCopiedKey("pwd");
+                    setTimeout(() => setCopiedKey(null), 2000);
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-white hover:bg-slate-100 flex items-center gap-1.5 transition cursor-pointer"
+                >
+                  {copiedKey === "pwd" ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                  <span>{copiedKey === "pwd" ? "Copié" : "Copier"}</span>
+                </button>
+              </div>
+
+              <div className="h-px bg-slate-200 dark:bg-white/10" />
+
+              <div className="text-xs text-slate-600 dark:text-white/70 space-y-1">
+                <div><strong className="text-slate-900 dark:text-white">URL de connexion :</strong> {window.location.origin}</div>
+                <div><strong className="text-slate-900 dark:text-white">Responsable :</strong> {credentialsSchool.managerName} ({credentialsSchool.managerEmail})</div>
+                <div><strong className="text-slate-900 dark:text-white">Validité :</strong> Jusqu'au {new Date(credentialsSchool.endDate).toLocaleDateString()}</div>
+              </div>
+            </div>
+
+            {/* Actions de transmission WhatsApp & Email */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
+              <a
+                href={`https://wa.me/${(credentialsSchool.managerPhone || credentialsSchool.phone || "").replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
+                  `Bonjour ${credentialsSchool.managerName},\n\nVotre accès Super Admin pour l'école *${credentialsSchool.name}* sur la plateforme Lingua-Flow a été configuré avec succès.\n\n🔗 *Lien de connexion* : ${window.location.origin}\n👤 *Identifiant* : ${credentialsSchool.username || credentialsSchool.managerEmail.split("@")[0]}\n🔑 *Mot de passe* : ${credentialsSchool.password || "school123"}\n\nVous pouvez dès à présent gérer vos cours, inscrire vos élèves et suivre les progrès pédagogiques.\n\nCordialement,\nL'administration Lingua-Flow`
+                )}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold shadow-md transition cursor-pointer"
+              >
+                <Share2 size={16} />
+                <span>Envoyer par WhatsApp</span>
+              </a>
+
+              <a
+                href={`mailto:${credentialsSchool.managerEmail}?subject=${encodeURIComponent(
+                  `Vos identifiants d'accès Lingua-Flow - École ${credentialsSchool.name}`
+                )}&body=${encodeURIComponent(
+                  `Bonjour ${credentialsSchool.managerName},\n\nVotre compte administrateur pour l'école "${credentialsSchool.name}" est désormais actif.\n\nURL de connexion : ${window.location.origin}\nNom d'utilisateur : ${credentialsSchool.username || credentialsSchool.managerEmail.split("@")[0]}\nMot de passe : ${credentialsSchool.password || "school123"}\n\nValidité de la licence : jusqu'au ${credentialsSchool.endDate}\n\nBienvenue sur Lingua-Flow !\nL'équipe administrative.`
+                )}`}
+                className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-950 text-xs font-bold shadow-md hover:opacity-90 transition cursor-pointer"
+              >
+                <Send size={16} />
+                <span>Envoyer par E-mail</span>
+              </a>
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-slate-200 dark:border-white/10">
+              <button
+                type="button"
+                onClick={() => setCredentialsSchool(null)}
+                className="px-5 py-2 rounded-xl bg-slate-100 dark:bg-white/10 text-xs font-bold text-slate-700 dark:text-white hover:bg-slate-200 min-h-[40px] cursor-pointer"
+              >
+                Fermer
               </button>
             </div>
           </div>

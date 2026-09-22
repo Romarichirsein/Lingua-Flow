@@ -14,7 +14,7 @@ export const sanityClient = createClient({
   dataset: SANITY_CONFIG.dataset,
   apiVersion: SANITY_CONFIG.apiVersion,
   useCdn: false,
-  token: "skT8MAyO16mvZxXVPz7pyWdFLuHC2cakJR3I768ziY6MGSTu7jBd6Gxl22J7hGaTTUhz3SaweQ7mDCGWzgG1C3oZxRGtnY7yvPQZTblo1rBhU8LbtlB2WoznxwyQJkV6WxPKmLpuRhQUoaaDHhCNwxGCxFiUF5x36J1d43YaFYyLobzB0v58",
+  token: (import.meta as any).env?.VITE_SANITY_API_TOKEN || "",
 });
 
 export interface SanityStatusResult {

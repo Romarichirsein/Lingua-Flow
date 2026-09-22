@@ -1,165 +1,336 @@
 import React, { useEffect, useState } from "react";
-import { motion } from "motion/react";
-import { ArrowRight } from "lucide-react";
-import { LinguaFlowLogo } from "./LinguaFlowLogo";
+import { motion, AnimatePresence } from "motion/react";
+import { ArrowRight, ShieldCheck, Check } from "lucide-react";
 
 interface SplashScreenProps {
   onComplete: () => void;
 }
 
 export const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
-  const [progress, setProgress] = useState(12);
-  const [statusMessage, setStatusMessage] = useState(
-    "Initialisation de l'écosystème LinguaFlow SaaS..."
-  );
+  const [progress, setProgress] = useState(0);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+
+  const steps = [
+    {
+      title: "Initialisation du noyau LinguaFlow SaaS",
+      sub: "Chargement du moteur applicatif et des configurations sécurisées",
+    },
+    {
+      title: "Curriculums CECRL Allemand 🇩🇪 & Italien 🇮🇹",
+      sub: "Vérification des référentiels officiels de niveau A1 à C2",
+    },
+    {
+      title: "Cloisonnement & Isolation Multi-Écoles",
+      sub: "Activation du chiffrement des sessions et règles de protection",
+    },
+    {
+      title: "Moteur d'Examen & Certification Prüfung",
+      sub: "Prêt pour les simulations : Sprechen, Hören, Schreiben, Lesen",
+    },
+    {
+      title: "Environnement prêt • Bienvenue",
+      sub: "Ouverture de votre espace de travail personnalisé",
+    },
+  ];
 
   useEffect(() => {
-    const timer1 = setTimeout(() => {
-      setProgress(42);
-      setStatusMessage("Chargement des environnements multi-écoles (Allemand 🇩🇪 & Italien 🇮🇹)...");
-    }, 500);
+    const duration = 10000; // exactly 10 seconds
+    const startTime = Date.now();
 
-    const timer2 = setTimeout(() => {
-      setProgress(78);
-      setStatusMessage("Vérification des quotas SaaS, licences et règles d'isolation...");
-    }, 1100);
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const currentPct = Math.min(100, (elapsed / duration) * 100);
+      setProgress(currentPct);
 
-    const timer3 = setTimeout(() => {
-      setProgress(100);
-      setStatusMessage("Environnement prêt ! Redirection vers votre espace...");
-    }, 1700);
+      // Determine step based on percentage (0-100 divided into 5 steps)
+      const stepIdx = Math.min(steps.length - 1, Math.floor(currentPct / 20));
+      setCurrentStepIndex(stepIdx);
 
-    const timer4 = setTimeout(() => {
-      onComplete();
-    }, 2200);
+      if (elapsed >= duration) {
+        clearInterval(interval);
+        setTimeout(() => {
+          onComplete();
+        }, 400);
+      }
+    }, 30);
 
-    return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      clearTimeout(timer3);
-      clearTimeout(timer4);
-    };
-  }, [onComplete]);
+    return () => clearInterval(interval);
+  }, [onComplete, steps.length]);
 
-  // Generate 12 dots arranged mathematically along a circle for the circular neon loading animation
-  const totalDots = 12;
-  const radius = 54; // radius in px
+  // Geometry calculations for the SVG circular loader
+  const size = 300;
+  const strokeWidth = 5;
+  const radius = 126;
+  const center = size / 2;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (progress / 100) * circumference;
+
+  // Calculate coordinates for the glowing comet tip
+  const angleInDegrees = (progress / 100) * 360 - 90;
+  const angleInRadians = (angleInDegrees * Math.PI) / 180;
+  const cometX = center + radius * Math.cos(angleInRadians);
+  const cometY = center + radius * Math.sin(angleInRadians);
+
+  const secondsRemaining = Math.max(0, Math.ceil((10000 - (progress / 100) * 10000) / 1000));
 
   return (
     <motion.div
       id="splash-screen"
       initial={{ opacity: 1 }}
-      exit={{ opacity: 0, scale: 1.02, transition: { duration: 0.5, ease: "easeInOut" } }}
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#070A12] text-white px-4 select-none overflow-hidden h-screen h-[100dvh] min-h-[100dvh] w-screen w-full"
+      exit={{ opacity: 0, scale: 1.02, transition: { duration: 0.6, ease: "easeInOut" } }}
+      className="fixed inset-0 z-[9999] flex flex-col items-center justify-between bg-black text-white px-4 py-8 select-none overflow-hidden h-screen h-[100dvh] min-h-[100dvh] w-screen w-full"
     >
-      {/* Ambient background glow orbs */}
-      <div className="absolute top-1/4 -left-20 w-96 h-96 rounded-full bg-[#6D5DFC]/20 blur-[130px] pointer-events-none" />
-      <div className="absolute bottom-1/4 -right-20 w-96 h-96 rounded-full bg-[#00D9FF]/20 blur-[130px] pointer-events-none" />
-      <div className="absolute inset-0 bg-[radial-gradient(#ffffff08_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none" />
+      {/* Background ambient lighting - Deep luxury black with minimal cosmic aura */}
+      <div className="absolute inset-0 bg-[#000000]" />
+      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] h-[520px] rounded-full bg-gradient-to-tr from-[#6D5DFC]/10 via-[#00D9FF]/10 to-transparent blur-[140px] pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(#ffffff0a_1px,transparent_1px)] [background-size:28px_28px] opacity-40 pointer-events-none" />
 
-      <motion.div
-        initial={{ opacity: 0, scale: 0.92, y: 15 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
-        className="relative flex flex-col items-center justify-center text-center max-w-md w-full mx-auto my-auto"
-      >
-        {/* Central Logo in Hero Size with pure white text and perfect centering */}
-        <div className="relative mb-5 flex flex-col items-center justify-center w-full text-center">
-          <LinguaFlowLogo
-            size="xl"
-            showText={true}
-            showBadge={true}
-            badgeText="SaaS B2B"
-            textColor="white"
-            centered={true}
-            className="w-full justify-center items-center text-center"
-          />
-          <p className="text-xs sm:text-sm text-slate-300 font-medium tracking-wide mt-2.5 max-w-xs text-center mx-auto">
-            Plateforme E-Learning Multi-Écoles (Allemand & Italien)
-          </p>
+      {/* Top Header info */}
+      <div className="relative z-10 w-full max-w-4xl flex items-center justify-between px-2 sm:px-6">
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-[10px] sm:text-xs font-mono tracking-widest text-white/50 uppercase">
+            LinguaFlow Core v2.4
+          </span>
         </div>
 
-        {/* Circular Neon-Animated Indicator with Orbiting Dots */}
-        <div className="relative my-6 flex items-center justify-center w-36 h-36">
-          {/* Central subtle pulsing core */}
-          <motion.div
-            animate={{ scale: [0.85, 1.15, 0.85], opacity: [0.35, 0.8, 0.35] }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-            className="w-12 h-12 rounded-full bg-gradient-to-tr from-[#6D5DFC]/40 via-[#00D9FF]/30 to-[#20E3A2]/40 blur-md"
-          />
-
-          {/* Rotating ambient ring */}
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-            className="absolute inset-0 rounded-full border border-white/5"
-          />
-
-          {/* Orbiting dots arranged geometrically along the circle */}
-          {Array.from({ length: totalDots }).map((_, index) => {
-            const angle = (index / totalDots) * (2 * Math.PI) - Math.PI / 2;
-            const x = Math.cos(angle) * radius;
-            const y = Math.sin(angle) * radius;
-            const delay = (index / totalDots) * 1.2;
-
-            return (
-              <motion.div
-                key={index}
-                className="absolute rounded-full"
-                style={{
-                  width: index % 2 === 0 ? "10px" : "7px",
-                  height: index % 2 === 0 ? "10px" : "7px",
-                  transform: `translate(${x}px, ${y}px)`,
-                  backgroundColor: index % 2 === 0 ? "#00D9FF" : "#6D5DFC",
-                }}
-                animate={{
-                  scale: [0.4, 1.4, 0.4],
-                  opacity: [0.2, 1, 0.2],
-                  boxShadow: [
-                    "0 0 2px rgba(0,217,255,0.2)",
-                    "0 0 14px rgba(0,217,255,0.9)",
-                    "0 0 2px rgba(0,217,255,0.2)",
-                  ],
-                }}
-                transition={{
-                  duration: 1.2,
-                  repeat: Infinity,
-                  delay: delay,
-                  ease: "easeInOut",
-                }}
-              />
-            );
-          })}
+        <div className="flex items-center gap-2 text-xs text-white/40 font-mono">
+          <ShieldCheck size={14} className="text-[#00D9FF]" />
+          <span className="hidden sm:inline">Secure SaaS Gateway</span>
+          <span className="text-white/60">•</span>
+          <span className="text-[#00D9FF] font-bold">{secondsRemaining}s</span>
         </div>
+      </div>
 
-        {/* Progress Bar & Status Text */}
-        <div className="w-full max-w-xs space-y-2">
-          <div className="flex justify-between text-[11px] font-mono text-white/60">
-            <span className="truncate pr-2">{statusMessage}</span>
-            <span className="text-[#00D9FF] font-bold">{progress}%</span>
-          </div>
+      {/* Center: Modern Circular Loader with Central Logo */}
+      <div className="relative z-10 flex flex-col items-center justify-center my-auto w-full max-w-md">
+        {/* Circular Orbital Loader Container */}
+        <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
+          {/* SVG Orbit Tracks & Progress Stroke */}
+          <svg
+            width={size}
+            height={size}
+            viewBox={`0 0 ${size} ${size}`}
+            className="absolute inset-0 pointer-events-none"
+          >
+            <defs>
+              {/* High-tech gradient for the progress line */}
+              <linearGradient id="orbit-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#6D5DFC" />
+                <stop offset="50%" stopColor="#00D9FF" />
+                <stop offset="100%" stopColor="#20E3A2" />
+              </linearGradient>
 
-          <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden p-0.5">
-            <motion.div
-              className="h-full bg-gradient-to-r from-[#6D5DFC] via-[#00D9FF] to-[#20E3A2] rounded-full shadow-[0_0_12px_rgba(0,217,255,0.8)]"
-              initial={{ width: "10%" }}
-              animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.4, ease: "easeOut" }}
+              {/* Intense laser glow filter */}
+              <filter id="laser-glow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="3.5" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+
+            {/* Layer 1: Outermost subtle radar perimeter with micro ticks */}
+            <circle
+              cx={center}
+              cy={center}
+              r={radius + 16}
+              fill="none"
+              stroke="rgba(255, 255, 255, 0.05)"
+              strokeWidth="1"
+              strokeDasharray="2 8"
             />
+
+            {/* Layer 2: Slow counter-clockwise rotating technical dashed ring */}
+            <g
+              style={{
+                transformOrigin: "center",
+                animation: "spin 25s linear infinite reverse",
+              }}
+            >
+              <circle
+                cx={center}
+                cy={center}
+                r={radius + 8}
+                fill="none"
+                stroke="rgba(109, 93, 252, 0.18)"
+                strokeWidth="1.5"
+                strokeDasharray="16 40 8 40"
+              />
+            </g>
+
+            {/* Layer 3: Passive background groove */}
+            <circle
+              cx={center}
+              cy={center}
+              r={radius}
+              fill="none"
+              stroke="rgba(255, 255, 255, 0.07)"
+              strokeWidth={strokeWidth}
+            />
+
+            {/* Layer 4: ACTIVE SMOOTH CIRCULAR PROGRESS (fills across 10 seconds) */}
+            <circle
+              cx={center}
+              cy={center}
+              r={radius}
+              fill="none"
+              stroke="url(#orbit-gradient)"
+              strokeWidth={strokeWidth}
+              strokeLinecap="round"
+              strokeDasharray={circumference}
+              strokeDashoffset={strokeDashoffset}
+              transform={`rotate(-90 ${center} ${center})`}
+              filter="url(#laser-glow)"
+              style={{ transition: "stroke-dashoffset 40ms linear" }}
+            />
+
+            {/* Layer 5: Inner subtle aperture border */}
+            <circle
+              cx={center}
+              cy={center}
+              r={radius - 14}
+              fill="none"
+              stroke="rgba(0, 217, 255, 0.12)"
+              strokeWidth="1"
+              strokeDasharray="4 6"
+            />
+
+            {/* Layer 6: Leading Photon / Comet Tip */}
+            {progress > 0 && progress < 100 && (
+              <g>
+                <circle
+                  cx={cometX}
+                  cy={cometY}
+                  r="7"
+                  fill="#00D9FF"
+                  filter="url(#laser-glow)"
+                  opacity="0.9"
+                />
+                <circle
+                  cx={cometX}
+                  cy={cometY}
+                  r="3"
+                  fill="#ffffff"
+                />
+              </g>
+            )}
+          </svg>
+
+          {/* Central Core with Floating Logo */}
+          <div className="relative z-10 w-48 h-48 rounded-full bg-[#030509] border border-white/10 flex flex-col items-center justify-center p-4 shadow-[inset_0_0_30px_rgba(0,0,0,0.9),0_0_40px_rgba(109,93,252,0.15)] overflow-hidden">
+            {/* Subtle inner ambient pulse */}
+            <motion.div
+              animate={{
+                scale: [0.95, 1.05, 0.95],
+                opacity: [0.3, 0.6, 0.3],
+              }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute inset-0 rounded-full bg-gradient-to-tr from-[#6D5DFC]/20 to-[#00D9FF]/20 blur-xl pointer-events-none"
+            />
+
+            {/* Logo image centered with breathing animation */}
+            <motion.div
+              animate={{
+                scale: [0.98, 1.02, 0.98],
+              }}
+              transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
+              className="relative z-20 flex flex-col items-center justify-center"
+            >
+              <img
+                src="/logo.png"
+                alt="LinguaFlow Logo"
+                className="h-16 sm:h-20 w-auto object-contain drop-shadow-[0_4px_16px_rgba(0,217,255,0.45)]"
+              />
+            </motion.div>
+
+            {/* Status indicator under logo */}
+            <div className="relative z-20 mt-1.5 flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/5 border border-white/10">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#00D9FF] animate-pulse" />
+              <span className="text-[9px] font-bold tracking-widest text-slate-300 uppercase font-mono">
+                SaaS Académie
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* Fast skip button */}
+        {/* Numeric Live Progress Indicator */}
+        <div className="mt-6 flex flex-col items-center justify-center space-y-2 text-center">
+          <div className="flex items-baseline gap-1 font-mono">
+            <span className="text-3xl sm:text-4xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-[#00D9FF]">
+              {Math.floor(progress)}
+            </span>
+            <span className="text-sm font-bold text-[#00D9FF]">%</span>
+          </div>
+
+          {/* Dynamic 5-step milestone indicators */}
+          <div className="flex items-center gap-1.5 pt-1">
+            {steps.map((_, idx) => (
+              <div
+                key={idx}
+                className={`h-1.5 rounded-full transition-all duration-300 ${
+                  idx < currentStepIndex
+                    ? "w-6 bg-gradient-to-r from-[#6D5DFC] to-[#00D9FF]"
+                    : idx === currentStepIndex
+                    ? "w-8 bg-[#00D9FF] shadow-[0_0_8px_rgba(0,217,255,0.8)] animate-pulse"
+                    : "w-2 bg-white/10"
+                }`}
+              />
+            ))}
+          </div>
+
+          {/* Current Status Message with smooth fade animation */}
+          <div className="h-14 flex flex-col items-center justify-center px-4 max-w-sm">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentStepIndex}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.25 }}
+                className="text-center"
+              >
+                <p className="text-xs sm:text-sm font-semibold text-white tracking-wide">
+                  {steps[currentStepIndex].title}
+                </p>
+                <p className="text-[11px] text-white/50 mt-0.5 line-clamp-1">
+                  {steps[currentStepIndex].sub}
+                </p>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer controls: Fast Access button if needed */}
+      <div className="relative z-10 w-full max-w-md flex flex-col items-center justify-center gap-2">
         <button
           id="skip-splash-btn"
           type="button"
           onClick={onComplete}
-          className="mt-6 flex items-center gap-1.5 text-xs text-white/40 hover:text-white transition cursor-pointer py-1 px-3 rounded-lg hover:bg-white/5"
+          className="group inline-flex items-center gap-2 text-[11px] font-medium text-white/40 hover:text-white transition-all py-1.5 px-4 rounded-full border border-white/5 hover:border-white/20 hover:bg-white/5 cursor-pointer backdrop-blur-sm"
         >
-          <span>Accéder directement à l'application</span>
-          <ArrowRight size={13} />
+          <span>Accéder directement ({secondsRemaining}s)</span>
+          <ArrowRight
+            size={12}
+            className="transition-transform group-hover:translate-x-0.5 text-[#00D9FF]"
+          />
         </button>
-      </motion.div>
+
+        <p className="text-[10px] font-mono text-white/30 text-center">
+          Plateforme E-Learning Multi-Écoles • Allemand & Italien
+        </p>
+      </div>
+
+      {/* Global CSS rotation utility for orbital rings */}
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </motion.div>
   );
 };

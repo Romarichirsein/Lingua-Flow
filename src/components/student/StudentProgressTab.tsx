@@ -10,7 +10,6 @@ import {
   Printer,
   ShieldCheck,
   BookOpen,
-  Sparkles,
   TrendingUp,
   Clock,
   Lock,
@@ -35,42 +34,85 @@ export const StudentProgressTab: React.FC<StudentProgressTabProps> = ({
   const t = translations[locale];
   const certificateRef = useRef<HTMLDivElement>(null);
 
-  const isCertified = (student.progressPercent || 0) >= 100;
   const completedLessons = student.completedLessons || [];
   const safeLessons = allLessons || [];
   const completedLessonsCount = completedLessons.length;
   const totalLessonsCount = Math.max(1, safeLessons.length);
 
-  // Skill competencies breakdown
+  // Exact real progress percentage strictly synchronized with completed curriculum
+  const realProgressPercent = safeLessons.length > 0
+    ? Math.min(100, Math.round((completedLessonsCount / safeLessons.length) * 100))
+    : 0;
+
+  const isCertified = realProgressPercent >= 100;
+
+  // Category breakdown 100% synchronized with actual student completion data (no random values)
+  // 1. Oral Comprehension: lessons with video/audio material
+  const videoLessons = safeLessons.filter((l) => !!l.videoUrl);
+  const completedVideoCount = videoLessons.filter((l) => completedLessons.includes(l.id)).length;
+  const oralScore = completedLessonsCount === 0
+    ? 0
+    : videoLessons.length > 0
+    ? Math.min(100, Math.round((completedVideoCount / videoLessons.length) * 100))
+    : realProgressPercent;
+
+  // 2. Grammar & Syntax: lessons featuring evaluation quizzes
+  const quizLessons = safeLessons.filter((l) => l.quiz && l.quiz.length > 0);
+  const completedQuizCount = quizLessons.filter((l) => completedLessons.includes(l.id)).length;
+  const grammarScore = completedLessonsCount === 0
+    ? 0
+    : quizLessons.length > 0
+    ? Math.min(100, Math.round((completedQuizCount / quizLessons.length) * 100))
+    : realProgressPercent;
+
+  // 3. Written Comprehension: overall curriculum progression
+  const writtenCompScore = completedLessonsCount === 0 ? 0 : realProgressPercent;
+
+  // 4. Vocabulary & Lexicon: synchronized with lesson milestones
+  const vocabScore = completedLessonsCount === 0 ? 0 : realProgressPercent;
+
+  // 5. Written Expression: synchronized with validated steps
+  const expressionScore = completedLessonsCount === 0 ? 0 : realProgressPercent;
+
+  // Skill competencies breakdown (100% mathematically grounded in student progress)
   const skills = [
     {
       name: t.student.oralComprehension,
       level: student.level,
-      score: Math.min(100, student.progressPercent + 5),
+      score: oralScore,
+      details: videoLessons.length > 0
+        ? `${completedVideoCount}/${videoLessons.length} ${locale === "en" ? "audio/video modules" : "modules audio/vidéo"}`
+        : `${completedLessonsCount}/${totalLessonsCount} ${locale === "en" ? "lessons" : "leçons"}`,
       color: "cyan",
     },
     {
       name: t.student.writtenComprehension,
       level: student.level,
-      score: Math.min(100, student.progressPercent),
+      score: writtenCompScore,
+      details: `${completedLessonsCount}/${totalLessonsCount} ${locale === "en" ? "lessons completed" : "leçons validées"}`,
       color: "indigo",
     },
     {
       name: t.student.grammarSyntax,
       level: student.level,
-      score: Math.max(20, Math.min(100, student.progressPercent - 2)),
+      score: grammarScore,
+      details: quizLessons.length > 0
+        ? `${completedQuizCount}/${quizLessons.length} ${locale === "en" ? "quizzes passed" : "quiz validés"}`
+        : `${completedLessonsCount}/${totalLessonsCount} ${locale === "en" ? "lessons" : "leçons"}`,
       color: "emerald",
     },
     {
       name: t.student.vocabularyLexicon,
       level: student.level,
-      score: Math.min(100, student.progressPercent + 2),
+      score: vocabScore,
+      details: `${completedLessonsCount}/${totalLessonsCount} ${locale === "en" ? "vocabulary units" : "unités de vocabulaire"}`,
       color: "purple",
     },
     {
       name: t.student.writtenExpression,
       level: student.level,
-      score: Math.max(15, Math.min(100, student.progressPercent - 5)),
+      score: expressionScore,
+      details: `${completedLessonsCount}/${totalLessonsCount} ${locale === "en" ? "curriculum steps" : "étapes du programme"}`,
       color: "amber",
     },
   ];
@@ -120,6 +162,9 @@ export const StudentProgressTab: React.FC<StudentProgressTabProps> = ({
                 <span className="text-slate-900 dark:text-white font-bold">{s.score}%</span>
               </div>
               <ProgressBar value={s.score} color={s.color as any} height="sm" />
+              <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
+                {s.details}
+              </div>
             </div>
           </div>
         ))}
@@ -132,7 +177,7 @@ export const StudentProgressTab: React.FC<StudentProgressTabProps> = ({
           </div>
 
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-black">{student.progressPercent}%</span>
+            <span className="text-3xl font-black">{realProgressPercent}%</span>
             <span className="text-xs text-slate-400">
               ({completedLessonsCount}/{totalLessonsCount} {locale === "en" ? "lessons" : "leçons"})
             </span>
@@ -148,14 +193,14 @@ export const StudentProgressTab: React.FC<StudentProgressTabProps> = ({
 
       {/* OFFICIAL CERTIFICATE SECTION */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
             <FileCheck size={18} className="text-emerald-500" />
             {t.student.certificateTitle}
           </h3>
 
           {isCertified && (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <NeonButton
                 variant="primary"
                 size="sm"
@@ -179,14 +224,14 @@ export const StudentProgressTab: React.FC<StudentProgressTabProps> = ({
         {/* Certificate Card Preview */}
         <div
           ref={certificateRef}
-          className={`relative overflow-hidden rounded-3xl border p-8 sm:p-12 transition ${
+          className={`relative overflow-hidden rounded-3xl border p-4 sm:p-10 transition ${
             isCertified
               ? "bg-gradient-to-b from-amber-500/5 via-white to-slate-50 dark:from-amber-500/5 dark:via-slate-900 dark:to-[#0D1220] border-amber-500/40 shadow-xl"
               : "bg-slate-50 dark:bg-white/[0.02] border-slate-200 dark:border-white/10 opacity-80"
           }`}
         >
           {/* Certificate Inner Frame Border */}
-          <div className="rounded-2xl border-2 border-dashed border-amber-500/30 p-6 sm:p-10 space-y-8 text-center relative">
+          <div className="rounded-2xl border-2 border-dashed border-amber-500/30 p-4 sm:p-8 space-y-6 sm:space-y-8 text-center relative">
             {/* Watermark Seal Background */}
             <div className="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none select-none">
               <Award size={280} className="text-amber-500" />
@@ -243,7 +288,7 @@ export const StudentProgressTab: React.FC<StudentProgressTabProps> = ({
               <div className="p-3 rounded-xl bg-slate-100/80 dark:bg-white/5">
                 <span className="text-[10px] text-slate-400 block uppercase">{locale === "en" ? "Progress" : "Progression"}</span>
                 <span className="font-bold text-emerald-500 text-sm">
-                  {student.progressPercent}%
+                  {realProgressPercent}%
                 </span>
               </div>
               <div className="p-3 rounded-xl bg-slate-100/80 dark:bg-white/5">
@@ -286,7 +331,7 @@ export const StudentProgressTab: React.FC<StudentProgressTabProps> = ({
                 <Lock size={28} />
               </div>
               <h4 className="text-base sm:text-lg font-bold">
-                {locale === "en" ? `Certificate locked (${student.progressPercent}%)` : `Certificat verrouillé (${student.progressPercent}%)`}
+                {locale === "en" ? `Certificate locked (${realProgressPercent}%)` : `Certificat verrouillé (${realProgressPercent}%)`}
               </h4>
               <p className="text-xs text-slate-300 max-w-md leading-relaxed">
                 {t.student.certificateLockedNotice}

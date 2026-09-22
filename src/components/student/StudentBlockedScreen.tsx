@@ -92,23 +92,23 @@ export const StudentBlockedScreen: React.FC<StudentBlockedScreenProps> = ({
               </a>
             )}
 
-            {school.contactEmail && (
+            {(school.contactEmail || school.professionalEmail || school.managerEmail) && (
               <a
-                href={`mailto:${school.contactEmail}?subject=Demande de réactivation d'accès - ${student.name}`}
+                href={`mailto:${school.contactEmail || school.professionalEmail || school.managerEmail}?subject=Demande de réactivation d'accès - ${student.name}`}
                 className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 text-slate-700 dark:text-slate-200 text-xs font-semibold transition"
               >
                 <Mail size={16} />
-                <span>{school.contactEmail}</span>
+                <span>{school.contactEmail || school.professionalEmail || school.managerEmail}</span>
               </a>
             )}
 
-            {school.contactPhone && (
+            {(school.contactPhone || school.phone || school.managerPhone) && (
               <a
-                href={`tel:${school.contactPhone}`}
+                href={`tel:${school.contactPhone || school.phone || school.managerPhone}`}
                 className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 text-slate-700 dark:text-slate-200 text-xs font-semibold transition"
               >
                 <Phone size={16} />
-                <span>{school.contactPhone}</span>
+                <span>{school.contactPhone || school.phone || school.managerPhone}</span>
               </a>
             )}
           </div>

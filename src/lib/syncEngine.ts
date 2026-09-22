@@ -10,6 +10,7 @@ import {
   GlobalPlatformConfig,
   Notification,
   ActivityLog,
+  Announcement,
 } from "../types";
 
 /**
@@ -268,4 +269,78 @@ export function createSystemNotification(params: {
     createdAt: new Date().toISOString(),
     linkUrl: params.linkUrl,
   };
+}
+
+/**
+ * Evaluates subscription expiration thresholds:
+ * 1. At <= 5 days before the end of a student's subscription,
+ *    the system sends an urgent alert message to the student's school.
+ * 2. At <= 5 days before the end of a school's subscription,
+ *    the system sends an urgent alert message to the Super Admin.
+ */
+export function checkAndGenerateSubscriptionExpiryAlerts(
+  schools: School[],
+  students: Student[],
+  existingAnnouncements: Announcement[] = []
+): Announcement[] {
+  const newAnnouncements: Announcement[] = [];
+  const existingIds = new Set(existingAnnouncements.map((a) => a.id));
+
+  // 1. Student expiration check (<= 5 days) -> Notify School
+  for (const student of students) {
+    if (student.status === "archived" || student.status === "blocked") continue;
+    const daysLeft = computeDaysRemaining(student.endDate);
+    if (daysLeft <= 5 && daysLeft >= 0) {
+      const annId = `ann-expiry-student-${student.id}-${student.endDate}`;
+      if (!existingIds.has(annId)) {
+        const school = schools.find((s) => s.id === student.schoolId);
+        const schoolName = school?.name || "Votre école";
+        newAnnouncements.push({
+          id: annId,
+          title: `⚠️ Échéance Abonnement Élève (J-${daysLeft}) : ${student.name}`,
+          titleFr: `⚠️ Échéance Abonnement Élève (J-${daysLeft}) : ${student.name}`,
+          titleEn: `⚠️ Student Subscription Expiry Warning (${daysLeft}d left): ${student.name}`,
+          content: `L'abonnement de l'élève ${student.name} (Niveau ${student.level}) se termine dans ${daysLeft} jour(s) (date de fin : ${student.endDate}). Pensez à renouveler son inscription pour assurer la continuité de son cursus linguistique chez ${schoolName}.`,
+          contentFr: `L'abonnement de l'élève ${student.name} (Niveau ${student.level}) se termine dans ${daysLeft} jour(s) (date de fin : ${student.endDate}). Pensez à renouveler son inscription pour assurer la continuité de son cursus linguistique chez ${schoolName}.`,
+          contentEn: `Student ${student.name} (Level ${student.level}) subscription expires in ${daysLeft} day(s) (end date: ${student.endDate}). Please renew their enrollment to ensure learning continuity at ${schoolName}.`,
+          target: "specific_school",
+          targetSchoolId: student.schoolId,
+          priority: "urgent",
+          createdAt: new Date().toISOString(),
+          authorName: "Système d'Alertes Licences",
+          isActive: true,
+          readCount: 0,
+        });
+      }
+    }
+  }
+
+  // 2. School expiration check (<= 5 days) -> Notify Super Admin
+  for (const school of schools) {
+    if (school.status === "archived" || school.status === "blocked") continue;
+    const daysLeft = computeDaysRemaining(school.endDate);
+    if (daysLeft <= 5 && daysLeft >= 0) {
+      const annId = `ann-expiry-school-${school.id}-${school.endDate}`;
+      if (!existingIds.has(annId)) {
+        newAnnouncements.push({
+          id: annId,
+          title: `🚨 Alerte Fin d'Abonnement École (J-${daysLeft}) : ${school.name}`,
+          titleFr: `🚨 Alerte Fin d'Abonnement École (J-${daysLeft}) : ${school.name}`,
+          titleEn: `🚨 School Contract Expiry Warning (${daysLeft}d left): ${school.name}`,
+          content: `L'abonnement SaaS de l'école partenaire "${school.name}" arrive à échéance dans ${daysLeft} jour(s) (le ${school.endDate}). Contact Direction : ${school.managerName || "Directeur"} (${school.managerEmail || school.professionalEmail || "Email non renseigné"}). Émettez la facture de renouvellement ou contactez l'établissement.`,
+          contentFr: `L'abonnement SaaS de l'école partenaire "${school.name}" arrive à échéance dans ${daysLeft} jour(s) (le ${school.endDate}). Contact Direction : ${school.managerName || "Directeur"} (${school.managerEmail || school.professionalEmail || "Email non renseigné"}). Émettez la facture de renouvellement ou contactez l'établissement.`,
+          contentEn: `The SaaS subscription for partner school "${school.name}" expires in ${daysLeft} day(s) (on ${school.endDate}). Manager: ${school.managerName || "Manager"} (${school.managerEmail || school.professionalEmail || "No email"}). Prepare contract renewal.`,
+          target: "super_admin",
+          targetSchoolId: school.id,
+          priority: "urgent",
+          createdAt: new Date().toISOString(),
+          authorName: "Système de Facturation & Licences",
+          isActive: true,
+          readCount: 0,
+        });
+      }
+    }
+  }
+
+  return newAnnouncements;
 }

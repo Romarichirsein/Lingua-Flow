@@ -159,7 +159,7 @@ export function parseVideoSource(rawUrl: string): ParsedVideoInfo {
 }
 
 /**
- * Pre-validated high-speed demo video presets for German and Italian courses
+ * Pre-validated high-speed sample video presets for German and Italian courses
  */
 export const SAMPLE_VIDEO_PRESETS = [
   {

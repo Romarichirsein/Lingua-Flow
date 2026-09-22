@@ -9,7 +9,7 @@ import {
   CheckCircle2,
   AlertCircle,
   RotateCcw,
-  Sparkles,
+  Play,
   Award,
   BookOpen,
   ArrowRight,
@@ -206,7 +206,7 @@ export const StudentEvaluationsTab: React.FC<StudentEvaluationsTabProps> = ({
                   variant={isPassed ? "emerald" : "primary"}
                   size="sm"
                   onClick={() => handleStartQuiz(les)}
-                  icon={isPassed ? <RotateCcw size={14} /> : <Sparkles size={14} />}
+                  icon={isPassed ? <RotateCcw size={14} /> : <Play size={14} />}
                 >
                   {isPassed ? (locale === "en" ? "Retry Quiz" : "Recommencer") : (locale === "en" ? "Start Quiz" : "Lancer le quiz")}
                 </NeonButton>
@@ -218,15 +218,15 @@ export const StudentEvaluationsTab: React.FC<StudentEvaluationsTabProps> = ({
 
       {/* QUIZ RUNNER MODAL */}
       {activeQuizLesson && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
-          <div className="bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 rounded-3xl p-6 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto space-y-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-xs">
+          <div className="bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 rounded-3xl p-4 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto space-y-6 shadow-2xl my-auto">
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
-              <div>
+              <div className="min-w-0">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-500">
                   {locale === "en" ? "Validation Quiz" : "Quiz de Validation"}
                 </span>
-                <h3 className="font-black text-lg text-slate-900 dark:text-white">
+                <h3 className="font-black text-base sm:text-lg text-slate-900 dark:text-white truncate">
                   {activeQuizLesson.title}
                 </h3>
               </div>
@@ -234,7 +234,7 @@ export const StudentEvaluationsTab: React.FC<StudentEvaluationsTabProps> = ({
               <button
                 type="button"
                 onClick={() => setActiveQuizLesson(null)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer shrink-0"
               >
                 <X size={20} />
               </button>
@@ -303,9 +303,9 @@ export const StudentEvaluationsTab: React.FC<StudentEvaluationsTabProps> = ({
             </div>
 
             {/* Modal Actions */}
-            <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
               {quizSubmitted && quizScore !== null ? (
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                   <motion.div
                     variants={quizScore >= (activeQuizLesson.passingScorePercent || 70) ? quizSuccess : undefined}
                     initial="hidden"
@@ -338,11 +338,11 @@ export const StudentEvaluationsTab: React.FC<StudentEvaluationsTabProps> = ({
                 <div />
               )}
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 self-end sm:self-auto">
                 <button
                   type="button"
                   onClick={() => setActiveQuizLesson(null)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-white/5 cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-white/5 cursor-pointer"
                 >
                   {locale === "en" ? "Close" : "Fermer"}
                 </button>

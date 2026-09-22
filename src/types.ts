@@ -8,7 +8,7 @@ export type ThemeMode = "light" | "dark" | "system";
 
 export type EntityStatus = "active" | "suspended" | "blocked" | "expired" | "archived" | "deleted";
 
-export type CEFRLevel = "A1" | "A2" | "B1" | "B2" | "C1";
+export type CEFRLevel = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
 
 export interface UserPreferences {
   locale: UILocale;
@@ -41,12 +41,20 @@ export interface School {
   secondaryColor: string;
   professionalEmail?: string;
   phone?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  contactPerson?: string;
+  website?: string;
+  whatsappNumber?: string;
+  whatsappWelcomeTemplate?: string;
   address?: string;
   city?: string;
   country?: string;
   managerName: string;
   managerEmail: string;
   managerPhone?: string;
+  username?: string; // Credentials set by Super Admin
+  password?: string; // Password set by Super Admin for the School
   startDate: string; // ISO format or YYYY-MM-DD
   endDate: string;
   status: EntityStatus;
@@ -77,18 +85,25 @@ export interface Student {
   schoolName?: string;
   name: string;
   email: string;
+  username?: string; // Credentials set by School Admin
+  password?: string; // Password set by School Admin for the Student
   phone?: string;
+  whatsappNumber?: string;
   avatar?: string;
   enrolledProgramId?: string;
   level: CEFRLevel;
   startDate: string;
   endDate: string;
+  accessStartDate?: string;
+  enrolledAt?: string;
+  expiresAt?: string;
   status: EntityStatus;
   suspensionReason?: string;
   progressPercent: number;
   lastActiveLessonId?: string;
   completedLessons: string[]; // lesson ids
   lastLoginDate?: string;
+  lastLoginAt?: string;
   createdAt?: string;
   createdBy?: string;
   updatedBy?: string;
@@ -294,7 +309,7 @@ export interface Announcement {
   content: string;
   contentFr?: string;
   contentEn?: string;
-  target: "all" | "schools" | "students" | "specific_school";
+  target: "all" | "schools" | "students" | "specific_school" | "super_admin";
   targetSchoolId?: string;
   priority: "info" | "success" | "warning" | "urgent";
   createdAt: string;

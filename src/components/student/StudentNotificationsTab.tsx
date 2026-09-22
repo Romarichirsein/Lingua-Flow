@@ -6,7 +6,7 @@ import {
   Bell,
   CheckCircle2,
   Calendar,
-  Sparkles,
+  PenTool,
   BookOpen,
   MessageSquare,
   AlertTriangle,
@@ -21,7 +21,7 @@ interface NotificationItem {
   message: string;
   date: string;
   read: boolean;
-  actionTab?: "courses" | "writing" | "chat" | "profile";
+  actionTab?: "courses" | "chat" | "profile" | "evaluations";
 }
 
 interface StudentNotificationsTabProps {
@@ -29,7 +29,7 @@ interface StudentNotificationsTabProps {
   school: School;
   locale: UILocale;
   announcements: Announcement[];
-  onNavigateTab: (tab: "courses" | "writing" | "chat" | "profile") => void;
+  onNavigateTab: (tab: "courses" | "chat" | "profile" | "evaluations") => void;
 }
 
 export const StudentNotificationsTab: React.FC<StudentNotificationsTabProps> = ({
@@ -88,13 +88,13 @@ export const StudentNotificationsTab: React.FC<StudentNotificationsTabProps> = (
     {
       id: "notif-3",
       type: "ai",
-      title: locale === "en" ? "AI Writing Assistant Available" : "Assistant Rédaction IA disponible",
+      title: locale === "en" ? "LinguaFlow AI Tutor Available" : "Tuteur IA LinguaFlow disponible",
       message: locale === "en"
-        ? "Practice writing immersion texts and receive immediate CEFR-compliant feedback."
-        : "Entraînez-vous à rédiger des textes en immersion et recevez un retour immédiat conforme au standard CECRL.",
+        ? "Converse in immersion with LinguaFlow AI and get instant feedback on cases, grammar and pronunciation."
+        : "Échangez en immersion avec LinguaFlow AI et obtenez des explications instantanées sur les cas, déclinaisons et tournures.",
       date: locale === "en" ? "3 days ago" : "Il y a 3 jours",
       read: true,
-      actionTab: "writing",
+      actionTab: "chat",
     },
     {
       id: "notif-4",
@@ -195,7 +195,7 @@ export const StudentNotificationsTab: React.FC<StudentNotificationsTabProps> = (
                 case "lesson":
                   return <BookOpen size={18} className="text-indigo-500" />;
                 case "ai":
-                  return <Sparkles size={18} className="text-cyan-500" />;
+                  return <PenTool size={18} className="text-cyan-500" />;
                 case "school":
                   return <MessageSquare size={18} className="text-emerald-500" />;
                 default:

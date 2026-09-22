@@ -20,7 +20,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   FileText,
-  Sparkles,
+  PenTool,
   RefreshCw,
   ExternalLink,
   MessageCircle,
@@ -28,6 +28,13 @@ import {
   GraduationCap,
   Layers,
   ChevronRight,
+  Key,
+  Lock,
+  Copy,
+  Check,
+  Eye,
+  EyeOff,
+  Send,
 } from "lucide-react";
 
 interface SchoolStudentDetailModalProps {
@@ -42,6 +49,7 @@ interface SchoolStudentDetailModalProps {
   onExtendAccess: (student: Student, months: number) => void;
   onResetProgress?: (student: Student) => void;
   onSelectStudentTab?: (studentId: string) => void;
+  onUpdateStudent?: (student: Student) => void;
 }
 
 export const SchoolStudentDetailModal: React.FC<SchoolStudentDetailModalProps> = ({
@@ -56,9 +64,14 @@ export const SchoolStudentDetailModal: React.FC<SchoolStudentDetailModalProps> =
   onExtendAccess,
   onResetProgress,
   onSelectStudentTab,
+  onUpdateStudent,
 }) => {
-  const [activeTab, setActiveTab] = useState<"overview" | "curriculum" | "quizzes" | "ai_writing">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "curriculum" | "quizzes" | "ai_writing" | "credentials">("overview");
   const [extendMonths, setExtendMonths] = useState<number>(3);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
   const isEn = locale === "en";
 
   if (!student) return null;
@@ -85,7 +98,7 @@ export const SchoolStudentDetailModal: React.FC<SchoolStudentDetailModalProps> =
       isOpen={isOpen}
       onClose={onClose}
       title={`${isEn ? "Student Dossier" : "Fiche Pédagogique Élève"} • ${student.name}`}
-      size="xl"
+      maxWidth="4xl"
     >
       <div className="space-y-6">
         {/* Top Student Identity Header */}
@@ -193,11 +206,23 @@ export const SchoolStudentDetailModal: React.FC<SchoolStudentDetailModalProps> =
                 : "text-slate-500 hover:text-slate-900 dark:text-white/60 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5"
             }`}
           >
-            <Sparkles size={13} className="text-[#00D9FF]" />
-            <span>{isEn ? "AI Homework Corrections" : "Devoirs & Rédactions IA"}</span>
+            <PenTool size={13} className="text-[#00D9FF]" />
+            <span>{isEn ? "Homework Corrections" : "Devoirs & Rédactions"}</span>
             <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-[#00D9FF]/20 text-[#00D9FF] font-mono">
               {studentSubmissions.length}
             </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("credentials")}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+              activeTab === "credentials"
+                ? "bg-[#6D5DFC] text-white shadow-sm"
+                : "text-slate-500 hover:text-slate-900 dark:text-white/60 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5"
+            }`}
+          >
+            <Key size={13} className="text-[#20E3A2]" />
+            <span>{isEn ? "Credentials & Access" : "Identifiants & Accès"}</span>
           </button>
         </div>
 
@@ -426,14 +451,14 @@ export const SchoolStudentDetailModal: React.FC<SchoolStudentDetailModalProps> =
           <div className="space-y-4">
             {studentSubmissions.length === 0 ? (
               <div className="py-12 text-center text-slate-500 dark:text-white/50 text-xs bg-slate-50 dark:bg-white/5 rounded-2xl border border-dashed border-slate-200 dark:border-white/10">
-                <Sparkles size={24} className="mx-auto mb-2 text-[#00D9FF] opacity-60" />
+                <PenTool size={24} className="mx-auto mb-2 text-[#00D9FF] opacity-60" />
                 <p className="font-bold text-slate-700 dark:text-white/80">
-                  {isEn ? "No AI writing submissions yet." : "Aucune rédaction soumise pour le moment."}
+                  {isEn ? "No writing submissions yet." : "Aucune rédaction soumise pour le moment."}
                 </p>
                 <p className="text-[11px] text-slate-400 dark:text-white/40 mt-1">
                   {isEn
-                    ? "When the student submits essays in the AI Assistant, Gemini corrections and scores will appear here."
-                    : "Dès que l'élève soumettra des compositions dans l'assistant IA, les analyses Gemini s'afficheront ici."}
+                    ? "When the student submits essays in the writing studio, corrections and scores will appear here."
+                    : "Dès que l'élève soumettra des compositions dans l'atelier de rédaction, les analyses s'afficheront ici."}
                 </p>
               </div>
             ) : (
@@ -479,6 +504,162 @@ export const SchoolStudentDetailModal: React.FC<SchoolStudentDetailModalProps> =
                     )}
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab 4: Credentials & Access */}
+        {activeTab === "credentials" && (
+          <div className="space-y-4">
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-[#20E3A2]/10 text-[#20E3A2] flex items-center justify-center font-bold">
+                    <Key size={16} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-extrabold text-slate-900 dark:text-white">
+                      {isEn ? "Student Login Credentials" : "Identifiants de Connexion de l'Élève"}
+                    </h4>
+                    <p className="text-[11px] text-slate-500 dark:text-white/60">
+                      {isEn
+                        ? "Authentication information required for the student to sign in to their learning portal."
+                        : "Informations nécessaires à l'élève pour se connecter à son espace personnel."}
+                    </p>
+                  </div>
+                </div>
+
+                {(student.phone || (student as any).whatsappNumber) && (
+                  <a
+                    href={`https://wa.me/${(student.phone || (student as any).whatsappNumber || "").replace(/[^0-9]/g, "")}?text=Bonjour%20${encodeURIComponent(student.name)},%20voici%20vos%20accès%20pour%20la%20plateforme%20${encodeURIComponent(school.name)}%20:%0A%0A- Identifiant : ${encodeURIComponent(student.username || student.email)}%0A- Mot de passe : ${encodeURIComponent(student.password || "student123")}%0A- Espace de cours : ${encodeURIComponent(window.location.origin + "/#/connexion")}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 text-xs font-bold transition flex items-center gap-1.5"
+                  >
+                    <Send size={13} />
+                    <span>{isEn ? "Share via WhatsApp" : "Envoyer par WhatsApp"}</span>
+                  </a>
+                )}
+              </div>
+
+              {/* Login Fields */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                <div className="p-3.5 rounded-xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 space-y-1">
+                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-400">
+                    <span>{isEn ? "Username / Login ID" : "Identifiant / Utilisateur"}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(student.username || student.email);
+                        setCopiedField("username");
+                        setTimeout(() => setCopiedField(null), 2000);
+                      }}
+                      className="text-slate-400 hover:text-[#00D9FF] flex items-center gap-1 transition cursor-pointer"
+                    >
+                      {copiedField === "username" ? <Check size={12} className="text-[#20E3A2]" /> : <Copy size={12} />}
+                      <span>{copiedField === "username" ? (isEn ? "Copied" : "Copié") : (isEn ? "Copy" : "Copier")}</span>
+                    </button>
+                  </div>
+                  <div className="text-sm font-black font-mono text-slate-900 dark:text-white">
+                    {student.username || student.email}
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 space-y-1">
+                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-400">
+                    <span>{isEn ? "Password" : "Mot de passe"}</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
+                        title={showPassword ? "Masquer" : "Afficher"}
+                      >
+                        {showPassword ? <EyeOff size={13} /> : <Eye size={13} />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(student.password || "student123");
+                          setCopiedField("password");
+                          setTimeout(() => setCopiedField(null), 2000);
+                        }}
+                        className="text-slate-400 hover:text-[#00D9FF] flex items-center gap-1 transition cursor-pointer"
+                      >
+                        {copiedField === "password" ? <Check size={12} className="text-[#20E3A2]" /> : <Copy size={12} />}
+                        <span>{copiedField === "password" ? (isEn ? "Copied" : "Copié") : (isEn ? "Copy" : "Copier")}</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div className="text-sm font-black font-mono text-slate-900 dark:text-white">
+                    {showPassword ? (student.password || "student123") : "••••••••••••"}
+                  </div>
+                </div>
+              </div>
+
+              {/* Portal URL */}
+              <div className="p-3.5 rounded-xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 space-y-1">
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-400">
+                  <span>{isEn ? "Portal URL" : "Lien de connexion de la plateforme"}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/#/connexion`);
+                      setCopiedField("url");
+                      setTimeout(() => setCopiedField(null), 2000);
+                    }}
+                    className="text-slate-400 hover:text-[#00D9FF] flex items-center gap-1 transition cursor-pointer"
+                  >
+                    {copiedField === "url" ? <Check size={12} className="text-[#20E3A2]" /> : <Copy size={12} />}
+                    <span>{copiedField === "url" ? (isEn ? "Copied" : "Copié") : (isEn ? "Copy" : "Copier")}</span>
+                  </button>
+                </div>
+                <div className="text-xs font-mono text-[#6D5DFC] dark:text-[#a399ff] truncate">
+                  {window.location.origin}/#/connexion
+                </div>
+              </div>
+            </div>
+
+            {/* Reset / Change Password Section */}
+            {onUpdateStudent && (
+              <div className="p-4 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 space-y-3">
+                <h4 className="text-xs font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Lock size={14} className="text-[#6D5DFC]" />
+                  <span>{isEn ? "Define or Reset Password" : "Modifier ou Réinitialiser le Mot de Passe"}</span>
+                </h4>
+
+                {passwordSuccess && (
+                  <div className="p-2.5 rounded-xl bg-[#20E3A2]/10 border border-[#20E3A2]/30 text-[#20E3A2] text-xs font-bold flex items-center gap-2">
+                    <Check size={14} />
+                    <span>{isEn ? "Student password successfully updated!" : "Mot de passe de l'élève mis à jour avec succès !"}</span>
+                  </div>
+                )}
+
+                <div className="flex flex-col sm:flex-row items-center gap-2">
+                  <input
+                    type="text"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder={isEn ? "Enter new password (e.g. eleve2025!)" : "Nouveau mot de passe (ex: pass2025!)"}
+                    className="w-full sm:flex-1 px-3 py-2 rounded-xl bg-slate-50 dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-[#00D9FF]"
+                  />
+                  <NeonButton
+                    type="button"
+                    variant="cyan"
+                    size="sm"
+                    disabled={!newPassword.trim()}
+                    onClick={() => {
+                      if (!newPassword.trim()) return;
+                      onUpdateStudent({ ...student, password: newPassword.trim() });
+                      setPasswordSuccess(true);
+                      setNewPassword("");
+                      setTimeout(() => setPasswordSuccess(false), 3000);
+                    }}
+                  >
+                    {isEn ? "Save Password" : "Enregistrer"}
+                  </NeonButton>
+                </div>
               </div>
             )}
           </div>

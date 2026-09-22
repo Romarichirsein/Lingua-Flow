@@ -6,8 +6,8 @@
     <title>LinguaFlow - Plateforme E-Learning B2B Multi-Écoles (Allemand & Italien)</title>
     <meta name="application-name" content="LinguaFlow" />
     <meta name="apple-mobile-web-app-title" content="LinguaFlow" />
-    <meta name="description" content="LinguaFlow : Plateforme SaaS E-Learning B2B pour centres de langues (Allemand & Italien). Espaces isolés Super Admin, Directeurs d'Écoles et Élèves, vidéos filigranées, correcteur d'écriture IA et tuteur conversationnel." />
-    <meta name="keywords" content="LinguaFlow, LMS B2B, E-Learning, Allemand, Italien, Plateforme langues, Tuteur IA, Gemini, CEFR, A1, A2, B1, B2" />
+    <meta name="description" content="LinguaFlow : Plateforme SaaS E-Learning B2B pour centres de langues (Allemand & Italien). Espaces isolés Super Admin, Directeurs d'Écoles et Élèves, vidéos filigranées, correcteur d'écriture IA et LinguaFlow AI, agent spécialisé dans les langues allemandes (DACH)." />
+    <meta name="keywords" content="LinguaFlow, LinguaFlow AI, LMS B2B, E-Learning, Allemand, DACH, Italien, Plateforme langues, Tuteur IA, Gemini, CEFR, A1, A2, B1, B2, C1, C2" />
     <meta name="author" content="LinguaFlow" />
     <meta name="robots" content="index, follow" />
     
@@ -70,6 +70,52 @@
             } catch (e) {
               // If defineProperty fails, window.fetch remains default
             }
+          }
+        } catch (_) {}
+      })();
+
+      // Circular structure protection: Prevents unhandled TypeError when serializing DOM nodes or cyclical structures
+      (function() {
+        try {
+          if (typeof window !== "undefined" && typeof JSON !== "undefined") {
+            const nativeStringify = JSON.stringify;
+
+            function createSafeReplacer(customReplacer) {
+              const seen = new WeakSet();
+              return function(key, val) {
+                let value = val;
+                if (typeof customReplacer === "function") {
+                  value = customReplacer.call(this, key, val);
+                }
+                if (value !== null && typeof value === "object") {
+                  if (typeof Node !== "undefined" && value instanceof Node) {
+                    return "[DOM " + (value.nodeName || "Node") + "]";
+                  }
+                  if (typeof Event !== "undefined" && value instanceof Event) {
+                    return "[Event " + (value.type || "") + "]";
+                  }
+                  if (typeof Window !== "undefined" && value instanceof Window) {
+                    return "[Window]";
+                  }
+                  if (seen.has(value)) {
+                    return "[Circular]";
+                  }
+                  seen.add(value);
+                }
+                return value;
+              };
+            }
+
+            JSON.stringify = function(value, replacer, space) {
+              try {
+                return nativeStringify.call(JSON, value, replacer, space);
+              } catch (err) {
+                if (err && err.message && (err.message.includes("circular") || err.message.includes("cyclic"))) {
+                  return nativeStringify.call(JSON, value, createSafeReplacer(replacer), space);
+                }
+                throw err;
+              }
+            };
           }
         } catch (_) {}
       })();

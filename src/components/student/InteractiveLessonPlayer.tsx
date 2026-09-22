@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence, type Variants } from "motion/react";
 import {
   Lesson,
   Student,
@@ -28,7 +28,6 @@ import {
   Award,
   Shield,
   Clock,
-  Sparkles,
   ChevronRight,
   ChevronLeft,
   RotateCcw,
@@ -52,13 +51,13 @@ interface InteractiveLessonPlayerProps {
 }
 
 // Framer motion variants for lesson transition
-const lessonTransitionVariants = {
+const lessonTransitionVariants: Variants = {
   initial: { opacity: 0, x: 25, scale: 0.98 },
   animate: {
     opacity: 1,
     x: 0,
     scale: 1,
-    transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] },
+    transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] as const },
   },
   exit: {
     opacity: 0,
@@ -68,7 +67,7 @@ const lessonTransitionVariants = {
   },
 };
 
-const tabContentVariants = {
+const tabContentVariants: Variants = {
   hidden: { opacity: 0, y: 10 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.28 } },
   exit: { opacity: 0, y: -6, transition: { duration: 0.18 } },
@@ -314,13 +313,13 @@ export const InteractiveLessonPlayer: React.FC<InteractiveLessonPlayerProps> = (
               </h2>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {/* Previous / Next buttons */}
               {hasPrevLesson && onPrevLesson && (
                 <button
                   type="button"
                   onClick={onPrevLesson}
-                  className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer"
+                  className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer min-h-[38px]"
                   title={locale === "en" ? "Previous lesson" : "Leçon précédente"}
                 >
                   <ChevronLeft size={15} />
@@ -329,7 +328,7 @@ export const InteractiveLessonPlayer: React.FC<InteractiveLessonPlayerProps> = (
               )}
 
               {isAlreadyCompleted ? (
-                <div className="flex items-center gap-2 rounded-2xl bg-emerald-500/10 px-3.5 py-2 text-xs font-bold text-emerald-500 border border-emerald-500/30">
+                <div className="flex items-center gap-2 rounded-2xl bg-emerald-500/10 px-3.5 py-2 text-xs font-bold text-emerald-500 border border-emerald-500/30 min-h-[38px]">
                   <CheckCircle2 size={16} />
                   <span>{t.student.validated}</span>
                 </div>
@@ -348,7 +347,7 @@ export const InteractiveLessonPlayer: React.FC<InteractiveLessonPlayerProps> = (
                 <button
                   type="button"
                   onClick={onNextLesson}
-                  className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-500 transition cursor-pointer shadow-sm"
+                  className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-500 transition cursor-pointer shadow-sm min-h-[38px]"
                   title={locale === "en" ? "Next lesson" : "Leçon suivante"}
                 >
                   <span className="hidden sm:inline">{locale === "en" ? "Next" : "Suivante"}</span>
@@ -359,7 +358,7 @@ export const InteractiveLessonPlayer: React.FC<InteractiveLessonPlayerProps> = (
           </div>
 
           {/* Interactive Sub-Tabs with Framer Motion indicators */}
-          <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2 overflow-x-auto">
+          <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2 overflow-x-auto scrollbar-none no-scrollbar">
             <button
               type="button"
               onClick={() => setActiveTab("video")}
@@ -466,65 +465,18 @@ export const InteractiveLessonPlayer: React.FC<InteractiveLessonPlayerProps> = (
                     setShowDrmWarning(true);
                     setTimeout(() => setShowDrmWarning(false), 4000);
                   }}
-                  className="relative aspect-video w-full overflow-hidden rounded-3xl bg-slate-950 shadow-2xl border border-slate-800 select-none group"
+                  className="relative w-full"
                 >
-                  {/* Video Player */}
-                  {isYouTubeUrl ? (
-                    <iframe
-                      src={getYouTubeEmbedUrl(lesson.videoUrl)}
-                      className="h-full w-full border-0 pointer-events-auto"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope"
-                      title={lesson.title}
-                    />
-                  ) : (
-                    <video
-                      src={lesson.videoUrl}
-                      poster={lesson.videoPoster}
-                      controls
-                      controlsList="nodownload nofullscreen noremoteplayback"
-                      disablePictureInPicture
-                      playsInline
-                      onContextMenu={(e) => {
-                        e.preventDefault();
-                        setShowDrmWarning(true);
-                        setTimeout(() => setShowDrmWarning(false), 4000);
-                      }}
-                      className="h-full w-full object-contain bg-black select-none"
-                    />
-                  )}
-
-                  {/* DYNAMIC ANTI-LEAK MOVING WATERMARK OVERLAY */}
-                  <div className="pointer-events-none absolute inset-0 z-20 flex flex-col justify-between p-4 sm:p-6 opacity-35 select-none overflow-hidden">
-                    <div className="flex items-center justify-between text-[10px] font-mono text-white/90 tracking-widest uppercase">
-                      <span>
-                        {school.name} • {student.name}
-                      </span>
-                      <span>{student.email}</span>
-                    </div>
-
-                    {/* Floating Shifting Watermark */}
-                    <div
-                      style={{
-                        transform: `translate(${watermarkOffset.x}px, ${watermarkOffset.y}px)`,
-                        transition: "transform 4s ease-in-out",
-                      }}
-                      className="flex items-center justify-center"
-                    >
-                      <div className="rounded-xl bg-black/60 px-3.5 py-1.5 backdrop-blur-xs text-center border border-cyan-500/30 shadow-lg">
-                        <p className="text-[10px] font-mono font-bold text-cyan-300">
-                          CONFIDENTIAL DRM • {student.id}
-                        </p>
-                        <p className="text-[9px] font-mono text-white/80">
-                          {currentTimeStr}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between text-[9px] font-mono text-white/70">
-                      <span>PROTECTED STREAM • DOWNLOAD PROHIBITED</span>
-                      <span>{currentTimeStr}</span>
-                    </div>
-                  </div>
+                  <UniversalVideoPlayer
+                    videoUrl={lesson.videoUrl}
+                    poster={lesson.videoPoster}
+                    title={lesson.title}
+                    watermarkText={`${school.name} • ${student.name}`}
+                    watermarkEmail={student.email}
+                    watermarkSessionId={student.id}
+                    showDrmWatermark={true}
+                    className="shadow-2xl rounded-3xl"
+                  />
                 </div>
 
                 {/* Lesson Summary and DRM footer */}
@@ -802,12 +754,12 @@ export const InteractiveLessonPlayer: React.FC<InteractiveLessonPlayerProps> = (
                   })}
                 </div>
 
-                <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
                   {quizSubmitted ? (
                     <button
                       type="button"
                       onClick={handleRetryQuiz}
-                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+                      className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-slate-800 transition min-h-[40px] cursor-pointer"
                     >
                       <RotateCcw size={14} />
                       <span>{locale === "en" ? "Retry Quiz" : "Recommencer le quiz"}</span>
@@ -822,7 +774,7 @@ export const InteractiveLessonPlayer: React.FC<InteractiveLessonPlayerProps> = (
                       size="sm"
                       onClick={handleSubmitQuiz}
                       disabled={Object.keys(selectedAnswers).length < totalQuiz}
-                      icon={<Sparkles size={15} />}
+                      icon={<CheckCircle2 size={15} />}
                     >
                       {t.student.submitQuiz}
                     </NeonButton>

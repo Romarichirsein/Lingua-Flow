@@ -12,11 +12,17 @@ import {
 export const INITIAL_PLATFORM_CONFIG: GlobalPlatformConfig = {
   superAdminWhatsapp: "https://wa.me/33612345678",
   platformName: "LinguaFlow SaaS",
-  supportEmail: "support@linguaflow.io",
+  supportEmail: "linguaflowadmin@gmail.com",
   primaryBrandColor: "#6D5DFC",
   aiCorrectionStrictness: "standard",
   aiCorrectionTemperature: 0.3,
   maintenanceMode: false,
+};
+
+export const getRelativeDateStr = (daysFromNow: number): string => {
+  const d = new Date();
+  d.setDate(d.getDate() + daysFromNow);
+  return d.toISOString().split("T")[0];
 };
 
 export const INITIAL_SCHOOLS: School[] = [
@@ -36,6 +42,8 @@ export const INITIAL_SCHOOLS: School[] = [
     managerName: "Klaus Weber",
     managerEmail: "klaus@berlin-sprachzentrum.de",
     managerPhone: "+49 151 23456789",
+    username: "klaus.weber",
+    password: "berlin2026",
     startDate: "2026-01-01",
     endDate: "2026-12-31",
     status: "active",
@@ -61,6 +69,8 @@ export const INITIAL_SCHOOLS: School[] = [
     managerName: "Chiara Rossi",
     managerEmail: "chiara@milanolingua.it",
     managerPhone: "+39 345 1234567",
+    username: "chiara.rossi",
+    password: "milano2026",
     startDate: "2026-02-01",
     endDate: "2026-11-30",
     status: "active",
@@ -86,8 +96,10 @@ export const INITIAL_SCHOOLS: School[] = [
     managerName: "Stefan Gruber",
     managerEmail: "stefan@muenchen-kolleg.de",
     managerPhone: "+49 176 11223344",
+    username: "stefan.gruber",
+    password: "munchen2026",
     startDate: "2026-03-01",
-    endDate: "2026-09-30",
+    endDate: getRelativeDateStr(4),
     status: "active",
     whatsappSupportUrl: "https://wa.me/491761122334",
     studentQuota: 100,
@@ -111,6 +123,8 @@ export const INITIAL_SCHOOLS: School[] = [
     managerName: "Elena Moretti",
     managerEmail: "elena@dante-firenze.it",
     managerPhone: "+39 320 9988776",
+    username: "elena.moretti",
+    password: "firenze2026",
     startDate: "2026-01-15",
     endDate: "2026-08-30",
     status: "suspended",
@@ -136,6 +150,8 @@ export const INITIAL_SCHOOLS: School[] = [
     managerName: "Lukas Brandt",
     managerEmail: "lukas@sprachakademie-hamburg.de",
     managerPhone: "+49 160 9988776",
+    username: "lukas.brandt",
+    password: "hamburg2026",
     startDate: "2026-04-01",
     endDate: "2026-10-31",
     status: "active",
@@ -161,6 +177,8 @@ export const INITIAL_SCHOOLS: School[] = [
     managerName: "Marco Bellini",
     managerEmail: "marco@romalinguistico.it",
     managerPhone: "+39 338 5544332",
+    username: "marco.bellini",
+    password: "roma2026",
     startDate: "2025-09-01",
     endDate: "2026-03-01",
     status: "expired",
@@ -466,6 +484,8 @@ export const INITIAL_STUDENTS: Student[] = [
     schoolId: "school-berlin",
     name: "Romaric Hirsein",
     email: "romarichirsein@gmail.com",
+    username: "romaric.hirsein",
+    password: "romaric123",
     phone: "+237 690 11 22 33",
     avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
     enrolledProgramId: "prog-de-a1",
@@ -483,12 +503,14 @@ export const INITIAL_STUDENTS: Student[] = [
     schoolId: "school-berlin",
     name: "Sophie Laurent",
     email: "sophie.laurent@example.com",
+    username: "sophie.laurent",
+    password: "sophie123",
     phone: "+33 6 45 78 90 12",
     avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
     enrolledProgramId: "prog-de-a1",
     level: "A1",
     startDate: "2026-07-15",
-    endDate: "2026-09-15",
+    endDate: getRelativeDateStr(3),
     status: "active",
     progressPercent: 80,
     lastActiveLessonId: "les-de-2",
@@ -500,6 +522,8 @@ export const INITIAL_STUDENTS: Student[] = [
     schoolId: "school-milano",
     name: "Gianni Berti",
     email: "gianni.berti@example.it",
+    username: "gianni.berti",
+    password: "gianni123",
     phone: "+39 347 88 99 001",
     avatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80",
     enrolledProgramId: "prog-it-a1",
@@ -517,6 +541,8 @@ export const INITIAL_STUDENTS: Student[] = [
     schoolId: "school-milano",
     name: "Clara Dubois",
     email: "clara.dubois@example.fr",
+    username: "clara.dubois",
+    password: "clara123",
     phone: "+33 7 12 34 56 78",
     avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80",
     enrolledProgramId: "prog-it-a1",
@@ -533,48 +559,86 @@ export const INITIAL_STUDENTS: Student[] = [
 
 export const INITIAL_LOGS: ActivityLog[] = [
   {
-    id: "log-1",
-    timestamp: "2026-08-24T08:15:00Z",
-    actorRole: "super_admin",
-    actorName: "Super Admin",
+    id: "log-audit-berlin-1",
+    timestamp: new Date(Date.now() - 1000 * 60 * 25).toISOString(),
+    actorRole: "school_admin",
+    actorName: "Klaus Weber",
+    schoolId: "school-berlin",
     schoolName: "Berlin Sprachzentrum",
-    action: "Vérification quotas SaaS",
-    details: "Vérification automatique des quotas de bande passante et de vidéos.",
-    ipAddress: "192.168.1.1",
+    action: "Audit conformité des licences élèves",
+    details: "Contrôle trimestriel de sécurité : vérification des 250 quotas et conformité des accès actifs.",
+    ipAddress: "192.168.1.42",
     status: "success",
   },
   {
-    id: "log-2",
-    timestamp: "2026-08-24T07:45:00Z",
+    id: "log-audit-berlin-2",
+    timestamp: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
     actorRole: "student",
     actorName: "Romaric Hirsein",
+    schoolId: "school-berlin",
     schoolName: "Berlin Sprachzentrum",
-    action: "Validation Leçon",
-    details: "Leçon 'Dire bonjour & se présenter' validée avec quiz à 100%.",
+    action: "Validation Leçon & Quiz",
+    details: "Progression enregistrée sur la leçon Dire bonjour & se présenter (Score 100%).",
     ipAddress: "105.235.12.8",
     status: "success",
   },
   {
-    id: "log-3",
-    timestamp: "2026-08-23T18:20:00Z",
+    id: "log-audit-berlin-3",
+    timestamp: new Date(Date.now() - 1000 * 60 * 360).toISOString(),
     actorRole: "school_admin",
     actorName: "Klaus Weber",
+    schoolId: "school-berlin",
     schoolName: "Berlin Sprachzentrum",
-    action: "Mise à jour groupe WhatsApp",
-    details: "Lien du groupe d'entraide Allemand A1 mis à jour.",
+    action: "Mise à jour groupe WhatsApp promotion",
+    details: "Lien du groupe d entraide WhatsApp Allemand A1 synchronisé avec succès.",
     ipAddress: "84.112.90.14",
     status: "success",
   },
   {
-    id: "log-4",
-    timestamp: "2026-08-22T14:10:00Z",
+    id: "log-audit-berlin-4",
+    timestamp: new Date(Date.now() - 1000 * 60 * 1440).toISOString(),
+    actorRole: "school_admin",
+    actorName: "Klaus Weber",
+    schoolId: "school-berlin",
+    schoolName: "Berlin Sprachzentrum",
+    action: "Publication Cursus Deutsch A1",
+    details: "Validation pédagogique et déverrouillage des modules 1 et 2 pour la cohorte.",
+    ipAddress: "192.168.1.42",
+    status: "success",
+  },
+  {
+    id: "log-audit-milano-1",
+    timestamp: new Date(Date.now() - 1000 * 60 * 50).toISOString(),
+    actorRole: "school_admin",
+    actorName: "Chiara Rossi",
+    schoolId: "school-milano",
+    schoolName: "Milano Lingua Studio",
+    action: "Vérification sécurité & accès",
+    details: "Audit des comptes étudiants italiens. Quotas vérifiés et conformes (180 places).",
+    ipAddress: "192.168.2.15",
+    status: "success",
+  },
+  {
+    id: "log-audit-milano-2",
+    timestamp: new Date(Date.now() - 1000 * 60 * 240).toISOString(),
+    actorRole: "student",
+    actorName: "Gianni Berti",
+    schoolId: "school-milano",
+    schoolName: "Milano Lingua Studio",
+    action: "Validation Module Italien",
+    details: "Validation du module Primi Passi in Italiano avec assiduité 100%.",
+    ipAddress: "93.45.120.7",
+    status: "success",
+  },
+  {
+    id: "log-audit-admin-1",
+    timestamp: new Date(Date.now() - 1000 * 60 * 1800).toISOString(),
     actorRole: "super_admin",
     actorName: "Super Admin",
-    schoolName: "Firenze Accademia Dante",
-    action: "Suspension temporaire",
-    details: "Suspension pour mise à jour des conditions contractuelles.",
-    ipAddress: "192.168.1.1",
-    status: "warning",
+    action: "Surveillance Globale SaaS",
+    details: "Vérification automatisée de l infrastructure d IA, streaming vidéo et quotas partenaires.",
+    ipAddress: "127.0.0.1",
+    status: "success",
   },
 ];
 
@@ -627,14 +691,14 @@ export const INITIAL_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
 
 // LocalStorage helpers with automatic hydration
 const STORAGE_KEYS = {
-  SCHOOLS: "linguaflow_schools_v1",
-  STUDENTS: "linguaflow_students_v1",
-  PROGRAMS: "linguaflow_programs_v1",
-  LOGS: "linguaflow_logs_v1",
-  CONFIG: "linguaflow_config_v1",
-  AI_SUBMISSIONS: "linguaflow_ai_submissions_v1",
-  ANNOUNCEMENTS: "linguaflow_announcements_v1",
-  TEMPLATES: "linguaflow_templates_v1",
+  SCHOOLS: "linguaflow_schools_v3",
+  STUDENTS: "linguaflow_students_v3",
+  PROGRAMS: "linguaflow_programs_v3",
+  LOGS: "linguaflow_logs_v3",
+  CONFIG: "linguaflow_config_v3",
+  AI_SUBMISSIONS: "linguaflow_ai_submissions_v3",
+  ANNOUNCEMENTS: "linguaflow_announcements_v3",
+  TEMPLATES: "linguaflow_templates_v3",
 };
 
 export const getStoredData = () => {
@@ -648,21 +712,45 @@ export const getStoredData = () => {
     const announcements = localStorage.getItem(STORAGE_KEYS.ANNOUNCEMENTS);
     const templates = localStorage.getItem(STORAGE_KEYS.TEMPLATES);
 
-    const parsedSchools: School[] = schools ? JSON.parse(schools) : INITIAL_SCHOOLS;
-    const parsedStudents: Student[] = students ? JSON.parse(students) : INITIAL_STUDENTS;
-    const parsedPrograms: Program[] = programs ? JSON.parse(programs) : INITIAL_PROGRAMS;
-    const parsedLogs: ActivityLog[] = logs ? JSON.parse(logs) : INITIAL_LOGS;
+    const rawSchools = schools ? JSON.parse(schools) : null;
+    const parsedSchools: School[] = (Array.isArray(rawSchools) && rawSchools.length > 0) ? rawSchools : INITIAL_SCHOOLS;
+
+    const rawStudents = students ? JSON.parse(students) : null;
+    const parsedStudents: Student[] = (Array.isArray(rawStudents) && rawStudents.length > 0) ? rawStudents : INITIAL_STUDENTS;
+
+    const rawPrograms = programs ? JSON.parse(programs) : null;
+    const parsedPrograms: Program[] = (Array.isArray(rawPrograms) && rawPrograms.length > 0) ? rawPrograms : INITIAL_PROGRAMS;
+
+    const rawLogs = logs ? JSON.parse(logs) : null;
+    const parsedLogs: ActivityLog[] = (Array.isArray(rawLogs) && rawLogs.length > 0) ? rawLogs : INITIAL_LOGS;
     const parsedConfig: GlobalPlatformConfig = config ? JSON.parse(config) : INITIAL_PLATFORM_CONFIG;
     const parsedAiSubmissions: AIWritingSubmission[] = aiSubmissions ? JSON.parse(aiSubmissions) : [];
     const parsedAnnouncements: Announcement[] = announcements ? JSON.parse(announcements) : INITIAL_ANNOUNCEMENTS;
     const parsedTemplates: NotificationTemplate[] = templates ? JSON.parse(templates) : INITIAL_NOTIFICATION_TEMPLATES;
 
+    // Sanitize schools
+    const sanitizedSchools = (Array.isArray(parsedSchools) ? parsedSchools : INITIAL_SCHOOLS).map((sch) => {
+      const defaultUsername = sch.username || (sch.managerEmail ? sch.managerEmail.split("@")[0] : sch.slug || "school_admin");
+      const defaultPassword = sch.password || "school123";
+      return {
+        ...sch,
+        username: defaultUsername,
+        password: defaultPassword,
+      };
+    });
+
     // Sanitize students
-    const sanitizedStudents = (Array.isArray(parsedStudents) ? parsedStudents : INITIAL_STUDENTS).map((s) => ({
-      ...s,
-      completedLessons: Array.isArray(s.completedLessons) ? s.completedLessons : [],
-      progressPercent: typeof s.progressPercent === "number" ? s.progressPercent : 0,
-    }));
+    const sanitizedStudents = (Array.isArray(parsedStudents) ? parsedStudents : INITIAL_STUDENTS).map((s) => {
+      const defaultUsername = s.username || (s.email ? s.email.split("@")[0] : `student_${s.id}`);
+      const defaultPassword = s.password || "student123";
+      return {
+        ...s,
+        username: defaultUsername,
+        password: defaultPassword,
+        completedLessons: Array.isArray(s.completedLessons) ? s.completedLessons : [],
+        progressPercent: typeof s.progressPercent === "number" ? s.progressPercent : 0,
+      };
+    });
 
     // Sanitize programs
     const sanitizedPrograms = (Array.isArray(parsedPrograms) ? parsedPrograms : INITIAL_PROGRAMS).map((p) => ({
@@ -678,7 +766,7 @@ export const getStoredData = () => {
     }));
 
     return {
-      schools: Array.isArray(parsedSchools) ? parsedSchools : INITIAL_SCHOOLS,
+      schools: sanitizedSchools,
       students: sanitizedStudents,
       programs: sanitizedPrograms,
       logs: Array.isArray(parsedLogs) ? parsedLogs : INITIAL_LOGS,

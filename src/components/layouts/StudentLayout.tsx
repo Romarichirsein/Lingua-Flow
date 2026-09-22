@@ -7,23 +7,22 @@ import {
   LayoutDashboard,
   Layers,
   BookOpen,
-  Sparkles,
-  MessageSquare,
-  HelpCircle,
   Award,
   Bell,
   User,
   Copy,
   Check,
   MessageCircle,
+  FileCheck,
+  Sparkles,
 } from "lucide-react";
 import { SidebarTabs, TabDefinition } from "../common/SidebarTabs";
+import { SchoolLogo } from "../common/SchoolLogo";
 
 export type StudentTab =
   | "dashboard"
   | "programs"
   | "courses"
-  | "writing"
   | "chat"
   | "evaluations"
   | "progress"
@@ -54,6 +53,9 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({
   const t = translations[locale];
   const [copiedLink, setCopiedLink] = useState(false);
   const studentSlug = student.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  const computedProgressPercent = totalLessonsCount > 0
+    ? Math.min(100, Math.round((completedLessonsCount / totalLessonsCount) * 100))
+    : (student.progressPercent || 0);
 
   const tabs: TabDefinition<StudentTab>[] = [
     {
@@ -80,25 +82,20 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({
       badgeColor: "cyan",
     },
     {
-      id: "writing",
-      label: t.student.tabs.writing.label,
-      shortLabel: locale === "en" ? "AI Writing" : "Rédaction IA",
-      description: t.student.tabs.writing.desc,
-      icon: <Sparkles size={18} />,
-    },
-    {
       id: "chat",
       label: t.student.tabs.chat.label,
-      shortLabel: locale === "en" ? "AI Tutor" : "Tuteur IA",
+      shortLabel: "LinguaFlow AI",
       description: t.student.tabs.chat.desc,
-      icon: <MessageSquare size={18} />,
+      icon: <Sparkles size={18} className="text-amber-400" />,
+      badge: "DACH 🇩🇪",
+      badgeColor: "amber",
     },
     {
       id: "evaluations",
-      label: t.student.tabs.evaluations.label,
-      shortLabel: locale === "en" ? "Quizzes" : "Quiz",
+      label: "Prüfung",
+      shortLabel: "Prüfung",
       description: t.student.tabs.evaluations.desc,
-      icon: <HelpCircle size={18} />,
+      icon: <FileCheck size={18} />,
     },
     {
       id: "progress",
@@ -156,20 +153,12 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({
           </div>
 
           <div className="flex items-center gap-3">
-            {school.logo && (
-              <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/10 border border-slate-200 dark:border-white/10 flex items-center justify-center overflow-hidden shrink-0 shadow-xs">
-                {school.logo.startsWith("http") || school.logo.startsWith("data:") ? (
-                  <img
-                    src={school.logo}
-                    alt={school.name}
-                    className="w-8 h-8 object-contain rounded"
-                    referrerPolicy="no-referrer"
-                  />
-                ) : (
-                  <span className="text-xl">{school.logo}</span>
-                )}
-              </div>
-            )}
+            <SchoolLogo
+              logo={school.logo}
+              name={school.name}
+              language={school.language}
+              size="md"
+            />
             <div>
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
                 {t.student.welcome}, {student.name} !
@@ -189,9 +178,9 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({
             <div className="flex-1 space-y-1">
               <div className="flex justify-between text-xs font-bold">
                 <span className="text-slate-500 dark:text-white/50">{t.common.progress}</span>
-                <span className="text-[#00D9FF]">{student.progressPercent}%</span>
+                <span className="text-[#00D9FF]">{computedProgressPercent}%</span>
               </div>
-              <ProgressBar value={student.progressPercent} color="cyan" height="sm" />
+              <ProgressBar value={computedProgressPercent} color="cyan" height="sm" />
             </div>
           </div>
 

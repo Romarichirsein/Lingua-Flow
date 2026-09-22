@@ -14,7 +14,8 @@ import { NeonButton } from "../common/NeonButton";
 import { ConfettiShower, playCelebrationSound } from "../common/CelebrationEffects";
 import { aiCorrectionAction } from "../../lib/aiActions";
 import {
-  Sparkles,
+  PenTool,
+  Loader2,
   CheckCircle2,
   AlertCircle,
   Copy,
@@ -64,6 +65,13 @@ export const AIWritingAssistant: React.FC<AIWritingAssistantProps> = ({
 
   // Selected level & topics
   const [level, setLevel] = useState<CEFRLevel>(student.level || "A1");
+
+  useEffect(() => {
+    if (student.level) {
+      setLevel(student.level);
+    }
+  }, [student.level, student.id]);
+
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedPromptIndex, setSelectedPromptIndex] = useState<number>(0);
   const [customPrompt, setCustomPrompt] = useState<string>("");
@@ -235,7 +243,7 @@ export const AIWritingAssistant: React.FC<AIWritingAssistantProps> = ({
       });
 
       if (!actionResult.success || !actionResult.evaluation) {
-        throw new Error(actionResult.error || "Erreur lors de la correction IA.");
+        throw new Error(actionResult.error || "Erreur lors de l'analyse linguistique.");
       }
 
       const evaluation = actionResult.evaluation;
@@ -280,9 +288,9 @@ export const AIWritingAssistant: React.FC<AIWritingAssistantProps> = ({
         setTimeout(() => setShowCelebration(false), 3500);
       }
     } catch (err: any) {
-      console.error("AI correction error:", err);
+      console.error("Evaluation error:", err);
       setErrorMsg(
-        err.message || "Impossible de contacter l'assistant IA. Veuillez réessayer."
+        err.message || "Impossible de contacter le service d'évaluation. Veuillez réessayer."
       );
     } finally {
       clearTimeout(stepTimer1);
@@ -369,10 +377,10 @@ export const AIWritingAssistant: React.FC<AIWritingAssistantProps> = ({
         <div>
           <div className="flex items-center gap-2">
             <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-500">
-              <Sparkles size={18} />
+              <PenTool size={18} />
             </span>
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
-              {locale === "en" ? "AI Writing Assistant" : "Expression Écrite IA"}
+              {locale === "en" ? "Writing & Expression Studio" : "Atelier d'Écriture & Rédaction"}
             </h2>
             <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-500 text-xs font-bold uppercase">
               {isGerman ? t.common.german : t.common.italian}
@@ -380,8 +388,8 @@ export const AIWritingAssistant: React.FC<AIWritingAssistantProps> = ({
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             {locale === "en"
-              ? "Draft texts, receive detailed CEFR-level corrections with Gemini, and track your progress."
-              : "Rédigez, recevez une correction détaillée niveau CECRL avec Gemini et suivez votre progression."}
+              ? "Draft texts, receive detailed CEFR-level feedback and grammar corrections, and track your progress."
+              : "Rédigez, recevez une analyse grammaticale détaillée niveau CECRL et suivez votre progression."}
           </p>
         </div>
 
@@ -611,12 +619,12 @@ export const AIWritingAssistant: React.FC<AIWritingAssistantProps> = ({
                   variant="primary"
                   onClick={handleCorrectText}
                   disabled={wordCount < 3 || isLoading}
-                  icon={<Sparkles size={16} className={isLoading ? "animate-spin" : ""} />}
+                  icon={isLoading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
                   className="shadow-lg shadow-indigo-500/20"
                 >
                   {isLoading
-                    ? (locale === "en" ? "Gemini correction in progress..." : "Correction Gemini en cours...")
-                    : (locale === "en" ? "Analyze & Correct with AI" : "Analyser & Corriger avec IA")}
+                    ? (locale === "en" ? "Analysis in progress..." : "Analyse en cours...")
+                    : (locale === "en" ? "Evaluate & Correct Text" : "Analyser & Corriger le texte")}
                 </NeonButton>
               </div>
             </div>
@@ -628,11 +636,11 @@ export const AIWritingAssistant: React.FC<AIWritingAssistantProps> = ({
             {isLoading && (
               <div className="neon-card rounded-3xl p-10 text-center space-y-5">
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-indigo-500/10 text-indigo-500 animate-pulse">
-                  <Sparkles size={32} className="animate-spin text-indigo-500" />
+                  <Loader2 size={32} className="animate-spin text-indigo-500" />
                 </div>
                 <div>
                   <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-                    {locale === "en" ? "Gemini Pedagogical Analysis" : "Analyse Pédagogique Gemini"}
+                    {locale === "en" ? "Pedagogical Linguistic Analysis" : "Analyse Pédagogique & Linguistique"}
                   </h3>
                   <p className="text-xs text-slate-400 mt-1">
                     {locale === "en"
@@ -690,7 +698,7 @@ export const AIWritingAssistant: React.FC<AIWritingAssistantProps> = ({
                   <BookOpen size={28} />
                 </div>
                 <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200">
-                  {locale === "en" ? "Your AI tutor is ready" : "Votre tuteur IA est prêt"}
+                  {locale === "en" ? "Pedagogical assessment ready" : "Évaluation pédagogique prête"}
                 </h3>
                 <p className="text-xs text-slate-400 max-w-xs mx-auto leading-relaxed">
                   {locale === "en"
@@ -698,7 +706,7 @@ export const AIWritingAssistant: React.FC<AIWritingAssistantProps> = ({
                     : "Rédigez votre paragraphe sur le sujet de votre choix à gauche et lancez l'analyse. Vous obtiendrez une note détaillée, la version corrigée et les explications grammaticales."}
                 </p>
                 <div className="rounded-2xl bg-indigo-500/5 p-3.5 border border-indigo-500/10 text-[11px] text-slate-500 dark:text-slate-400 max-w-xs mx-auto">
-                  ✨ <strong>{locale === "en" ? "Tip:" : "Astuce :"}</strong> {locale === "en" ? "Every corrected text is automatically saved in your history to track progress!" : "Chaque texte corrigé est automatiquement archivé dans votre historique pour suivre vos progrès !"}
+                  <strong>{locale === "en" ? "Tip:" : "Astuce :"}</strong> {locale === "en" ? "Every corrected text is automatically saved in your history to track progress!" : "Chaque texte corrigé est automatiquement archivé dans votre historique pour suivre vos progrès !"}
                 </div>
               </div>
             )}
@@ -993,7 +1001,7 @@ export const AIWritingAssistant: React.FC<AIWritingAssistantProps> = ({
                 variant="primary"
                 size="sm"
                 onClick={() => setMainView("editor")}
-                icon={<Sparkles size={14} />}
+                icon={<PenTool size={14} />}
               >
                 {locale === "en" ? "Write my first text" : "Rédiger mon premier texte"}
               </NeonButton>
@@ -1088,7 +1096,7 @@ export const AIWritingAssistant: React.FC<AIWritingAssistantProps> = ({
               initial={{ opacity: 0, scale: 0.9, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="relative z-10 w-full max-w-3xl max-h-[85vh] overflow-y-auto rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0D1220] p-6 sm:p-7 shadow-2xl text-slate-900 dark:text-white space-y-5"
+              className="relative z-10 w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0D1220] p-4 sm:p-7 shadow-2xl text-slate-900 dark:text-white space-y-5 my-auto"
             >
               {/* Header */}
               <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
@@ -1173,20 +1181,20 @@ export const AIWritingAssistant: React.FC<AIWritingAssistantProps> = ({
               )}
 
               {/* Action buttons in Modal */}
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => handleDeleteHistory(selectedHistoryItem.id)}
-                  className="px-3.5 py-2 rounded-xl text-xs font-semibold text-rose-500 hover:bg-rose-500/10 transition cursor-pointer flex items-center gap-1.5"
+                  className="px-3.5 py-2.5 rounded-xl text-xs font-semibold text-rose-500 hover:bg-rose-500/10 transition cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   <Trash2 size={14} /> {locale === "en" ? "Delete" : "Supprimer"}
                 </button>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setSelectedHistoryItem(null)}
-                    className="px-4 py-2 rounded-xl text-xs font-semibold border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer"
+                    className="px-4 py-2.5 rounded-xl text-xs font-semibold border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer text-center"
                   >
                     {locale === "en" ? "Close" : "Fermer"}
                   </button>
@@ -1197,7 +1205,7 @@ export const AIWritingAssistant: React.FC<AIWritingAssistantProps> = ({
                     onClick={() => handleLoadFromHistory(selectedHistoryItem)}
                     icon={<RotateCcw size={14} />}
                   >
-                    {locale === "en" ? "Edit in Workshop" : "Reprendre / Réécrire dans l'Atelier"}
+                    {locale === "en" ? "Edit in Workshop" : "Reprendre dans l'Atelier"}
                   </NeonButton>
                 </div>
               </div>

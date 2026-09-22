@@ -25,9 +25,8 @@ import {
 import { StudentDashboardTab } from "./StudentDashboardTab";
 import { StudentProgramsTab } from "./StudentProgramsTab";
 import { InteractiveLessonPlayer } from "./InteractiveLessonPlayer";
-import { AIWritingAssistant } from "./AIWritingAssistant";
 import { AIChatTutor } from "./AIChatTutor";
-import { StudentEvaluationsTab } from "./StudentEvaluationsTab";
+import { StudentPrufungTab } from "./StudentPrufungTab";
 import { StudentProgressTab } from "./StudentProgressTab";
 import { StudentNotificationsTab } from "./StudentNotificationsTab";
 import { StudentProfileTab } from "./StudentProfileTab";
@@ -35,7 +34,6 @@ import { ModuleUnlockedModal } from "../common/CelebrationEffects";
 import { navigateTo } from "../../lib/router";
 import {
   BookOpen,
-  Sparkles,
   MessageSquare,
   CheckCircle2,
   Lock,
@@ -87,7 +85,6 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
     "dashboard",
     "programs",
     "courses",
-    "writing",
     "chat",
     "evaluations",
     "progress",
@@ -256,7 +253,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
               switchTab("courses");
             }}
             onOpenPrograms={() => switchTab("programs")}
-            onOpenWriting={() => switchTab("writing")}
+            onOpenEvaluations={() => switchTab("evaluations")}
             onOpenChat={() => switchTab("chat")}
           />
         )}
@@ -408,25 +405,14 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
           </div>
         )}
 
-        {/* 4. AI WRITING ASSISTANT TAB (Expression Écrite IA) */}
-        {activeTab === "writing" && (
-          <AIWritingAssistant
-            student={student}
-            school={school}
-            locale={locale}
-            submissions={submissions}
-            onSaveSubmission={onSaveSubmission}
-          />
-        )}
-
-        {/* 5. AI CHAT TUTOR TAB */}
+        {/* 4. AI CHAT TUTOR TAB */}
         {activeTab === "chat" && (
           <AIChatTutor student={student} school={school} locale={locale} />
         )}
 
-        {/* 6. EVALUATIONS & QUIZ TAB */}
+        {/* 6. PRÜFUNG & ZERTIFIZIERUNG TAB */}
         {activeTab === "evaluations" && (
-          <StudentEvaluationsTab
+          <StudentPrufungTab
             student={student}
             school={school}
             program={activeProgram}

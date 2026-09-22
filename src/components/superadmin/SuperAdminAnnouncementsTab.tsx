@@ -41,7 +41,7 @@ export const SuperAdminAnnouncementsTab: React.FC<SuperAdminAnnouncementsTabProp
     titleEn: "",
     content: "",
     contentEn: "",
-    target: "all" as "all" | "schools" | "students" | "specific_school",
+    target: "all" as "all" | "schools" | "students" | "specific_school" | "super_admin",
     specificSchoolId: "",
     priority: "info" as "info" | "warning" | "urgent",
     startDate: new Date().toISOString().split("T")[0],
@@ -200,6 +200,8 @@ export const SuperAdminAnnouncementsTab: React.FC<SuperAdminAnnouncementsTabProp
                         ? "Écoles uniquement"
                         : ann.target === "students"
                         ? "Élèves uniquement"
+                        : ann.target === "super_admin"
+                        ? "Super Admin (Alerte Système)"
                         : "École spécifique"}
                     </strong>
                   </span>
@@ -317,6 +319,7 @@ export const SuperAdminAnnouncementsTab: React.FC<SuperAdminAnnouncementsTabProp
                 <option value="all">Toutes les écoles & élèves</option>
                 <option value="schools">Écoles & Directeurs uniquement</option>
                 <option value="students">Élèves uniquement</option>
+                <option value="super_admin">Super Admin uniquement (Alerte interne)</option>
               </select>
             </div>
 

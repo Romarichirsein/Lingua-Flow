@@ -22,6 +22,7 @@ import { SchoolCourseBuilderTab } from "./SchoolCourseBuilderTab";
 import { SchoolEvaluationsTab } from "./SchoolEvaluationsTab";
 import { SchoolAnalyticsTab } from "./SchoolAnalyticsTab";
 import { SchoolSettingsTab } from "./SchoolSettingsTab";
+import { SchoolAuditTab } from "./SchoolAuditTab";
 
 interface SchoolDashboardProps {
   locale: UILocale;
@@ -36,7 +37,7 @@ interface SchoolDashboardProps {
   onUpdateStudents: (students: Student[]) => void;
   onUpdatePrograms: (programs: Program[]) => void;
   onUpdateSchool: (school: School) => void;
-  onAddLog: (action: string, details: string, status?: "success" | "warning" | "error") => void;
+  onAddLog: (action: string, details: string, status?: "success" | "warning" | "error", extra?: any) => void;
   onSelectStudentTab?: (studentId: string) => void;
 }
 
@@ -59,15 +60,30 @@ export const SchoolDashboard: React.FC<SchoolDashboardProps> = ({
   const effectiveStatus = getEffectiveStatus(school);
   const isSchoolRestricted = effectiveStatus !== "active";
 
+  // Dedicated School Logger guaranteeing schoolId and schoolName
+  const handleSchoolAddLog = (
+    action: string,
+    details: string,
+    status: "success" | "warning" | "error" = "success",
+    extra?: any
+  ) => {
+    onAddLog(action, details, status, {
+      schoolId: school.id,
+      schoolName: school.name,
+      ...extra,
+    });
+  };
+
   // Active School Tab state
   const [activeTab, setActiveTab] = useState<
-    "dashboard" | "students" | "programs" | "courses" | "evaluations" | "pedagogy" | "settings"
+    "dashboard" | "students" | "programs" | "courses" | "evaluations" | "pedagogy" | "audit" | "settings"
   >(
     activeSubpath === "students" ||
     activeSubpath === "programs" ||
     activeSubpath === "courses" ||
     activeSubpath === "evaluations" ||
     activeSubpath === "pedagogy" ||
+    activeSubpath === "audit" ||
     activeSubpath === "settings"
       ? (activeSubpath as any)
       : "dashboard"
@@ -77,14 +93,14 @@ export const SchoolDashboard: React.FC<SchoolDashboardProps> = ({
   useEffect(() => {
     if (
       activeSubpath &&
-      ["dashboard", "students", "programs", "courses", "evaluations", "pedagogy", "settings"].includes(activeSubpath)
+      ["dashboard", "students", "programs", "courses", "evaluations", "pedagogy", "audit", "settings"].includes(activeSubpath)
     ) {
       setActiveTab(activeSubpath as any);
     }
   }, [activeSubpath]);
 
   const switchTab = (
-    tab: "dashboard" | "students" | "programs" | "courses" | "evaluations" | "pedagogy" | "settings"
+    tab: "dashboard" | "students" | "programs" | "courses" | "evaluations" | "pedagogy" | "audit" | "settings"
   ) => {
     setActiveTab(tab);
     navigateTo(`/ecole/${school.slug}/${tab}`);
@@ -122,6 +138,7 @@ export const SchoolDashboard: React.FC<SchoolDashboardProps> = ({
       school={school}
       students={students}
       programs={programs}
+      auditLogs={auditLogs}
       activeTab={activeTab}
       onTabChange={switchTab}
     >
@@ -148,7 +165,7 @@ export const SchoolDashboard: React.FC<SchoolDashboardProps> = ({
           programs={programs}
           submissions={submissions}
           onUpdateStudents={onUpdateStudents}
-          onAddLog={onAddLog}
+          onAddLog={handleSchoolAddLog}
           onOpenStudentDetail={handleOpenStudentDetail}
           onSelectStudentTab={onSelectStudentTab}
         />
@@ -162,7 +179,7 @@ export const SchoolDashboard: React.FC<SchoolDashboardProps> = ({
           programs={programs}
           students={students}
           onUpdatePrograms={onUpdatePrograms}
-          onAddLog={onAddLog}
+          onAddLog={handleSchoolAddLog}
           onOpenCourseBuilder={handleOpenCourseBuilder}
         />
       )}
@@ -175,7 +192,7 @@ export const SchoolDashboard: React.FC<SchoolDashboardProps> = ({
           programs={programs}
           selectedProgramId={builderProgramId}
           onUpdatePrograms={onUpdatePrograms}
-          onAddLog={onAddLog}
+          onAddLog={handleSchoolAddLog}
         />
       )}
 
@@ -188,7 +205,7 @@ export const SchoolDashboard: React.FC<SchoolDashboardProps> = ({
           students={students}
           submissions={submissions}
           onUpdatePrograms={onUpdatePrograms}
-          onAddLog={onAddLog}
+          onAddLog={handleSchoolAddLog}
         />
       )}
 
@@ -199,19 +216,29 @@ export const SchoolDashboard: React.FC<SchoolDashboardProps> = ({
           school={school}
           programs={programs}
           students={students}
-          onAddLog={onAddLog}
+          onAddLog={handleSchoolAddLog}
           onOpenStudentDetail={handleOpenStudentDetail}
         />
       )}
 
-      {/* 7. SETTINGS TAB */}
+      {/* 7. AUDIT & TRACEABILITY TAB */}
+      {activeTab === "audit" && (
+        <SchoolAuditTab
+          locale={locale}
+          school={school}
+          auditLogs={auditLogs}
+          onAddLog={handleSchoolAddLog}
+        />
+      )}
+
+      {/* 8. SETTINGS TAB */}
       {activeTab === "settings" && (
         <SchoolSettingsTab
           locale={locale}
           school={school}
           auditLogs={auditLogs}
           onUpdateSchool={onUpdateSchool}
-          onAddLog={onAddLog}
+          onAddLog={handleSchoolAddLog}
         />
       )}
 
@@ -225,13 +252,23 @@ export const SchoolDashboard: React.FC<SchoolDashboardProps> = ({
           programs={programs}
           submissions={submissions}
           onClose={() => setSelectedDetailStudent(null)}
+          onUpdateStudent={(updated) => {
+            const updatedList = students.map((s) => (s.id === updated.id ? updated : s));
+            onUpdateStudents(updatedList);
+            setSelectedDetailStudent(updated);
+            handleSchoolAddLog(
+              "Mise à jour élève",
+              `Profil et identifiants de l'élève ${updated.name} mis à jour.`,
+              "success"
+            );
+          }}
           onToggleStatus={(student, newStatus) => {
             const updatedList = students.map((s) => (s.id === student.id ? { ...s, status: newStatus } : s));
             onUpdateStudents(updatedList);
             if (selectedDetailStudent?.id === student.id) {
               setSelectedDetailStudent({ ...selectedDetailStudent, status: newStatus });
             }
-            onAddLog(
+            handleSchoolAddLog(
               "Statut élève mis à jour",
               `Statut de ${student.name} modifié : ${newStatus.toUpperCase()}`,
               "success"
@@ -249,7 +286,7 @@ export const SchoolDashboard: React.FC<SchoolDashboardProps> = ({
             if (selectedDetailStudent?.id === student.id) {
               setSelectedDetailStudent({ ...selectedDetailStudent, endDate: formatted, status: "active" });
             }
-            onAddLog(
+            handleSchoolAddLog(
               "Prolongation accès",
               `Accès de ${student.name} prolongé jusqu'au ${formatted}.`,
               "success"
@@ -263,7 +300,7 @@ export const SchoolDashboard: React.FC<SchoolDashboardProps> = ({
             if (selectedDetailStudent?.id === student.id) {
               setSelectedDetailStudent({ ...selectedDetailStudent, progressPercent: 0, completedLessons: [] });
             }
-            onAddLog(
+            handleSchoolAddLog(
               "Réinitialisation progression",
               `Progression de l'élève ${student.name} remise à zéro.`,
               "warning"
