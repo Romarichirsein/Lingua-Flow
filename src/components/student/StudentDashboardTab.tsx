@@ -2,7 +2,7 @@ import React from "react";
 import { motion } from "motion/react";
 import { Student, School, Program, Lesson, UILocale, Announcement } from "../../types";
 import { translations } from "../../lib/translations";
-import { computeDaysRemaining } from "../../lib/syncEngine";
+import { computeDaysRemaining, filterAnnouncementsForStudent } from "../../lib/syncEngine";
 import { ProgressBar } from "../common/ProgressBar";
 import { NeonButton } from "../common/NeonButton";
 import {
@@ -77,14 +77,8 @@ export const StudentDashboardTab: React.FC<StudentDashboardTabProps> = ({
 
   const totalModulesCount = (program?.modules || []).length || 0;
 
-  // Filter actual school announcements for this student
-  const relevantAnnouncements = (announcements || [])
-    .filter(
-      (a) =>
-        a.target === "all" ||
-        a.target === "students" ||
-        a.targetSchoolId === school.id
-    )
+  // Filter actual school announcements for this student with strict multi-tenant isolation
+  const relevantAnnouncements = filterAnnouncementsForStudent(announcements, student, school)
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 3); // show latest 3
 

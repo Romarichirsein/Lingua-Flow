@@ -158,6 +158,16 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
     onUpdateStudent(result.student);
     onAddLog(result.activityLog.action, result.activityLog.details);
 
+    // Save personal completion notifications strictly isolated to this student
+    if (result.newNotifications && result.newNotifications.length > 0) {
+      try {
+        const notifKey = `linguaflow_student_completed_notifs_${student.id}`;
+        const existingNotifs = JSON.parse(localStorage.getItem(notifKey) || "[]");
+        const updated = [...result.newNotifications, ...existingNotifs].slice(0, 20);
+        localStorage.setItem(notifKey, JSON.stringify(updated));
+      } catch {}
+    }
+
     // Call server endpoint asynchronously for persistent server calculation
     fetch("/api/progression/complete-lesson", {
       method: "POST",

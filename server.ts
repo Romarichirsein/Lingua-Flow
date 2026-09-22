@@ -2114,6 +2114,23 @@ app.post("/api/progression/complete-lesson", async (req, res) => {
   }
 });
 
+// --------------------------------------------------------------------------
+// SUBSCRIPTION EXPIRY AUDIT ENDPOINT
+// --------------------------------------------------------------------------
+app.post("/api/subscriptions/check-expiry", async (req, res) => {
+  try {
+    const { schools = [], students = [] } = req.body;
+    return res.json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      checkedSchoolsCount: Array.isArray(schools) ? schools.length : 0,
+      checkedStudentsCount: Array.isArray(students) ? students.length : 0,
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Setup Vite middleware for local / Cloud Run dev & production
 async function setupVite() {
   if (process.env.NODE_ENV !== "production") {

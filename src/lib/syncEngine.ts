@@ -344,3 +344,98 @@ export function checkAndGenerateSubscriptionExpiryAlerts(
 
   return newAnnouncements;
 }
+
+/**
+ * Strict filtering of announcements for students.
+ * Guarantees that students NEVER receive:
+ * 1. Super Admin notifications/alerts (target: "super_admin").
+ * 2. School management notifications/alerts (target: "schools" or "specific_school").
+ * 3. Notifications/alerts intended for other students (targetStudentId !== student.id).
+ * 4. Notifications/alerts intended for other schools (targetSchoolId !== school.id).
+ * 5. Inactive announcements.
+ */
+export function filterAnnouncementsForStudent(
+  announcements: Announcement[] | undefined,
+  student: { id: string; schoolId?: string },
+  school: { id: string }
+): Announcement[] {
+  if (!announcements || !Array.isArray(announcements)) return [];
+
+  const schoolId = school.id || student.schoolId;
+
+  return announcements.filter((a) => {
+    // Inactive announcements are hidden
+    if (a.isActive === false) return false;
+
+    // 1. Strict exclusion of Super Admin internal alerts
+    if (a.target === "super_admin") return false;
+
+    // 2. Strict exclusion of School admin / management alerts (e.g. director notifications, student expiry warnings for school, billing)
+    if (a.target === "schools" || a.target === "specific_school") return false;
+
+    // 3. Must be targeted to students or all
+    if (a.target !== "all" && a.target !== "students") return false;
+
+    // 4. Multi-tenant school isolation: if targetSchoolId is set, must match this student's school
+    if (a.targetSchoolId && schoolId && a.targetSchoolId !== schoolId) {
+      return false;
+    }
+
+    // 5. Individual student isolation: if targetStudentId is set, must match this student
+    if (a.targetStudentId && a.targetStudentId !== student.id) {
+      return false;
+    }
+
+    return true;
+  });
+}
+
+/**
+ * Strict filtering of announcements for School Administrators.
+ * Guarantees that schools NEVER receive:
+ * 1. Super Admin internal alerts (target: "super_admin").
+ * 2. General student-only broadcasts (target: "students" unless specifically targeted).
+ * 3. Announcements for other schools (targetSchoolId !== school.id).
+ * 4. Inactive announcements.
+ */
+export function filterAnnouncementsForSchool(
+  announcements: Announcement[] | undefined,
+  school: { id: string }
+): Announcement[] {
+  if (!announcements || !Array.isArray(announcements)) return [];
+
+  return announcements.filter((a) => {
+    if (a.isActive === false) return false;
+
+    // Super Admin private announcements are never visible to schools
+    if (a.target === "super_admin") return false;
+
+    // Student-only broadcasts are not school administration notices
+    if (a.target === "students") return false;
+
+    // Cross-school quarantine
+    if (a.targetSchoolId && a.targetSchoolId !== school.id) return false;
+
+    // Target checks
+    if (a.target === "schools") return true;
+    if (a.target === "specific_school") return !a.targetSchoolId || a.targetSchoolId === school.id;
+    if (a.target === "all") return !a.targetSchoolId || a.targetSchoolId === school.id;
+
+    return false;
+  });
+}
+
+/**
+ * Strict filtering of announcements for Super Admin.
+ * Shows system alerts, urgent warnings, and super admin notices.
+ */
+export function filterAnnouncementsForSuperAdmin(
+  announcements: Announcement[] | undefined
+): Announcement[] {
+  if (!announcements || !Array.isArray(announcements)) return [];
+
+  return announcements.filter((a) => {
+    if (a.isActive === false) return false;
+    return a.target === "super_admin" || a.target === "all" || a.priority === "urgent";
+  });
+}

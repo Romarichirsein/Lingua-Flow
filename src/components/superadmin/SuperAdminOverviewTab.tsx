@@ -2,6 +2,7 @@ import React from "react";
 import { School, Student, Program, ActivityLog, Announcement, UILocale } from "../../types";
 import { ProgressBar } from "../common/ProgressBar";
 import { SchoolLogo } from "../common/SchoolLogo";
+import { filterAnnouncementsForSuperAdmin } from "../../lib/syncEngine";
 import {
   Building2,
   Users,
@@ -455,30 +456,35 @@ export const SuperAdminOverviewTab: React.FC<SuperAdminOverviewTabProps> = ({
           )}
 
           {/* Active System Announcements Alert Box */}
-          {announcements.length > 0 && (
-            <div className="p-4 rounded-3xl bg-amber-500/10 border border-amber-500/30 text-amber-500 space-y-2">
-              <div className="flex items-center gap-2 font-bold text-xs">
-                <Megaphone size={16} />
-                <span>{isEn ? "Active Broadcast Announcement" : "Annonce Active en Diffusion"}</span>
+          {(() => {
+            const superAnnouncements = filterAnnouncementsForSuperAdmin(announcements);
+            if (superAnnouncements.length === 0) return null;
+            const latestAnn = superAnnouncements[0];
+            return (
+              <div className="p-4 rounded-3xl bg-amber-500/10 border border-amber-500/30 text-amber-500 space-y-2">
+                <div className="flex items-center gap-2 font-bold text-xs">
+                  <Megaphone size={16} />
+                  <span>{isEn ? "Active Broadcast Announcement" : "Annonce Active en Diffusion"}</span>
+                </div>
+                <h4 className="font-extrabold text-sm text-slate-900 dark:text-white">
+                  {latestAnn.title}
+                </h4>
+                <p className="text-xs text-slate-600 dark:text-white/70 line-clamp-2">
+                  {latestAnn.content}
+                </p>
+                <div className="pt-1 flex items-center justify-between text-[10px] font-mono">
+                  <span>{isEn ? "Target:" : "Cible :"} {latestAnn.target}</span>
+                  <button
+                    type="button"
+                    onClick={() => onNavigateToTab("announcements")}
+                    className="font-bold underline cursor-pointer"
+                  >
+                    {isEn ? "Manage" : "Gérer"}
+                  </button>
+                </div>
               </div>
-              <h4 className="font-extrabold text-sm text-slate-900 dark:text-white">
-                {announcements[0].title}
-              </h4>
-              <p className="text-xs text-slate-600 dark:text-white/70 line-clamp-2">
-                {announcements[0].content}
-              </p>
-              <div className="pt-1 flex items-center justify-between text-[10px] font-mono">
-                <span>{isEn ? "Target:" : "Cible :"} {announcements[0].target}</span>
-                <button
-                  type="button"
-                  onClick={() => onNavigateToTab("announcements")}
-                  className="font-bold underline cursor-pointer"
-                >
-                  {isEn ? "Manage" : "Gérer"}
-                </button>
-              </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Live Activity Stream Feed */}
           <div className="p-5 sm:p-6 rounded-3xl bg-white/90 dark:bg-[#0D1220]/90 backdrop-blur-md border border-slate-200 dark:border-white/10 shadow-sm space-y-4">

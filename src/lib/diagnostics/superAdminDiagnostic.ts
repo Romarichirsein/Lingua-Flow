@@ -6,6 +6,7 @@ import {
   SupportedLanguage,
   EntityStatus,
   UserRole,
+  Announcement,
 } from "../../types";
 import {
   computeDaysRemaining,
@@ -14,6 +15,8 @@ import {
   checkTenantAccess,
   canStudentAccessPedagogy,
   createActivityLog,
+  filterAnnouncementsForStudent,
+  filterAnnouncementsForSchool,
 } from "../syncEngine";
 
 export interface DiagnosticAssertion {
@@ -471,6 +474,134 @@ export async function runSuperAdminDiagnostic(customStorage?: StorageAdapter): P
     "Audit log entry successfully created and persisted with complete actor attribution and timestamp.",
     { logId: auditEntry.id, actor: auditEntry.actorName },
     Date.now() - step7Start
+  );
+
+  // =========================================================================
+  // STEP 8: Notification & Announcement Multi-Tenant Isolation
+  // =========================================================================
+  const step8Start = Date.now();
+
+  const testAnnouncements: Announcement[] = [
+    {
+      id: "ann-super-1",
+      title: "Super Admin Internal Alert: School Expiring",
+      content: "Contract renewal required for school.",
+      target: "super_admin",
+      targetSchoolId: testSchoolId,
+      priority: "urgent",
+      createdAt: new Date().toISOString(),
+      authorName: "System",
+      isActive: true,
+    },
+    {
+      id: "ann-school-1",
+      title: "School Admin: Student J-5 Expiry Warning",
+      content: "Student subscription ending soon.",
+      target: "specific_school",
+      targetSchoolId: testSchoolId,
+      priority: "urgent",
+      createdAt: new Date().toISOString(),
+      authorName: "System",
+      isActive: true,
+    },
+    {
+      id: "ann-schools-gen",
+      title: "All Schools: Video streaming maintenance",
+      content: "Server maintenance for school directors.",
+      target: "schools",
+      priority: "warning",
+      createdAt: new Date().toISOString(),
+      authorName: "Super Admin",
+      isActive: true,
+    },
+    {
+      id: "ann-student-other",
+      title: "Private message for other student",
+      content: "Personal reminder for another student.",
+      target: "students",
+      targetSchoolId: testSchoolId,
+      targetStudentId: "stu-other-999",
+      priority: "info",
+      createdAt: new Date().toISOString(),
+      authorName: "Instructor",
+      isActive: true,
+    },
+    {
+      id: "ann-student-valid",
+      title: "Nouveau module débloqué",
+      content: "Votre nouveau module est accessible.",
+      target: "students",
+      targetSchoolId: testSchoolId,
+      targetStudentId: student1Id,
+      priority: "info",
+      createdAt: new Date().toISOString(),
+      authorName: "Instructor",
+      isActive: true,
+    },
+    {
+      id: "ann-global-valid",
+      title: "Mise à jour du tuteur IA",
+      content: "Tous les élèves et écoles ont accès aux nouveautés.",
+      target: "all",
+      priority: "info",
+      createdAt: new Date().toISOString(),
+      authorName: "Super Admin",
+      isActive: true,
+    },
+  ];
+
+  // 1. Student Announcement Filtering Check
+  const student1Announcements = filterAnnouncementsForStudent(
+    testAnnouncements,
+    { id: student1Id, schoolId: testSchoolId },
+    { id: testSchoolId }
+  );
+
+  const student1Ids = new Set(student1Announcements.map((a) => a.id));
+
+  const studentNeverReceivesSuperAdmin = !student1Ids.has("ann-super-1");
+  const studentNeverReceivesSchoolAlerts = !student1Ids.has("ann-school-1") && !student1Ids.has("ann-schools-gen");
+  const studentNeverReceivesOtherStudentNotifs = !student1Ids.has("ann-student-other");
+  const studentReceivesOwnValidNotifs = student1Ids.has("ann-student-valid") && student1Ids.has("ann-global-valid");
+
+  recordAssertion(
+    "8. Notifications Isolation",
+    "Strict Student Notification Isolation",
+    studentNeverReceivesSuperAdmin &&
+      studentNeverReceivesSchoolAlerts &&
+      studentNeverReceivesOtherStudentNotifs &&
+      studentReceivesOwnValidNotifs,
+    "Student receives strictly zero Super Admin alerts, zero School admin alerts, and zero alerts from other students.",
+    {
+      studentNeverReceivesSuperAdmin,
+      studentNeverReceivesSchoolAlerts,
+      studentNeverReceivesOtherStudentNotifs,
+      studentReceivesOwnValidNotifs,
+      receivedCount: student1Announcements.length,
+    },
+    Date.now() - step8Start
+  );
+
+  // 2. School Admin Announcement Filtering Check
+  const schoolAnnouncements = filterAnnouncementsForSchool(testAnnouncements, { id: testSchoolId });
+  const schoolAnnIds = new Set(schoolAnnouncements.map((a) => a.id));
+
+  const schoolNeverReceivesSuperAdmin = !schoolAnnIds.has("ann-super-1");
+  const schoolNeverReceivesStudentOnly = !schoolAnnIds.has("ann-student-valid") && !schoolAnnIds.has("ann-student-other");
+  const schoolReceivesSchoolAlerts = schoolAnnIds.has("ann-school-1") && schoolAnnIds.has("ann-schools-gen") && schoolAnnIds.has("ann-global-valid");
+
+  recordAssertion(
+    "8. Notifications Isolation",
+    "Strict School Admin Notification Isolation",
+    schoolNeverReceivesSuperAdmin && schoolNeverReceivesStudentOnly && schoolReceivesSchoolAlerts,
+    "School admin receives school broadcasts & alerts, but zero Super Admin private alerts and zero student-only broadcasts.",
+    {
+      schoolNeverReceivesSuperAdmin,
+      schoolNeverReceivesStudentOnly,
+      schoolReceivesSchoolAlerts,
+      receivedCount: schoolAnnouncements.length,
+    },
+    Date.now() - step8Start
   );
 
   // =========================================================================

@@ -311,6 +311,7 @@ export interface Announcement {
   contentEn?: string;
   target: "all" | "schools" | "students" | "specific_school" | "super_admin";
   targetSchoolId?: string;
+  targetStudentId?: string;
   priority: "info" | "success" | "warning" | "urgent";
   createdAt: string;
   publishDate?: string;

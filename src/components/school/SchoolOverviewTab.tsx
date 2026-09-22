@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { ProgressBar } from "../common/ProgressBar";
 import { NeonButton } from "../common/NeonButton";
+import { filterAnnouncementsForSchool } from "../../lib/syncEngine";
 
 interface SchoolOverviewTabProps {
   locale: UILocale;
@@ -152,14 +153,8 @@ export const SchoolOverviewTab: React.FC<SchoolOverviewTabProps> = ({
     Math.round((schoolStudents.length / Math.max(1, school.studentQuota)) * 100)
   );
 
-  // Filter actual school announcements for this school admin
-  const relevantAnnouncements = announcements
-    .filter(
-      (a) =>
-        a.target === "all" ||
-        a.target === "schools" ||
-        a.targetSchoolId === school.id
-    )
+  // Filter actual school announcements for this school admin with multi-tenant isolation
+  const relevantAnnouncements = filterAnnouncementsForSchool(announcements, school)
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 3); // show latest 3
 
