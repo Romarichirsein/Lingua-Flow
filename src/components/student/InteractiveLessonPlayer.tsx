@@ -35,6 +35,7 @@ import {
   Flame,
   Star,
   Check,
+  Lock,
 } from "lucide-react";
 
 interface InteractiveLessonPlayerProps {
@@ -132,28 +133,38 @@ export const InteractiveLessonPlayer: React.FC<InteractiveLessonPlayerProps> = (
     };
   }, []);
 
+  const hasVideo = Boolean(lesson.videoUrl && lesson.videoUrl.trim());
+  const hasQuiz = Boolean(quizList && quizList.length > 0);
+
+  // Lesson completion gating states (strict video + quiz completion)
+  const [videoWatched, setVideoWatched] = useState<boolean>(isAlreadyCompleted || !hasVideo);
+  const [quizPassed, setQuizPassed] = useState<boolean>(isAlreadyCompleted || !hasQuiz);
+
   // Flashcards state
   const [activeVocabIndex, setActiveVocabIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
 
   // Quiz state
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
-  const [quizSubmitted, setQuizSubmitted] = useState(false);
-  const [quizScore, setQuizScore] = useState<number | null>(null);
+  const [quizSubmitted, setQuizSubmitted] = useState(isAlreadyCompleted);
+  const [quizScore, setQuizScore] = useState<number | null>(isAlreadyCompleted ? 100 : null);
 
   // Celebration state
   const [showCelebration, setShowCelebration] = useState(false);
   const [justCompletedToast, setJustCompletedToast] = useState(false);
 
-  // Reset quiz state when switching lessons
+  // Reset states when switching lessons
   useEffect(() => {
+    const isCompleted = isAlreadyCompleted;
+    setVideoWatched(isCompleted || !hasVideo);
+    setQuizPassed(isCompleted || !hasQuiz);
     setSelectedAnswers({});
-    setQuizSubmitted(false);
-    setQuizScore(null);
+    setQuizSubmitted(isCompleted);
+    setQuizScore(isCompleted ? 100 : null);
     setActiveVocabIndex(0);
     setIsFlipped(false);
     setActiveTab("video");
-  }, [lesson.id]);
+  }, [lesson.id, isAlreadyCompleted, hasVideo, hasQuiz]);
 
   // Audio Speech Synthesis for Pronunciation
   const handleSpeak = (text: string) => {
@@ -166,21 +177,28 @@ export const InteractiveLessonPlayer: React.FC<InteractiveLessonPlayerProps> = (
     }
   };
 
-  // Handle Manual Completion
-  const handleTriggerComplete = () => {
-    onCompleteLesson(lesson.id);
-    setShowCelebration(true);
-    setJustCompletedToast(true);
-    playCelebrationSound("lesson");
-    setTimeout(() => {
-      setShowCelebration(false);
-      setJustCompletedToast(false);
-    }, 3500);
+  // Helper to validate and persist lesson completion
+  const triggerValidationIfEligible = (vDone: boolean, qDone: boolean) => {
+    if (vDone && qDone && !isAlreadyCompleted) {
+      onCompleteLesson(lesson.id);
+      setShowCelebration(true);
+      setJustCompletedToast(true);
+      playCelebrationSound("quiz");
+      setTimeout(() => {
+        setShowCelebration(false);
+        setJustCompletedToast(false);
+      }, 4000);
+    }
+  };
+
+  const handleVideoEnded = () => {
+    setVideoWatched(true);
+    triggerValidationIfEligible(true, quizPassed);
   };
 
   // Handle Quiz Submission
   const handleAnswerSelect = (questionIndex: number, optionIndex: number) => {
-    if (quizSubmitted) return;
+    if (quizSubmitted && isAlreadyCompleted) return;
     setSelectedAnswers({
       ...selectedAnswers,
       [questionIndex]: optionIndex,
@@ -188,7 +206,11 @@ export const InteractiveLessonPlayer: React.FC<InteractiveLessonPlayerProps> = (
   };
 
   const handleSubmitQuiz = () => {
-    if (quizList.length === 0) return;
+    if (quizList.length === 0) {
+      setQuizPassed(true);
+      triggerValidationIfEligible(videoWatched, true);
+      return;
+    }
     let correctCount = 0;
     quizList.forEach((q, idx) => {
       if (selectedAnswers[idx] === q.correctIndex) {
@@ -200,15 +222,10 @@ export const InteractiveLessonPlayer: React.FC<InteractiveLessonPlayerProps> = (
     setQuizScore(scorePercent);
     setQuizSubmitted(true);
 
-    if (scorePercent >= (lesson.passingScorePercent || 70)) {
-      onCompleteLesson(lesson.id);
-      setShowCelebration(true);
-      setJustCompletedToast(true);
-      playCelebrationSound("quiz");
-      setTimeout(() => {
-        setShowCelebration(false);
-        setJustCompletedToast(false);
-      }, 3500);
+    const isPassing = scorePercent >= (lesson.passingScorePercent || 70);
+    if (isPassing) {
+      setQuizPassed(true);
+      triggerValidationIfEligible(videoWatched, true);
     }
   };
 
@@ -216,7 +233,10 @@ export const InteractiveLessonPlayer: React.FC<InteractiveLessonPlayerProps> = (
     setSelectedAnswers({});
     setQuizSubmitted(false);
     setQuizScore(null);
+    setQuizPassed(false);
   };
+
+  const isCurrentLessonCompleted = isAlreadyCompleted || (videoWatched && quizPassed);
 
   const isYouTubeUrl =
     lesson.videoUrl?.includes("youtube.com/watch") ||
@@ -304,9 +324,6 @@ export const InteractiveLessonPlayer: React.FC<InteractiveLessonPlayerProps> = (
                 <span className="flex items-center gap-1 text-xs text-slate-400">
                   <Clock size={12} /> {lesson.durationMinutes} min
                 </span>
-                <span className="flex items-center gap-1 text-xs text-amber-500 font-semibold">
-                  <Star size={12} /> 50 XP
-                </span>
               </div>
               <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1">
                 {lesson.title}
@@ -327,32 +344,49 @@ export const InteractiveLessonPlayer: React.FC<InteractiveLessonPlayerProps> = (
                 </button>
               )}
 
-              {isAlreadyCompleted ? (
-                <div className="flex items-center gap-2 rounded-2xl bg-emerald-500/10 px-3.5 py-2 text-xs font-bold text-emerald-500 border border-emerald-500/30 min-h-[38px]">
-                  <CheckCircle2 size={16} />
+              {isCurrentLessonCompleted ? (
+                <div className="flex items-center gap-2 rounded-2xl bg-emerald-500/15 px-3.5 py-2 text-xs font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 min-h-[38px]">
+                  <CheckCircle2 size={16} className="text-emerald-500" />
                   <span>{t.student.validated}</span>
                 </div>
               ) : (
-                <NeonButton
-                  variant="emerald"
-                  size="sm"
-                  onClick={handleTriggerComplete}
-                  icon={<CheckCircle2 size={16} />}
+                <div
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-amber-500/10 text-amber-500 border border-amber-500/25 text-xs font-bold min-h-[38px]"
+                  title={locale === "en" ? "Lesson locks until video and quiz are completed" : "La leçon se valide automatiquement dès que la vidéo et le quiz sont réussis"}
                 >
-                  {t.student.markCompleted}
-                </NeonButton>
+                  <Lock size={14} className="text-amber-500 shrink-0" />
+                  <span>
+                    {!videoWatched && !quizPassed
+                      ? (locale === "en" ? "Video & Quiz Required" : "Vidéo & Quiz Requis")
+                      : !videoWatched
+                      ? (locale === "en" ? "Finish Video" : "Visionnez la vidéo")
+                      : (locale === "en" ? "Pass Quiz" : "Réussissez le quiz")}
+                  </span>
+                </div>
               )}
 
               {hasNextLesson && onNextLesson && (
-                <button
-                  type="button"
-                  onClick={onNextLesson}
-                  className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-500 transition cursor-pointer shadow-sm min-h-[38px]"
-                  title={locale === "en" ? "Next lesson" : "Leçon suivante"}
-                >
-                  <span className="hidden sm:inline">{locale === "en" ? "Next" : "Suivante"}</span>
-                  <ChevronRight size={15} />
-                </button>
+                isCurrentLessonCompleted ? (
+                  <button
+                    type="button"
+                    onClick={onNextLesson}
+                    className="flex items-center gap-1 px-3.5 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-500/25 transition cursor-pointer min-h-[38px] animate-pulse"
+                    title={locale === "en" ? "Next lesson" : "Leçon suivante"}
+                  >
+                    <span>{locale === "en" ? "Next" : "Suivante"}</span>
+                    <ChevronRight size={15} />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-slate-100 dark:bg-white/5 text-slate-400 border border-slate-200 dark:border-white/10 cursor-not-allowed opacity-60 min-h-[38px]"
+                    title={locale === "en" ? "Watch video and pass quiz to unlock next lesson" : "Regardez la vidéo jusqu'au bout et réussissez le quiz pour débloquer la leçon suivante"}
+                  >
+                    <Lock size={13} className="text-amber-400" />
+                    <span>{locale === "en" ? "Next (Locked)" : "Suivante (Verrouillée)"}</span>
+                  </button>
+                )
               )}
             </div>
           </div>
@@ -475,8 +509,49 @@ export const InteractiveLessonPlayer: React.FC<InteractiveLessonPlayerProps> = (
                     watermarkEmail={student.email}
                     watermarkSessionId={student.id}
                     showDrmWatermark={true}
+                    onEnded={handleVideoEnded}
                     className="shadow-2xl rounded-3xl"
                   />
+                </div>
+
+                {/* Video Progression Status Indicator */}
+                <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 text-xs text-white">
+                  <div className="flex items-center gap-2.5">
+                    {videoWatched ? (
+                      <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400">
+                        <CheckCircle2 size={16} />
+                      </div>
+                    ) : (
+                      <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-amber-500/20 text-amber-400 animate-pulse">
+                        <Play size={14} />
+                      </div>
+                    )}
+                    <div>
+                      <p className="font-bold">
+                        {videoWatched
+                          ? (locale === "en" ? "Video viewing validated ✓" : "Vidéo visionnée avec succès ✓")
+                          : (locale === "en" ? "Watch video to validate this step" : "Visionnez la vidéo jusqu'au bout pour valider cette étape")}
+                      </p>
+                      <p className="text-[10px] text-slate-400">
+                        {videoWatched
+                          ? (quizPassed
+                              ? (locale === "en" ? "All requirements complete • Lesson unlocked!" : "Toutes les étapes sont validées • Leçon débloquée !")
+                              : (locale === "en" ? "Step 1 of 2 done • Now complete the quiz" : "Étape 1 sur 2 validée • Complétez maintenant le quiz"))
+                          : (locale === "en" ? "Video viewing is mandatory before unlocking the next lesson" : "Le visionnage complet est obligatoire pour pouvoir passer à la suite")}
+                      </p>
+                    </div>
+                  </div>
+
+                  {!videoWatched && (
+                    <button
+                      type="button"
+                      onClick={handleVideoEnded}
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition shadow cursor-pointer ml-auto"
+                    >
+                      <Check size={13} />
+                      <span>{locale === "en" ? "Confirm full viewing" : "Confirmer le visionnage complet"}</span>
+                    </button>
+                  )}
                 </div>
 
                 {/* Lesson Summary and DRM footer */}
@@ -780,15 +855,36 @@ export const InteractiveLessonPlayer: React.FC<InteractiveLessonPlayerProps> = (
                     </NeonButton>
                   )}
 
-                  {quizSubmitted && onNextLesson && (
-                    <NeonButton
-                      variant="emerald"
-                      size="sm"
-                      onClick={onNextLesson}
-                      icon={<ChevronRight size={15} />}
-                    >
-                      {locale === "en" ? "Next Lesson" : "Leçon suivante"}
-                    </NeonButton>
+                  {quizSubmitted && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      {!quizPassed ? (
+                        <span className="text-xs text-rose-500 font-bold">
+                          {locale === "en"
+                            ? `Score ${quizScore}% (Minimum ${lesson.passingScorePercent || 70}% required)`
+                            : `Score ${quizScore}% (Minimum requis : ${lesson.passingScorePercent || 70}%)`}
+                        </span>
+                      ) : !videoWatched ? (
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab("video")}
+                          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 hover:bg-amber-500/25 transition cursor-pointer"
+                        >
+                          <Play size={13} />
+                          <span>{locale === "en" ? "Watch Video to unlock next lesson" : "Regardez la vidéo pour débloquer la suite"}</span>
+                        </button>
+                      ) : (
+                        hasNextLesson && onNextLesson && (
+                          <NeonButton
+                            variant="emerald"
+                            size="sm"
+                            onClick={onNextLesson}
+                            icon={<ChevronRight size={15} />}
+                          >
+                            {locale === "en" ? "Proceed to Next Lesson" : "Passer à la leçon suivante"}
+                          </NeonButton>
+                        )
+                      )}
+                    </div>
                   )}
                 </div>
               </motion.div>

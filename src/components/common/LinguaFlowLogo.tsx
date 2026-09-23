@@ -13,8 +13,8 @@ export interface LinguaFlowLogoProps {
 
 export const LinguaFlowLogo: React.FC<LinguaFlowLogoProps> = ({
   size = "md",
-  showBadge = true,
-  badgeText = "SaaS B2B",
+  showBadge = false,
+  badgeText = "",
   className = "",
   centered = false,
   subtitle,

@@ -24,6 +24,7 @@ import {
   Sparkles,
   Globe,
   SunMoon,
+  Languages,
 } from "lucide-react";
 
 interface HeaderProps {
@@ -41,6 +42,7 @@ interface HeaderProps {
   onSelectStudent?: (studentId: string) => void;
   currentUserName?: string;
   onLogout?: () => void;
+  onOpenTranslator?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -53,6 +55,7 @@ export const Header: React.FC<HeaderProps> = ({
   currentStudent,
   currentUserName,
   onLogout,
+  onOpenTranslator,
 }) => {
   const t = translations[locale];
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -119,11 +122,9 @@ export const Header: React.FC<HeaderProps> = ({
               className="h-8 sm:h-10 w-auto object-contain shrink-0 drop-shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
             />
             <div className="min-w-0">
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className="rounded-md bg-[#6D5DFC]/10 px-1.5 py-0.5 text-[9px] sm:text-[10px] font-bold text-[#6D5DFC] dark:text-[#a399ff] border border-[#6D5DFC]/20 uppercase tracking-wider shrink-0">
-                  SaaS B2B
-                </span>
-              </div>
+              <h1 className="text-sm sm:text-base font-black tracking-tight text-slate-900 dark:text-white leading-tight">
+                LinguaFlow
+              </h1>
               <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-white/40 hidden sm:block font-medium truncate max-w-[200px] md:max-w-none">
                 {currentRole === "super_admin"
                   ? t.common.centralPlatform
@@ -205,6 +206,20 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="hidden lg:inline">{t.common.logout}</span>
               </button>
             </div>
+          )}
+
+          {/* Translator Button */}
+          {onOpenTranslator && (
+            <button
+              id="header-translator-btn"
+              type="button"
+              onClick={onOpenTranslator}
+              title={locale === "en" ? "English ⇄ French Translator" : "Traducteur Anglais ⇄ Français"}
+              className="flex items-center gap-1.5 h-9 sm:h-10 px-3 rounded-xl border border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-[#6D5DFC] transition cursor-pointer shadow-2xs"
+            >
+              <Languages size={14} className="text-[#6D5DFC]" />
+              <span className="hidden lg:inline">{locale === "en" ? "Translate EN ⇄ FR" : "Traducteur EN ⇄ FR"}</span>
+            </button>
           )}
 
           {/* Language Switcher */}
@@ -331,6 +346,21 @@ export const Header: React.FC<HeaderProps> = ({
                     })}
                   </div>
                 </div>
+
+                {/* Translator Quick Button in Mobile Menu */}
+                {onOpenTranslator && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      onOpenTranslator();
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 text-xs font-bold transition cursor-pointer"
+                  >
+                    <Languages size={14} />
+                    <span>{locale === "en" ? "Open Translator (EN ⇄ FR)" : "Ouvrir le Traducteur (EN ⇄ FR)"}</span>
+                  </button>
+                )}
 
                 {/* Logout Action Button */}
                 {onLogout && (

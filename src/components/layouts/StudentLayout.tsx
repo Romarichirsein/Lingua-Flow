@@ -15,6 +15,7 @@ import {
   MessageCircle,
   FileCheck,
   Sparkles,
+  Bot,
 } from "lucide-react";
 import { SidebarTabs, TabDefinition } from "../common/SidebarTabs";
 import { SchoolLogo } from "../common/SchoolLogo";
@@ -86,9 +87,7 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({
       label: t.student.tabs.chat.label,
       shortLabel: "LinguaFlow AI",
       description: t.student.tabs.chat.desc,
-      icon: <Sparkles size={18} className="text-amber-400" />,
-      badge: "DACH 🇩🇪",
-      badgeColor: "amber",
+      icon: <Bot size={18} className="text-cyan-400" />,
     },
     {
       id: "evaluations",

@@ -14,7 +14,7 @@ import {
 import { translations } from "../../lib/translations";
 import { StudentLayout, StudentTab } from "../layouts/StudentLayout";
 import { StudentBlockedScreen } from "./StudentBlockedScreen";
-import { getEffectiveStatus } from "../../lib/syncEngine";
+import { getEffectiveStatus, isLessonAccessible, calculateProgression } from "../../lib/syncEngine";
 import { ProgressionService } from "../../lib/progressionService";
 import {
   unlockedModule,
@@ -200,13 +200,30 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
     }
   };
 
+  // Dynamic robot logo and tab title for LinguaFlow AI tab
+  React.useEffect(() => {
+    if (activeTab === "chat") {
+      document.title = "LinguaFlow AI 🤖 | Tuteur Intelligent";
+      const link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+      if (link) link.href = "/robot.svg";
+    } else {
+      document.title = "LinguaFlow - Plateforme E-Learning B2B Multi-Écoles";
+      const link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+      if (link) link.href = "/logo.png";
+    }
+  }, [activeTab]);
+
   const currentIndex = allLessons.findIndex((l) => l.id === selectedLessonId);
   const hasPrevLesson = currentIndex > 0;
   const hasNextLesson = currentIndex !== -1 && currentIndex < allLessons.length - 1;
 
   const handleNextLesson = () => {
     if (hasNextLesson) {
-      setSelectedLessonId(allLessons[currentIndex + 1].id);
+      const nextLesson = allLessons[currentIndex + 1];
+      // Sequential lock check: only advance if next lesson is accessible
+      if (nextLesson && isLessonAccessible(nextLesson, allLessons, student.completedLessons || [])) {
+        setSelectedLessonId(nextLesson.id);
+      }
     }
   };
 
@@ -217,7 +234,10 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
   };
 
   const handleOpenSpecificLesson = (lessonId: string) => {
-    setSelectedLessonId(lessonId);
+    const target = allLessons.find((l) => l.id === lessonId);
+    if (target && isLessonAccessible(target, allLessons, student.completedLessons || [])) {
+      setSelectedLessonId(lessonId);
+    }
     switchTab("courses");
   };
 
@@ -288,10 +308,10 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
 
         {/* 3. COURSES & LESSON PLAYER TAB */}
         {activeTab === "courses" && (
-          <div className="grid gap-6 lg:grid-cols-12">
-            {/* Left Column: Modules & Lessons Syllabus */}
-            <div className="lg:col-span-4 space-y-4">
-              <div className="bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 rounded-3xl p-5 space-y-4 shadow-xs">
+          <div className="grid gap-6 lg:grid-cols-12 items-start">
+            {/* Syllabus: on mobile it shows below the video player for instant lesson access */}
+            <div className="order-2 lg:order-1 lg:col-span-4 space-y-4 w-full min-w-0">
+              <div className="bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 rounded-3xl p-4 sm:p-5 space-y-4 shadow-xs">
                 <div className="flex items-center justify-between">
                   <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
                     <Layers size={18} className="text-indigo-500" />
@@ -341,27 +361,45 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                           {modLessons.map((les) => {
                             const isSelected = selectedLessonId === les.id;
                             const isDone = studentCompleted.includes(les.id);
+                            const isAccessible = isLessonAccessible(les, allLessons, studentCompleted);
 
                             return (
                               <motion.button
                                 key={les.id}
                                 type="button"
+                                disabled={!isAccessible}
                                 variants={lessonUnlockVariant}
                                 initial="locked"
                                 animate={isReducedMotion() ? "unlockedReduced" : "unlocked"}
-                                whileHover={{ x: 2 }}
-                                whileTap={{ scale: 0.98 }}
-                                onClick={() => setSelectedLessonId(les.id)}
-                                className={`w-full text-left p-2.5 rounded-xl border text-xs transition flex items-center justify-between cursor-pointer ${
-                                  isSelected
-                                    ? "border-indigo-500 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-bold shadow-xs"
+                                whileHover={isAccessible ? { x: 2 } : {}}
+                                whileTap={isAccessible ? { scale: 0.98 } : {}}
+                                onClick={() => {
+                                  if (isAccessible) {
+                                    setSelectedLessonId(les.id);
+                                  }
+                                }}
+                                title={
+                                  !isAccessible
+                                    ? (locale === "en" ? "Locked: Complete previous lessons and quizzes" : "Verrouillée : Terminez les leçons précédentes et leurs quiz")
+                                    : les.title
+                                }
+                                className={`w-full text-left p-2.5 rounded-xl border text-xs transition flex items-center justify-between ${
+                                  !isAccessible
+                                    ? "border-slate-100 dark:border-white/5 opacity-50 cursor-not-allowed bg-slate-50/50 dark:bg-white/[0.02] text-slate-400"
+                                    : isSelected
+                                    ? "border-indigo-500 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-bold shadow-xs cursor-pointer"
                                     : isDone
-                                    ? "border-slate-200/60 dark:border-slate-800 bg-emerald-500/5 text-slate-700 dark:text-slate-300"
-                                    : "border-slate-100 dark:border-white/5 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-400"
+                                    ? "border-slate-200/60 dark:border-slate-800 bg-emerald-500/5 text-slate-700 dark:text-slate-300 cursor-pointer"
+                                    : "border-slate-100 dark:border-white/5 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-400 cursor-pointer"
                                 }`}
                               >
                                 <div className="flex items-center gap-2.5 min-w-0">
-                                  {isDone ? (
+                                  {!isAccessible ? (
+                                    <Lock
+                                      size={14}
+                                      className="text-slate-400 shrink-0"
+                                    />
+                                  ) : isDone ? (
                                     <CheckCircle2
                                       size={15}
                                       className="text-emerald-500 shrink-0"
@@ -378,7 +416,11 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                                 </div>
 
                                 <span className="text-[10px] text-slate-400 shrink-0 ml-2">
-                                  {les.durationMinutes}m
+                                  {!isAccessible ? (
+                                    <Lock size={12} className="inline text-slate-400" />
+                                  ) : (
+                                    `${les.durationMinutes}m`
+                                  )}
                                 </span>
                               </motion.button>
                             );
@@ -391,8 +433,8 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
               </div>
             </div>
 
-            {/* Right Column: Interactive Lesson Player with Transitions */}
-            <div className="lg:col-span-8">
+            {/* Main Interactive Lesson Player: order-1 on mobile for immediate access */}
+            <div className="order-1 lg:order-2 lg:col-span-8 w-full min-w-0">
               {currentLesson ? (
                 <InteractiveLessonPlayer
                   lesson={currentLesson}

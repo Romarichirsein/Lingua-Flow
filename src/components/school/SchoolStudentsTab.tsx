@@ -525,8 +525,8 @@ export const SchoolStudentsTab: React.FC<SchoolStudentsTabProps> = ({
       </div>
 
       {/* Desktop Students Table */}
-      <div className="hidden md:block bg-white dark:bg-[#0D1220] rounded-3xl border border-slate-200 dark:border-white/10 overflow-hidden shadow-sm">
-        <table className="w-full text-left text-xs">
+      <div className="hidden md:block bg-white dark:bg-[#0D1220] rounded-3xl border border-slate-200 dark:border-white/10 overflow-x-auto shadow-sm">
+        <table className="w-full text-left text-xs min-w-[700px]">
           <thead className="bg-slate-50 dark:bg-white/5 text-slate-500 dark:text-white/50 border-b border-slate-200 dark:border-white/10 font-bold uppercase tracking-wider text-[11px]">
             <tr>
               <th className="py-3.5 px-4">{isEn ? "Learner" : "Apprenant"}</th>

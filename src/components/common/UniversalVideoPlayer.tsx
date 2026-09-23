@@ -7,18 +7,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { parseVideoSource } from "../../lib/videoHelper";
 import { resolvePlayableVideoUrl } from "../../lib/videoStorage";
 import {
-  Play,
-  Pause,
-  Volume2,
-  VolumeX,
-  Maximize2,
-  RotateCcw,
   AlertTriangle,
-  ExternalLink,
-  Shield,
-  Sparkles,
   RefreshCw,
-  Video,
 } from "lucide-react";
 
 interface UniversalVideoPlayerProps {
@@ -121,13 +111,16 @@ export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
     }
   };
 
-  const handleUseFallbackSample = () => {
-    setHasError(false);
-    setResolvedUrl("https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4");
+  const handleTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
+    const video = e.currentTarget;
+    if (video.duration && video.currentTime >= video.duration * 0.98) {
+      onEnded?.();
+    }
   };
 
   return (
     <div
+      onContextMenu={(e) => e.preventDefault()}
       className={`relative aspect-video w-full overflow-hidden rounded-2xl bg-slate-950 shadow-xl border border-slate-800 select-none group ${className}`}
     >
       {/* 1. Iframe Players: YouTube, Vimeo, Google Drive, Dailymotion */}
@@ -155,30 +148,11 @@ export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
             <button
               type="button"
               onClick={handleRetry}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-white transition cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-white transition cursor-pointer"
             >
               <RefreshCw size={13} />
               <span>Réessayer</span>
             </button>
-            <button
-              type="button"
-              onClick={handleUseFallbackSample}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white shadow transition cursor-pointer"
-            >
-              <Sparkles size={13} />
-              <span>Tester un échantillon HD</span>
-            </button>
-            {resolvedUrl.startsWith("http") && (
-              <a
-                href={resolvedUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 transition"
-              >
-                <span>Ouvrir lien</span>
-                <ExternalLink size={12} />
-              </a>
-            )}
           </div>
         </div>
       ) : (
@@ -189,42 +163,38 @@ export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
           poster={poster}
           controls
           autoPlay={autoPlay}
-          controlsList="nodownload"
+          controlsList="nodownload noplaybackrate"
+          disablePictureInPicture
           playsInline
+          onContextMenu={(e) => e.preventDefault()}
           onError={handleVideoError}
+          onTimeUpdate={handleTimeUpdate}
           onEnded={() => onEnded?.()}
-          className="h-full w-full object-contain bg-black select-none"
+          className="h-full w-full object-contain bg-black select-none pointer-events-auto"
         />
       )}
 
-      {/* 2. DYNAMIC ANTI-RECORDING DRM WATERMARK OVERLAY */}
+      {/* 2. PLATFORM LOGO WATERMARK WITH REDUCED OPACITY */}
+      <div className="pointer-events-none absolute top-3.5 right-3.5 sm:top-4 sm:right-4 z-20 flex items-center gap-2 select-none">
+        <img
+          src="/logo.png"
+          alt="LinguaFlow"
+          className="h-6 sm:h-8 w-auto object-contain opacity-25 drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] filter contrast-125"
+        />
+        <span className="hidden sm:inline text-[9px] font-mono font-bold tracking-widest text-white/25 uppercase">
+          LinguaFlow
+        </span>
+      </div>
+
+      {/* 3. OPTIONAL SUBTLE SESSION DRM WATERMARK */}
       {showDrmWatermark && (
-        <div className="pointer-events-none absolute inset-0 z-20 flex flex-col justify-between p-4 sm:p-5 opacity-30 select-none overflow-hidden">
-          {/* Top Bar Watermark */}
-          <div className="flex items-center justify-between text-[10px] font-mono text-white/90 tracking-wider uppercase">
-            <span>{watermarkText || "LinguaFlow Protected Stream"}</span>
+        <div className="pointer-events-none absolute inset-0 z-20 flex flex-col justify-between p-3 sm:p-4 opacity-20 select-none overflow-hidden">
+          <div className="flex items-center justify-between text-[9px] font-mono text-white/70 tracking-wider uppercase">
+            <span>{watermarkText || "LinguaFlow Protected"}</span>
             <span>{watermarkEmail || ""}</span>
           </div>
-
-          {/* Shifting Floating Watermark Badge */}
-          <div
-            style={{
-              transform: `translate(${watermarkOffset.x}px, ${watermarkOffset.y}px)`,
-              transition: "transform 4s ease-in-out",
-            }}
-            className="flex items-center justify-center"
-          >
-            <div className="rounded-xl bg-black/60 px-3.5 py-1.5 backdrop-blur-xs text-center border border-cyan-500/30 shadow-lg">
-              <p className="text-[10px] font-mono font-bold text-cyan-300">
-                DRM SESSION • {watermarkSessionId || "SECURE-ID"}
-              </p>
-              <p className="text-[9px] font-mono text-white/80">{currentTimeStr || "ACTIVE"}</p>
-            </div>
-          </div>
-
-          {/* Bottom Bar Watermark */}
-          <div className="flex items-center justify-between text-[9px] font-mono text-white/70">
-            <span>PROTECTED LMS STREAM • DOWNLOAD PROHIBITED</span>
+          <div className="flex items-center justify-between text-[8px] font-mono text-white/60">
+            <span>FLUX PROTÉGÉ • TÉLÉCHARGEMENT & PARTAGE STRICTEMENT INTERDITS</span>
             <span>{currentTimeStr}</span>
           </div>
         </div>

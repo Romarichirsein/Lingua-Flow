@@ -493,7 +493,7 @@ export const INITIAL_STUDENTS: Student[] = [
     startDate: "2026-08-01",
     endDate: "2026-10-24", // 61 days calculation example from prompt
     status: "active",
-    progressPercent: 65,
+    progressPercent: 33, // 1 out of 3 lessons in prog-de-a1
     lastActiveLessonId: "les-de-1",
     completedLessons: ["les-de-1"],
     lastLoginDate: "2026-08-24",
@@ -512,7 +512,7 @@ export const INITIAL_STUDENTS: Student[] = [
     startDate: "2026-07-15",
     endDate: getRelativeDateStr(3),
     status: "active",
-    progressPercent: 80,
+    progressPercent: 67, // 2 out of 3 lessons in prog-de-a1
     lastActiveLessonId: "les-de-2",
     completedLessons: ["les-de-1", "les-de-2"],
     lastLoginDate: "2026-08-23",
@@ -531,7 +531,7 @@ export const INITIAL_STUDENTS: Student[] = [
     startDate: "2026-08-01",
     endDate: "2026-11-01",
     status: "active",
-    progressPercent: 40,
+    progressPercent: 50, // 1 out of 2 lessons in prog-it-a1
     lastActiveLessonId: "les-it-1",
     completedLessons: ["les-it-1"],
     lastLoginDate: "2026-08-22",
@@ -550,9 +550,9 @@ export const INITIAL_STUDENTS: Student[] = [
     startDate: "2026-05-01",
     endDate: "2026-07-31", // Expired
     status: "expired",
-    progressPercent: 100,
-    lastActiveLessonId: "les-it-1",
-    completedLessons: ["les-it-1"],
+    progressPercent: 100, // 2 out of 2 lessons in prog-it-a1
+    lastActiveLessonId: "les-it-2",
+    completedLessons: ["les-it-1", "les-it-2"],
     lastLoginDate: "2026-07-30",
   },
 ];
@@ -739,20 +739,7 @@ export const getStoredData = () => {
       };
     });
 
-    // Sanitize students
-    const sanitizedStudents = (Array.isArray(parsedStudents) ? parsedStudents : INITIAL_STUDENTS).map((s) => {
-      const defaultUsername = s.username || (s.email ? s.email.split("@")[0] : `student_${s.id}`);
-      const defaultPassword = s.password || "student123";
-      return {
-        ...s,
-        username: defaultUsername,
-        password: defaultPassword,
-        completedLessons: Array.isArray(s.completedLessons) ? s.completedLessons : [],
-        progressPercent: typeof s.progressPercent === "number" ? s.progressPercent : 0,
-      };
-    });
-
-    // Sanitize programs
+    // Sanitize programs first
     const sanitizedPrograms = (Array.isArray(parsedPrograms) ? parsedPrograms : INITIAL_PROGRAMS).map((p) => ({
       ...p,
       modules: (Array.isArray(p.modules) ? p.modules : []).map((m) => ({
@@ -764,6 +751,32 @@ export const getStoredData = () => {
         })),
       })),
     }));
+
+    // Sanitize students with strictly synchronized mathematical progression
+    const sanitizedStudents = (Array.isArray(parsedStudents) ? parsedStudents : INITIAL_STUDENTS).map((s) => {
+      const defaultUsername = s.username || (s.email ? s.email.split("@")[0] : `student_${s.id}`);
+      const defaultPassword = s.password || "student123";
+      const completedLessons = Array.isArray(s.completedLessons) ? Array.from(new Set(s.completedLessons)) : [];
+
+      // Calculate real progression percentage based on enrolled program
+      const enrolledProg =
+        sanitizedPrograms.find((p) => p.id === s.enrolledProgramId) ||
+        sanitizedPrograms.find((p) => p.schoolId === s.schoolId) ||
+        sanitizedPrograms[0];
+      const allProgLessons = enrolledProg ? enrolledProg.modules.flatMap((m) => m.lessons || []) : [];
+      const totalCount = allProgLessons.length;
+      const validCompleted = allProgLessons.filter((l) => completedLessons.includes(l.id)).length;
+      const realProgressPercent =
+        totalCount > 0 ? Math.min(100, Math.round((validCompleted / totalCount) * 100)) : 0;
+
+      return {
+        ...s,
+        username: defaultUsername,
+        password: defaultPassword,
+        completedLessons,
+        progressPercent: realProgressPercent,
+      };
+    });
 
     return {
       schools: sanitizedSchools,

@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="robotGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00D9FF" />
+      <stop offset="100%" stop-color="#6D5DFC" />
+    </linearGradient>
+    <linearGradient id="eyeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#20E3A2" />
+      <stop offset="100%" stop-color="#00D9FF" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Antenna -->
+  <line x1="32" y1="6" x2="32" y2="15" stroke="url(#robotGrad)" stroke-width="4" stroke-linecap="round" />
+  <circle cx="32" cy="6" r="4.5" fill="#00D9FF" filter="url(#glow)" />
+
+  <!-- Robot Head Outline / Base -->
+  <rect x="10" y="15" width="44" height="34" rx="10" fill="#0D1220" stroke="url(#robotGrad)" stroke-width="3" />
+
+  <!-- Ears / Audio Sensors -->
+  <rect x="5" y="24" width="5" height="16" rx="2.5" fill="url(#robotGrad)" />
+  <rect x="54" y="24" width="5" height="16" rx="2.5" fill="url(#robotGrad)" />
+
+  <!-- Visor Screen -->
+  <rect x="16" y="22" width="32" height="15" rx="5" fill="#050811" stroke="#1E293B" stroke-width="1.5" />
+
+  <!-- Glowing Eyes -->
+  <circle cx="24" cy="29.5" r="4" fill="url(#eyeGrad)" filter="url(#glow)" />
+  <circle cx="40" cy="29.5" r="4" fill="url(#eyeGrad)" filter="url(#glow)" />
+  
+  <!-- Pupil sparkles -->
+  <circle cx="25" cy="28.5" r="1.2" fill="#FFFFFF" />
+  <circle cx="41" cy="28.5" r="1.2" fill="#FFFFFF" />
+
+  <!-- Mouth / Equalizer Line -->
+  <path d="M22 42 Q32 46 42 42" stroke="url(#robotGrad)" stroke-width="2.5" stroke-linecap="round" />
+
+  <!-- Neck & Body hint -->
+  <rect x="25" y="49" width="14" height="4" rx="2" fill="#1E293B" />
+  <path d="M18 53 H46 C48 53 50 55 51 57 L54 62 H10 L13 57 C14 55 16 53 18 53 Z" fill="#0D1220" stroke="url(#robotGrad)" stroke-width="2" />
+</svg>

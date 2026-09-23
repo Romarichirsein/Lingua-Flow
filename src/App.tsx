@@ -36,6 +36,7 @@ import { SplashScreen } from "./components/common/SplashScreen";
 import { LoginPage } from "./components/auth/LoginPage";
 import { Header } from "./components/common/Header";
 import { FloatingWhatsApp } from "./components/common/FloatingWhatsApp";
+import { TranslatorWidget } from "./components/common/TranslatorWidget";
 import { SuperAdminDashboard } from "./components/superadmin/SuperAdminDashboard";
 import { SchoolDashboard } from "./components/school/SchoolDashboard";
 import { StudentPortal } from "./components/student/StudentPortal";
@@ -51,6 +52,7 @@ export default function App() {
     return route.type !== "login" && route.type !== "splash";
   });
   const [currentUserName, setCurrentUserName] = useState<string>("Romaric Hirsein");
+  const [isTranslatorOpen, setIsTranslatorOpen] = useState(false);
 
   const [role, setRole] = useState<UserRole>("student");
   const [locale, setLocale] = useState<UILocale>("fr");
@@ -455,6 +457,7 @@ export default function App() {
             }}
             currentUserName={currentUserName}
             onLogout={handleLogout}
+            onOpenTranslator={() => setIsTranslatorOpen(true)}
           />
 
           {/* Main Multi-Role Portal Views with Fluid Transitions */}
@@ -639,6 +642,13 @@ export default function App() {
             role={role}
             whatsappUrl={activeWhatsappUrl}
             recipientName={recipientName}
+            locale={locale}
+          />
+
+          {/* Bilingual English ⇄ French Translation Tool */}
+          <TranslatorWidget
+            isOpen={isTranslatorOpen}
+            onClose={() => setIsTranslatorOpen(false)}
             locale={locale}
           />
         </motion.div>
