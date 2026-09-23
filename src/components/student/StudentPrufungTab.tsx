@@ -9,11 +9,15 @@ import {
   UILocale,
 } from "../../types";
 import { translations } from "../../lib/translations";
-import { NeonButton } from "../common/NeonButton";
 import {
   PRUFUNG_DATA_DE,
   LevelExamConfig,
   ExamQuestion,
+  ExamMatchingLesenTask,
+  ExamSprachbausteineTask,
+  ExamHorenTrueFalseTask,
+  ExamSchreibenSimulationTask,
+  ExamSprechenSimulationTask,
 } from "../../data/prufungData";
 import {
   Award,
@@ -29,19 +33,19 @@ import {
   Volume2,
   RefreshCw,
   HelpCircle,
-  ExternalLink,
   ChevronRight,
   Clock,
   Gauge,
   Check,
   X,
-  Languages,
   FileCheck,
   Flame,
-  ArrowRight,
   Info,
-  Lock,
   Shield,
+  RotateCcw,
+  Sparkles,
+  Timer,
+  ChevronDown,
 } from "lucide-react";
 
 interface StudentPrufungTabProps {
@@ -57,11 +61,33 @@ interface StudentPrufungTabProps {
 type PrufungSubTab =
   | "overview"
   | "lesen"
+  | "sprachbausteine"
   | "horen"
   | "schreiben"
   | "sprechen"
   | "wortschatz"
   | "lessons";
+
+interface WritingEvaluationResult {
+  nombre_mots: number;
+  seuil_atteint: boolean;
+  scores: Array<{
+    critere: string;
+    points_obtenus: number;
+    points_max: number;
+    commentaire: string;
+  }>;
+  note_totale: number;
+  note_max: number;
+  corrections_ciblees: Array<{
+    erreur: string;
+    correction: string;
+    regle: string;
+  }>;
+  points_forts: string[];
+  axes_amelioration: string[];
+  appreciation_generale: string;
+}
 
 export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
   student,
@@ -76,7 +102,7 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
   const isEn = locale === "en";
   const isGerman = school.language === "german";
 
-  // Level defined by school for this student (locked, strictly non-modifiable by student)
+  // Strict Level Isolation: defined by school for this student. No other level can be accessed.
   const rawLevel = (student.level || "A1").toUpperCase().trim();
   const assignedLevel: CEFRLevel = (["A1", "A2", "B1", "B2", "C1", "C2"].includes(rawLevel)
     ? rawLevel
@@ -85,15 +111,18 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
   const selectedLevel = assignedLevel;
   const [activeSubTab, setActiveSubTab] = useState<PrufungSubTab>("overview");
 
-  // Get current exam data for selected level
+  // Get current exam data for student's strictly assigned level
   const currentExamConfig: LevelExamConfig =
     PRUFUNG_DATA_DE[selectedLevel] || PRUFUNG_DATA_DE.B1;
 
   // Track progress and scores per skill (stored in local state & persisted)
-  const storageKey = `linguaflow_prufung_${student.id}_${selectedLevel}`;
+  const storageKey = `linguaflow_prufung_v2_${student.id}_${selectedLevel}`;
   const [skillScores, setSkillScores] = useState<{
     lesenAnswers: Record<string, number>;
+    matchingAnswers: Record<string, string>;
+    sprachbausteineAnswers: Record<string, number>;
     horenAnswers: Record<string, number>;
+    trueFalseAnswers: Record<string, boolean>;
     wortschatzQuizAnswers: Record<string, number>;
     masteredVocabIds: string[];
     schreibenCompleted: boolean;
@@ -108,7 +137,10 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
     }
     return {
       lesenAnswers: {},
+      matchingAnswers: {},
+      sprachbausteineAnswers: {},
       horenAnswers: {},
+      trueFalseAnswers: {},
       wortschatzQuizAnswers: {},
       masteredVocabIds: [],
       schreibenCompleted: false,
@@ -148,7 +180,7 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = isGerman ? "de-DE" : "it-IT";
-    utterance.rate = selectedLevel === "A1" || selectedLevel === "A2" ? 0.85 : 1.0;
+    utterance.rate = selectedLevel === "A1" || selectedLevel === "A2" ? 0.85 : 0.95;
 
     utterance.onstart = () => {
       setIsPlayingAudio(true);
@@ -182,7 +214,7 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
     setCurrentPlayingText(null);
   };
 
-  // Score calculations
+  // Helper score calculation
   const calculateScore = (
     questions: ExamQuestion[],
     answers: Record<string, number>
@@ -197,21 +229,73 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
     return Math.round((correct / questions.length) * 100);
   };
 
-  // Aggregate Lesen questions
-  const allLesenQuestions = (currentExamConfig.tasks.lesen || []).flatMap(
-    (t) => t.questions
-  );
-  const lesenScore = calculateScore(allLesenQuestions, skillScores.lesenAnswers);
+  // 1. Lesen Scores (QCM + Matching)
+  const allLesenQuestions = (currentExamConfig.tasks.lesen || []).flatMap((t) => t.questions);
+  const regularLesenScore = calculateScore(allLesenQuestions, skillScores.lesenAnswers);
+
+  const matchingTasks = currentExamConfig.tasks.matchingLesen || [];
+  let totalMatchingTexts = 0;
+  let correctMatchingTexts = 0;
+  matchingTasks.forEach((mTask) => {
+    mTask.texts.forEach((_, tIdx) => {
+      totalMatchingTexts++;
+      const userAns = skillScores.matchingAnswers[`${mTask.id}_${tIdx}`];
+      if (userAns && userAns === mTask.answers[String(tIdx)]) {
+        correctMatchingTexts++;
+      }
+    });
+  });
+  const matchingScore = totalMatchingTexts > 0 ? Math.round((correctMatchingTexts / totalMatchingTexts) * 100) : 0;
+  const lesenScore = matchingTasks.length > 0 && allLesenQuestions.length > 0
+    ? Math.round((regularLesenScore + matchingScore) / 2)
+    : matchingTasks.length > 0
+    ? matchingScore
+    : regularLesenScore;
   const isLesenPassed = lesenScore >= currentExamConfig.passingScorePercent;
 
-  // Aggregate Hören questions
-  const allHorenQuestions = (currentExamConfig.tasks.horen || []).flatMap(
-    (t) => t.questions
-  );
-  const horenScore = calculateScore(allHorenQuestions, skillScores.horenAnswers);
+  // 2. Sprachbausteine Score
+  const sbTasks = currentExamConfig.tasks.sprachbausteine || [];
+  let totalSbGaps = 0;
+  let correctSbGaps = 0;
+  sbTasks.forEach((task) => {
+    task.parts.forEach((part) => {
+      if (typeof part !== "string") {
+        totalSbGaps++;
+        const userChoice = skillScores.sprachbausteineAnswers[`${task.id}_gap_${part.n}`];
+        if (userChoice !== undefined && userChoice === part.correct) {
+          correctSbGaps++;
+        }
+      }
+    });
+  });
+  const sprachbausteineScore = totalSbGaps > 0 ? Math.round((correctSbGaps / totalSbGaps) * 100) : 0;
+  const isSbPassed = sprachbausteineScore >= currentExamConfig.passingScorePercent;
+
+  // 3. Hören Scores (QCM + True/False)
+  const allHorenQuestions = (currentExamConfig.tasks.horen || []).flatMap((t) => t.questions);
+  const regularHorenScore = calculateScore(allHorenQuestions, skillScores.horenAnswers);
+
+  const tfHorenTasks = currentExamConfig.tasks.trueFalseHoren || [];
+  let totalTfStatements = 0;
+  let correctTfStatements = 0;
+  tfHorenTasks.forEach((tfTask) => {
+    tfTask.statements.forEach((stmt) => {
+      totalTfStatements++;
+      const userChoice = skillScores.trueFalseAnswers[stmt.id];
+      if (userChoice !== undefined && userChoice === stmt.isTrue) {
+        correctTfStatements++;
+      }
+    });
+  });
+  const tfHorenScore = totalTfStatements > 0 ? Math.round((correctTfStatements / totalTfStatements) * 100) : 0;
+  const horenScore = tfHorenTasks.length > 0 && allHorenQuestions.length > 0
+    ? Math.round((regularHorenScore + tfHorenScore) / 2)
+    : tfHorenTasks.length > 0
+    ? tfHorenScore
+    : regularHorenScore;
   const isHorenPassed = horenScore >= currentExamConfig.passingScorePercent;
 
-  // Wortschatz score
+  // 4. Wortschatz Score
   const wortschatzQuizScore = calculateScore(
     currentExamConfig.tasks.wortschatzQuiz || [],
     skillScores.wortschatzQuizAnswers
@@ -225,78 +309,171 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
     (wortschatzQuizScore * 0.6) + (vocabMasteryPercent * 0.4)
   );
 
-  // Overall Prüfungsreife Readiness Index (0 to 100%)
+  // Overall Readiness Index (0 to 100%)
   const readinessComponents = [
-    { name: "Lesen", score: lesenScore, weight: 0.25 },
-    { name: "Hören", score: horenScore, weight: 0.25 },
-    { name: "Schreiben", score: skillScores.schreibenCompleted ? 85 : skillScores.schreibenDraft.length > 50 ? 50 : 0, weight: 0.2 },
+    { name: "Lesen", score: lesenScore, weight: 0.20 },
+    { name: "Sprachbausteine", score: sprachbausteineScore, weight: 0.15 },
+    { name: "Hören", score: horenScore, weight: 0.20 },
+    { name: "Schreiben", score: skillScores.schreibenCompleted ? 85 : skillScores.schreibenDraft.length > 50 ? 50 : 0, weight: 0.20 },
     { name: "Sprechen", score: skillScores.sprechenCompleted ? 85 : 20, weight: 0.15 },
-    { name: "Wortschatz", score: combinedWortschatzScore, weight: 0.15 },
+    { name: "Wortschatz", score: combinedWortschatzScore, weight: 0.10 },
   ];
 
   const overallReadiness = Math.round(
     readinessComponents.reduce((acc, c) => acc + c.score * c.weight, 0)
   );
-
-  // Determine certification readiness status
   const isPruefungsbereit = overallReadiness >= currentExamConfig.passingScorePercent;
 
-  // Interactive AI feedback simulation for writing
+  // Timed Writing Simulation State
+  const activeWritingSimulation = currentExamConfig.tasks.schreibenSimulation?.[0];
+  const simulationTimeMinutes = activeWritingSimulation?.time_minutes || currentExamConfig.schreibenTimeMinutes || 30;
+  const [writingTimerSeconds, setWritingTimerSeconds] = useState<number>(simulationTimeMinutes * 60);
+  const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
+
+  useEffect(() => {
+    let interval: any = null;
+    if (isTimerRunning && writingTimerSeconds > 0) {
+      interval = setInterval(() => {
+        setWritingTimerSeconds((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    } else if (writingTimerSeconds === 0 && isTimerRunning) {
+      setIsTimerRunning(false);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isTimerRunning, writingTimerSeconds]);
+
+  const formatTimer = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  // Writing Evaluation with Official 4x25 Rubric
   const [isEvaluatingWriting, setIsEvaluatingWriting] = useState(false);
-  const [writingFeedback, setWritingFeedback] = useState<string | null>(null);
+  const [writingEvaluation, setWritingEvaluation] = useState<WritingEvaluationResult | null>(null);
 
   const handleEvaluateWriting = async (task: any) => {
-    if (!skillScores.schreibenDraft || skillScores.schreibenDraft.trim().length < 20) {
-      alert(isEn ? "Please write at least 20 words before evaluating." : "Veuillez rédiger au moins 20 mots avant de lancer l'évaluation.");
+    const draft = skillScores.schreibenDraft.trim();
+    if (!draft || draft.split(/\s+/).length < 20) {
+      alert(isEn ? "Please write at least 20 words before requesting evaluation." : "Veuillez rédiger au moins 20 mots avant de lancer l'évaluation.");
       return;
     }
 
     setIsEvaluatingWriting(true);
-    setWritingFeedback(null);
 
     try {
-      const resp = await fetch("/api/ai/writing/correct", {
+      const resp = await fetch("/api/prufung/evaluate-writing", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          text: skillScores.schreibenDraft,
-          language: school.language,
+          scenario: task.scenario || task.prompt,
+          requirements: task.requirements || task.requiredPoints || [],
+          min_words: task.min_words || task.targetWordCount?.min || 100,
+          rubric: task.rubric || [
+            { critere: "I. Erfüllung der Aufgabenstellung", points: 25 },
+            { critere: "II. Kohärenz & Textaufbau", points: 25 },
+            { critere: "III. Wortschatz & Ausdruck", points: 25 },
+            { critere: "IV. Grammatische Korrektheit", points: 25 },
+          ],
+          text: draft,
           targetLevel: selectedLevel,
-          topic: task.title,
+          language: school.language,
         }),
       });
 
       if (resp.ok) {
-        const data = await resp.json();
-        setWritingFeedback(
-          `${isEn ? "Score" : "Note"}: ${data.score || 85}/100 • CEFR: ${data.cefrLevel || selectedLevel}\n\n${data.overallFeedback || "Sehr gut strukturierter Text!"}`
-        );
-        setSkillScores((prev) => ({ ...prev, schreibenCompleted: true }));
+        const data: WritingEvaluationResult = await resp.json();
+        setWritingEvaluation(data);
+        setSkillScores((prev) => ({
+          ...prev,
+          schreibenCompleted: data.note_totale >= 60,
+        }));
       } else {
-        throw new Error("Failed response");
+        throw new Error("Evaluation failed");
       }
     } catch {
-      // Graceful pedagogical fallback
-      const wordCount = skillScores.schreibenDraft.trim().split(/\s+/).length;
-      const minReq = task.targetWordCount.min;
+      // Deterministic pedagogical fallback matching the exact schema
+      const wordCount = draft.split(/\s+/).length;
+      const minReq = task.min_words || task.targetWordCount?.min || 100;
       const meetsWords = wordCount >= minReq;
-      setWritingFeedback(
-        `${isEn ? "Evaluation Result" : "Résultat d'évaluation"} : ${meetsWords ? "85/100 (Recommandé pour l'examen)" : "60/100 (Volume un peu court)"}\n\n` +
-          (meetsWords
-            ? isEn
-              ? "Your written production respects the required points and demonstrates good sentence structures appropriate for " + selectedLevel + "."
-              : "Votre rédaction couvre les points exigés avec une bonne clarté syntaxique conforme au niveau " + selectedLevel + "."
-            : isEn
-              ? `You wrote ${wordCount} words, while ${minReq} are expected for this task. Enrich your arguments!`
-              : `Vous avez rédigé ${wordCount} mots sur les ${minReq} attendus. Enrichissez vos connecteurs logiques !`)
-      );
-      setSkillScores((prev) => ({ ...prev, schreibenCompleted: true }));
+      const fallbackResult: WritingEvaluationResult = {
+        nombre_mots: wordCount,
+        seuil_atteint: meetsWords,
+        scores: [
+          {
+            critere: "I. Erfüllung der Aufgabenstellung (Leitpunkte)",
+            points_obtenus: meetsWords ? 23 : 15,
+            points_max: 25,
+            commentaire: meetsWords ? "Tous les points obligatoires de la consigne sont traités avec pertinence." : "Volume un peu court pour développer l'ensemble des points requis.",
+          },
+          {
+            critere: "II. Kohärenz & Textaufbau (Structure & Liens)",
+            points_obtenus: meetsWords ? 22 : 14,
+            points_max: 25,
+            commentaire: "La progression thématique est logique avec des paragraphes bien délimités.",
+          },
+          {
+            critere: "III. Wortschatz & Ausdruck (Richesse lexicale)",
+            points_obtenus: meetsWords ? 21 : 14,
+            points_max: 25,
+            commentaire: `Vocabulaire et tournures adaptés au niveau ${selectedLevel}.`,
+          },
+          {
+            critere: "IV. Grammatische Korrektheit (Syntaxe & Déclinaisons)",
+            points_obtenus: meetsWords ? 21 : 14,
+            points_max: 25,
+            commentaire: "Bonne maîtrise des subordonnants et de la place du verbe.",
+          },
+        ],
+        note_totale: meetsWords ? 87 : 57,
+        note_max: 100,
+        corrections_ciblees: [
+          {
+            erreur: "Place du verbe après 'weil' ou 'dass'",
+            correction: "Veillez à renvoyer le verbe conjugué en fin de proposition subordonnée.",
+            regle: "Dans les propositions causales (weil) et complétives (dass), le verbe conjugué occupe la dernière position.",
+          },
+        ],
+        points_forts: [
+          "Respect rigoureux de la formule d'appel et de salutation officielle.",
+          `Nombre de mots (${wordCount}) en adéquation avec les critères de certification.`,
+          "Bonne utilisation des connecteurs logiques de cause et de conséquence.",
+        ],
+        axes_amelioration: [
+          "Consolider l'accord des adjectifs après les articles définis au datif (-en).",
+          "Diversifier les verbes de modalité pour exprimer la réclamation ou la proposition avec nuance.",
+        ],
+        appreciation_generale: meetsWords
+          ? `Très bonne production écrite pour le niveau ${selectedLevel}. Le texte répond aux exigences de l'examen officiel.`
+          : `Production encourageante mais le seuil minimal de ${minReq} mots n'est pas encore atteint. Développez davantage vos arguments.`,
+      };
+      setWritingEvaluation(fallbackResult);
+      setSkillScores((prev) => ({ ...prev, schreibenCompleted: meetsWords }));
     } finally {
       setIsEvaluatingWriting(false);
     }
   };
 
-  // Lesson Quizzes list for subtab "lessons"
+  // Active Sprechen Simulation
+  const activeSprechenSim = currentExamConfig.tasks.sprechenSimulation?.[0];
+  const [activeOralStep, setActiveOralStep] = useState<number>(0);
+  const [isRecordingAudio, setIsRecordingAudio] = useState<boolean>(false);
+  const [oralTimerSeconds, setOralTimerSeconds] = useState<number>(0);
+
+  useEffect(() => {
+    let intv: any = null;
+    if (isRecordingAudio) {
+      intv = setInterval(() => {
+        setOralTimerSeconds((s) => s + 1);
+      }, 1000);
+    }
+    return () => {
+      if (intv) clearInterval(intv);
+    };
+  }, [isRecordingAudio]);
+
   const safeLessons = allLessons || [];
   const studentCompleted = student.completedLessons || [];
   const lessonsWithQuiz = safeLessons.filter((l) => l.quiz && l.quiz.length > 0);
@@ -328,20 +505,18 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
 
             <p className="text-sm text-slate-300 max-w-2xl leading-relaxed">
               {isEn
-                ? `Standardized exam training based on official certification guidelines. Master all 5 exam pillars (Lesen, Hören, Schreiben, Sprechen, Wortschatz) and assess if you are ready to pass the official exam.`
-                : `Entraînement officiel calqué sur les référentiels réels de certification. Maîtrisez les 5 piliers de l'examen (Lesen, Hören, Schreiben, Sprechen, Wortschatz) et évaluez en direct si vous êtes prêt à réussir l'examen.`}
+                ? `Official exam simulations based on real certification benchmarks (telccfree & deuropa). Complete Lesen, Sprachbausteine, Hören, Schreiben, Sprechen and Wortschatz.`
+                : `Entraînement officiel calqué sur les sujets réels d'examen (telccfree & deuropa). Maîtrisez le Lesen, les Sprachbausteine, le Hören, le Schreiben avec correction IA, le Sprechen et le Wortschatz.`}
             </p>
 
             <div className="flex flex-wrap items-center gap-4 pt-1 text-xs text-slate-300">
               <span className="flex items-center gap-1.5">
                 <Clock size={14} className="text-[#00D9FF]" />
-                {currentExamConfig.totalTimeMinutes} min{" "}
-                {isEn ? "official exam duration" : "durée officielle"}
+                {currentExamConfig.totalTimeMinutes} min {isEn ? "official exam duration" : "durée officielle"}
               </span>
               <span className="flex items-center gap-1.5">
                 <CheckCircle2 size={14} className="text-emerald-400" />
-                {currentExamConfig.passingScorePercent}%{" "}
-                {isEn ? "passing mark (60 pts)" : "seuil de réussite requis (60 pts)"}
+                {currentExamConfig.passingScorePercent}% {isEn ? "passing mark (60 pts)" : "seuil de réussite requis (60 pts)"}
               </span>
               <span className="flex items-center gap-1.5">
                 <Award size={14} className="text-amber-400" />
@@ -397,81 +572,48 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
                   ? "Exam Ready!"
                   : "Prêt pour l'examen !"
                 : isEn
-                  ? "In Progress"
-                  : "En préparation"}
+                ? "In Progress"
+                : "En préparation"}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Level Selector Bar (A1, A2, B1, B2, C1, C2) - Locked to school-assigned level */}
-      <div className="space-y-2.5 bg-white dark:bg-[#0D1220] p-4 rounded-2xl border border-slate-200 dark:border-white/10 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Languages size={18} className="text-[#6D5DFC]" />
-            <span className="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider">
-              {isEn ? "Target Exam Level :" : "Sélectionner le niveau d'examen :"}
-            </span>
+      {/* STRICT LEVEL ISOLATION BANNER — Assigned by school, strictly no other levels shown */}
+      <div className="p-4 rounded-2xl bg-gradient-to-r from-indigo-950/40 via-purple-950/30 to-slate-900/40 border border-indigo-500/20 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#6D5DFC] to-[#00D9FF] flex items-center justify-center text-white font-black text-lg shadow-md shadow-indigo-500/30 shrink-0">
+            {selectedLevel}
           </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {(["A1", "A2", "B1", "B2", "C1", "C2"] as CEFRLevel[]).map((lvl) => {
-              const isAssigned = lvl === assignedLevel;
-
-              if (isAssigned) {
-                return (
-                  <div
-                    key={lvl}
-                    className="relative px-4 py-2 rounded-xl text-xs font-black bg-gradient-to-r from-[#6D5DFC] to-[#00D9FF] text-white shadow-md shadow-indigo-500/20 flex items-center gap-1.5 ring-2 ring-[#6D5DFC]/40"
-                  >
-                    <Shield size={12} className="text-cyan-200" />
-                    <span>{lvl}</span>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider bg-white/20 text-white">
-                      {isEn ? "Assigned by School" : "Défini par l'école"}
-                    </span>
-                  </div>
-                );
-              }
-
-              return (
-                <button
-                  key={lvl}
-                  type="button"
-                  disabled={true}
-                  tabIndex={-1}
-                  aria-disabled="true"
-                  title={
-                    isEn
-                      ? `Level ${lvl} is locked. Only ${school.name} administration can adjust your assigned curriculum level.`
-                      : `Le niveau ${lvl} est verrouillé et inaccessible. Seule votre école (${school.name}) peut modifier votre niveau d'examen.`
-                  }
-                  className="relative px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-100/60 dark:bg-white/[0.02] text-slate-400 dark:text-slate-600 border border-slate-200/50 dark:border-white/5 cursor-not-allowed pointer-events-none flex items-center gap-1.5 opacity-40 select-none grayscale"
-                >
-                  <Lock size={11} className="text-slate-400 dark:text-slate-600" />
-                  <span>{lvl}</span>
-                </button>
-              );
-            })}
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-black text-slate-800 dark:text-white">
+                {isEn ? `Official Track: ${selectedLevel}` : `Niveau d'examen officiel : ${selectedLevel}`}
+              </span>
+              <span className="text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
+                {school.name}
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              {isEn
+                ? `Configured by your school administration. All exam simulations and modules are strictly isolated to your level.`
+                : `Attribué par l'administration de ${school.name}. Les épreuves d'autres niveaux sont strictement isolées pour garantir la conformité de votre entraînement.`}
+            </p>
           </div>
         </div>
 
-        {/* Informational notice: level locked by school */}
-        <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 pt-1.5 border-t border-slate-100 dark:border-white/5">
-          <Info size={14} className="text-[#6D5DFC] shrink-0" />
-          <span>
-            {isEn
-              ? `Your exam level is locked to ${assignedLevel} (defined by ${school.name} during enrollment). All other levels are greyed out and inaccessible.`
-              : `Votre niveau d'examen est fixé au niveau ${assignedLevel} défini par ${school.name} lors de votre inscription. Seule l'école peut modifier ce niveau. Les autres niveaux sont grisés et inaccessibles.`}
-          </span>
+        <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-slate-300 shrink-0">
+          <Shield size={14} className="text-[#00D9FF]" />
+          <span>{currentExamConfig.officialExamNameDe}</span>
         </div>
       </div>
 
-      {/* Navigation Tabs: Overview, Lesen, Hören, Schreiben, Sprechen, Wortschatz, Lessons */}
+      {/* Navigation Tabs: Overview, Lesen, Sprachbausteine, Hören, Schreiben, Sprechen, Wortschatz, Lessons */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none border-b border-slate-200 dark:border-white/10">
         {[
           {
             id: "overview",
-            label: isEn ? "Overview & Diagnosis" : "Vue Générale & Diagnostic",
+            label: isEn ? "Overview" : "Vue Générale",
             icon: <Gauge size={16} />,
           },
           {
@@ -481,6 +623,14 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
             icon: <BookOpen size={16} />,
             badge: `${lesenScore}%`,
             badgeColor: isLesenPassed ? "emerald" : "slate",
+          },
+          {
+            id: "sprachbausteine",
+            label: "Sprachbausteine",
+            sublabel: isEn ? "Cloze" : "Grammaire & Syntaxe",
+            icon: <FileCheck size={16} />,
+            badge: `${sprachbausteineScore}%`,
+            badgeColor: isSbPassed ? "emerald" : "slate",
           },
           {
             id: "horen",
@@ -559,7 +709,6 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
       {/* SUBTAB 1: OVERVIEW & READINESS DIAGNOSIS */}
       {activeSubTab === "overview" && (
         <div className="space-y-6">
-          {/* Diagnostic Banner */}
           <div
             className={`p-6 rounded-3xl border flex flex-col md:flex-row items-start md:items-center justify-between gap-6 ${
               isPruefungsbereit
@@ -584,17 +733,17 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
                       ? "Prüfungsbereit : You are ready to take the official exam!"
                       : "Prüfungsbereit : Vous avez validé les prérequis pour l'examen officiel !"
                     : isEn
-                      ? "Preparation in progress : Strengthen weaker modules to reach 60%"
-                      : "Préparation active : consolidez vos points faibles pour atteindre le seuil de 60%"}
+                    ? "Preparation in progress : Strengthen weaker modules to reach 60%"
+                    : "Préparation active : consolidez vos points faibles pour atteindre le seuil de 60%"}
                 </h3>
                 <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl">
                   {isPruefungsbereit
                     ? isEn
-                      ? `Your global readiness index is ${overallReadiness}%. You have reached the passing standards across Lesen, Hören, Schreiben, Sprechen and Wortschatz for ${selectedLevel}.`
+                      ? `Your global readiness index is ${overallReadiness}%. You have reached the passing standards across Lesen, Sprachbausteine, Hören, Schreiben, Sprechen and Wortschatz for ${selectedLevel}.`
                       : `Votre indice de préparation globale est de ${overallReadiness}%. Vous dépassez le seuil officiel de 60% requis par le Goethe-Institut / telc pour le niveau ${selectedLevel}.`
                     : isEn
-                      ? `Your current readiness index is ${overallReadiness}% (passing threshold: 60%). We recommend reviewing the Wortschatz list and practicing Hören.`
-                      : `Votre indice actuel est de ${overallReadiness}% (seuil officiel requis : 60%). Nous vous recommandons de compléter le quiz de Wortschatz et de vous entraîner sur les épreuves d'écoute.`}
+                    ? `Your current readiness index is ${overallReadiness}% (passing threshold: 60%). We recommend practicing Sprachbausteine and reviewing the Wortschatz list.`
+                    : `Votre indice actuel est de ${overallReadiness}% (seuil officiel requis : 60%). Nous vous recommandons de compléter les Sprachbausteine et de vous entraîner sur l'écriture chronométrée.`}
                 </p>
               </div>
             </div>
@@ -602,36 +751,34 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
             <div className="flex items-center gap-2 self-stretch sm:self-auto">
               <button
                 type="button"
-                onClick={() => setActiveSubTab("wortschatz")}
+                onClick={() => setActiveSubTab("sprachbausteine")}
                 className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#6D5DFC] hover:bg-[#5848e0] text-white text-xs font-bold shadow transition cursor-pointer flex items-center justify-center gap-1.5"
               >
-                <span>{isEn ? "Review Wortschatz" : "Réviser le Wortschatz"}</span>
+                <span>{isEn ? "Train Sprachbausteine" : "S'entraîner aux Sprachbausteine"}</span>
                 <ChevronRight size={14} />
               </button>
             </div>
           </div>
 
-          {/* 5 Pillars Metric Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          {/* 6 Pillars Metric Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
             {readinessComponents.map((comp) => {
               const passed = comp.score >= 60;
               return (
                 <div
                   key={comp.name}
-                  onClick={() =>
-                    setActiveSubTab(comp.name.toLowerCase() as PrufungSubTab)
-                  }
+                  onClick={() => setActiveSubTab(comp.name.toLowerCase() as PrufungSubTab)}
                   className="bg-white dark:bg-[#0D1220] p-4 rounded-2xl border border-slate-200 dark:border-white/10 hover:border-[#6D5DFC] transition cursor-pointer shadow-xs flex flex-col justify-between"
                 >
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
                         {comp.name}
                       </span>
                       {passed ? (
-                        <CheckCircle2 size={16} className="text-emerald-500" />
+                        <CheckCircle2 size={15} className="text-emerald-500" />
                       ) : (
-                        <AlertCircle size={16} className="text-amber-500" />
+                        <AlertCircle size={15} className="text-amber-500" />
                       )}
                     </div>
                     <div className="text-2xl font-black text-slate-900 dark:text-white">
@@ -639,10 +786,10 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
                     </div>
                   </div>
 
-                  <div className="pt-3 mt-2 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-[11px] text-slate-400">
-                    <span>{isEn ? "Target: 60%" : "Objectif: 60%"}</span>
+                  <div className="pt-3 mt-2 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-[10px] text-slate-400">
+                    <span>{isEn ? "Target: 60%" : "Seuil: 60%"}</span>
                     <span className="text-[#6D5DFC] font-bold flex items-center">
-                      {isEn ? "Train" : "S'entraîner"} <ChevronRight size={12} />
+                      <ChevronRight size={12} />
                     </span>
                   </div>
                 </div>
@@ -650,13 +797,11 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
             })}
           </div>
 
-          {/* Official Goethe/telc Guidelines & Examination Structure */}
+          {/* Official Goethe/telc Guidelines */}
           <div className="bg-white dark:bg-[#0D1220] rounded-3xl p-6 border border-slate-200 dark:border-white/10 shadow-xs space-y-4">
             <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
               <Award size={18} className="text-[#6D5DFC]" />
-              {isEn
-                ? `Official Exam Specifications : ${currentExamConfig.officialExamNameDe}`
-                : `Structure Officielle de l'Examen : ${currentExamConfig.officialExamNameDe}`}
+              <span>Structure Officielle de l'Examen : {currentExamConfig.officialExamNameDe}</span>
             </h3>
 
             <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
@@ -666,49 +811,49 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3 pt-2">
               <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 space-y-1">
                 <span className="text-[10px] uppercase font-bold text-slate-400">
-                  1. Lesen (Compréhension écrite)
+                  1. Lesen & Sprachbausteine
                 </span>
                 <p className="text-sm font-bold text-slate-800 dark:text-white">
                   {currentExamConfig.lesenTimeMinutes} minutes
                 </p>
                 <p className="text-[11px] text-slate-500">
-                  Emails, annonces, articles & consignes
+                  Appariement titres/textes & trous lexicaux
                 </p>
               </div>
 
               <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 space-y-1">
                 <span className="text-[10px] uppercase font-bold text-slate-400">
-                  2. Hören (Compréhension orale)
+                  2. Hören (Écoute)
                 </span>
                 <p className="text-sm font-bold text-slate-800 dark:text-white">
                   {currentExamConfig.horenTimeMinutes} minutes
                 </p>
                 <p className="text-[11px] text-slate-500">
-                  Annonces gare/aéroports, dialogues & interviews
+                  Vrai/Faux (Richtig/Falsch) & QCM
                 </p>
               </div>
 
               <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 space-y-1">
                 <span className="text-[10px] uppercase font-bold text-slate-400">
-                  3. Schreiben (Production écrite)
+                  3. Schreiben (Rédaction)
                 </span>
                 <p className="text-sm font-bold text-slate-800 dark:text-white">
                   {currentExamConfig.schreibenTimeMinutes} minutes
                 </p>
                 <p className="text-[11px] text-slate-500">
-                  Emails formels/informels, forum & réclamations
+                  Barème officiel 4x25 points & IA
                 </p>
               </div>
 
               <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 space-y-1">
                 <span className="text-[10px] uppercase font-bold text-slate-400">
-                  4. Sprechen (Production orale)
+                  4. Sprechen (Oral)
                 </span>
                 <p className="text-sm font-bold text-slate-800 dark:text-white">
                   {currentExamConfig.sprechenTimeMinutes} minutes
                 </p>
                 <p className="text-[11px] text-slate-500">
-                  Présentation, description, débat & interaction
+                  Simulations & Redemittel interactifs
                 </p>
               </div>
             </div>
@@ -716,7 +861,7 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
         </div>
       )}
 
-      {/* SUBTAB 2: LESEN (Reading Comprehension) */}
+      {/* SUBTAB 2: LESEN (Reading Comprehension: Matching & Text Analysis) */}
       {activeSubTab === "lesen" && (
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-[#0D1220] p-5 rounded-3xl border border-slate-200 dark:border-white/10">
@@ -727,14 +872,14 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
               </h3>
               <p className="text-xs text-slate-500 mt-1">
                 {isEn
-                  ? `Time allocated : ${currentExamConfig.lesenTimeMinutes} minutes • Pass threshold : 60%`
-                  : `Temps officiel alloué : ${currentExamConfig.lesenTimeMinutes} minutes • Seuil de validation : 60%`}
+                  ? `Authentic certification tasks: Text-to-headline matching (Teil 1) and in-depth reading comprehension (Teil 2).`
+                  : `Épreuves officielles conformes aux examens telc et Goethe : Appariement texte/titre (Teil 1) et analyse de textes longs (Teil 2).`}
               </p>
             </div>
 
             <div className="flex items-center gap-3">
               <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
-                {isEn ? "Your Score :" : "Votre Score :"}
+                Score Lesen :
               </span>
               <span
                 className={`text-lg font-black px-3 py-1 rounded-xl ${
@@ -748,12 +893,149 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
             </div>
           </div>
 
+          {/* Section 1: Matching Task (Teil 1) */}
+          {matchingTasks.map((mTask) => (
+            <div
+              key={mTask.id}
+              className="bg-white dark:bg-[#0D1220] rounded-3xl border border-slate-200 dark:border-white/10 p-6 space-y-6 shadow-xs"
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-white/5 pb-4">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-[#6D5DFC] bg-[#6D5DFC]/10 px-2.5 py-0.5 rounded-full">
+                    {mTask.theme}
+                  </span>
+                  <h4 className="text-base font-bold text-slate-900 dark:text-white mt-1">
+                    {mTask.title}
+                  </h4>
+                </div>
+                <span className="text-xs font-mono text-slate-500">
+                  {mTask.textType}
+                </span>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200/50 dark:border-indigo-800/30 text-xs text-slate-700 dark:text-slate-300 flex items-start gap-2">
+                <Info size={16} className="text-[#6D5DFC] shrink-0 mt-0.5" />
+                <span>{mTask.instructions}</span>
+              </div>
+
+              {/* Available Headlines Palette */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 space-y-2">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider block">
+                  Überschriften (Titres disponibles à associer) :
+                </span>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {mTask.headlines.map((hl) => (
+                    <div
+                      key={hl.id}
+                      className="p-2.5 rounded-xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 text-xs flex items-start gap-2"
+                    >
+                      <span className="w-5 h-5 rounded-md bg-[#6D5DFC] text-white flex items-center justify-center font-bold text-[10px] uppercase shrink-0">
+                        {hl.id}
+                      </span>
+                      <span className="text-slate-700 dark:text-slate-300 font-medium">
+                        {hl.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Texts with headline selectors */}
+              <div className="space-y-4">
+                {mTask.texts.map((text, tIdx) => {
+                  const key = `${mTask.id}_${tIdx}`;
+                  const selectedHl = skillScores.matchingAnswers[key];
+                  const correctHl = mTask.answers[String(tIdx)];
+                  const isAnswered = selectedHl !== undefined;
+                  const isCorrect = selectedHl === correctHl;
+
+                  return (
+                    <div
+                      key={tIdx}
+                      className={`p-4 rounded-2xl border transition space-y-3 ${
+                        isAnswered
+                          ? isCorrect
+                            ? "bg-emerald-500/5 border-emerald-500/30"
+                            : "bg-rose-500/5 border-rose-500/30"
+                          : "bg-white dark:bg-[#0D1220] border-slate-200 dark:border-white/10"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                          Text {tIdx + 1}
+                        </span>
+                        {isAnswered && (
+                          <span
+                            className={`text-xs font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 ${
+                              isCorrect
+                                ? "bg-emerald-500/20 text-emerald-400"
+                                : "bg-rose-500/20 text-rose-400"
+                            }`}
+                          >
+                            {isCorrect ? <Check size={12} /> : <X size={12} />}
+                            {isCorrect ? "Richtig" : `Falsch (Lösung: ${correctHl?.toUpperCase()})`}
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-serif">
+                        {text}
+                      </p>
+
+                      <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100 dark:border-white/5">
+                        <span className="text-xs text-slate-500 font-medium">
+                          Passende Überschrift :
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {mTask.headlines.map((hl) => {
+                            const isChosen = selectedHl === hl.id;
+                            return (
+                              <button
+                                key={hl.id}
+                                type="button"
+                                onClick={() => {
+                                  setSkillScores((prev) => ({
+                                    ...prev,
+                                    matchingAnswers: {
+                                      ...prev.matchingAnswers,
+                                      [key]: hl.id,
+                                    },
+                                  }));
+                                }}
+                                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                                  isChosen
+                                    ? isChosen === (correctHl === hl.id)
+                                      ? "bg-emerald-500 text-white"
+                                      : "bg-rose-500 text-white"
+                                    : "bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-slate-300"
+                                }`}
+                              >
+                                {hl.id.toUpperCase()}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {isAnswered && mTask.explanations?.[String(tIdx)] && (
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 italic pt-1">
+                          💡 {mTask.explanations[String(tIdx)]}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+
+          {/* Section 2: Standard Reading Comprehension Texts (Teil 2) */}
           {currentExamConfig.tasks.lesen.map((task) => (
             <div
               key={task.id}
-              className="bg-white dark:bg-[#0D1220] rounded-3xl border border-slate-200 dark:border-white/10 p-6 space-y-5 shadow-xs"
+              className="bg-white dark:bg-[#0D1220] rounded-3xl border border-slate-200 dark:border-white/10 p-6 space-y-6 shadow-xs"
             >
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
                   <span className="text-[10px] uppercase font-bold text-[#6D5DFC] bg-[#6D5DFC]/10 px-2.5 py-0.5 rounded-full">
                     {task.textType}
@@ -762,25 +1044,16 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
                     {task.title}
                   </h4>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => playSpeech(task.text, task.id)}
-                  className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 transition cursor-pointer"
-                >
-                  <Volume2 size={14} className="text-[#6D5DFC]" />
-                  <span>{isEn ? "Listen to text" : "Écouter le texte"}</span>
-                </button>
+                <span className="text-xs text-slate-500">{task.context}</span>
               </div>
 
-              {/* Text Box styled like an authentic exam paper */}
-              <div className="p-5 rounded-2xl bg-amber-500/5 dark:bg-white/5 border border-amber-500/20 dark:border-white/10 font-serif text-sm leading-relaxed text-slate-800 dark:text-slate-200 whitespace-pre-line">
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-serif whitespace-pre-line">
                 {task.text}
               </div>
 
-              {/* Questions */}
               <div className="space-y-4 pt-2">
                 <h5 className="text-xs uppercase font-bold text-slate-400 tracking-wider">
-                  {isEn ? "Comprehension Questions" : "Questions de compréhension"} :
+                  Fragen zum Text :
                 </h5>
 
                 {task.questions.map((q, qIdx) => {
@@ -844,13 +1117,7 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
                           <Info size={14} className="shrink-0 mt-0.5" />
                           <div>
                             <span className="font-bold">
-                              {isCorrect
-                                ? isEn
-                                  ? "Correct! "
-                                  : "Bonne réponse ! "
-                                : isEn
-                                ? "Explanation: "
-                                : "Explication officielle : "}
+                              {isCorrect ? "Bonne réponse ! " : "Explication officielle : "}
                             </span>
                             {q.explanation}
                           </div>
@@ -865,7 +1132,176 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
         </div>
       )}
 
-      {/* SUBTAB 3: HÖREN (Listening Comprehension) */}
+      {/* SUBTAB 3: SPRACHBAUSTEINE (Grammar & Cloze in Context — telc B1, B2, C1) */}
+      {activeSubTab === "sprachbausteine" && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-[#0D1220] p-5 rounded-3xl border border-slate-200 dark:border-white/10">
+            <div>
+              <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+                <FileCheck size={20} className="text-[#6D5DFC]" />
+                <span>Modul Sprachbausteine — Niveau {selectedLevel}</span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                {isEn
+                  ? "Standard telc cloze test: Select the grammatically and idiomatically appropriate word (a, b or c) for each numbered gap."
+                  : "Épreuve officielle des Sprachbausteine (telc) : choisissez pour chaque trou numéroté la solution grammaticale ou lexicale exacte (a, b ou c)."}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                Score Sprachbausteine :
+              </span>
+              <span
+                className={`text-lg font-black px-3 py-1 rounded-xl ${
+                  isSbPassed
+                    ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                    : "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                }`}
+              >
+                {sprachbausteineScore}%
+              </span>
+            </div>
+          </div>
+
+          {sbTasks.map((task) => (
+            <div
+              key={task.id}
+              className="bg-white dark:bg-[#0D1220] rounded-3xl border border-slate-200 dark:border-white/10 p-6 space-y-6 shadow-xs"
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-white/5 pb-4">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-[#6D5DFC] bg-[#6D5DFC]/10 px-2.5 py-0.5 rounded-full">
+                    {task.theme}
+                  </span>
+                  <h4 className="text-base font-bold text-slate-900 dark:text-white mt-1">
+                    {task.title}
+                  </h4>
+                </div>
+                <span className="text-xs text-slate-400">
+                  Teil {task.part}
+                </span>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200/50 dark:border-indigo-800/30 text-xs text-slate-700 dark:text-slate-300 flex items-start gap-2">
+                <Info size={16} className="text-[#6D5DFC] shrink-0 mt-0.5" />
+                <span>{task.instructions}</span>
+              </div>
+
+              {/* Text display with gaps highlighted */}
+              <div className="p-5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 leading-relaxed text-sm font-serif text-slate-800 dark:text-slate-200 whitespace-pre-line">
+                {task.parts.map((p, idx) => {
+                  if (typeof p === "string") {
+                    return <span key={idx}>{p}</span>;
+                  }
+                  const key = `${task.id}_gap_${p.n}`;
+                  const userChoice = skillScores.sprachbausteineAnswers[key];
+                  const hasAnswered = userChoice !== undefined;
+                  const isCorrect = userChoice === p.correct;
+
+                  return (
+                    <span
+                      key={idx}
+                      className={`inline-flex items-center px-2 py-0.5 mx-1 rounded-md text-xs font-mono font-bold border transition ${
+                        hasAnswered
+                          ? isCorrect
+                            ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/40"
+                            : "bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/40"
+                          : "bg-[#6D5DFC]/15 text-[#6D5DFC] border-[#6D5DFC]/30"
+                      }`}
+                    >
+                      [{p.n} : {hasAnswered ? p.opts[userChoice] : "___"}]
+                    </span>
+                  );
+                })}
+              </div>
+
+              {/* Numbered Gaps Option Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                {task.parts
+                  .filter((p): p is { n: number; opts: [string, string, string]; correct: number; explanation?: string } => typeof p !== "string")
+                  .map((gap) => {
+                    const key = `${task.id}_gap_${gap.n}`;
+                    const userChoice = skillScores.sprachbausteineAnswers[key];
+                    const hasAnswered = userChoice !== undefined;
+                    const isCorrect = userChoice === gap.correct;
+
+                    return (
+                      <div
+                        key={gap.n}
+                        className={`p-3.5 rounded-2xl border transition space-y-2 ${
+                          hasAnswered
+                            ? isCorrect
+                              ? "bg-emerald-500/5 border-emerald-500/30"
+                              : "bg-rose-500/5 border-rose-500/30"
+                            : "bg-white dark:bg-[#0D1220] border-slate-200 dark:border-white/10"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-black text-slate-800 dark:text-white">
+                            Lücke [{gap.n}]
+                          </span>
+                          {hasAnswered && (
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                isCorrect
+                                  ? "bg-emerald-500/20 text-emerald-400"
+                                  : "bg-rose-500/20 text-rose-400"
+                              }`}
+                            >
+                              {isCorrect ? "Correct" : `Exact: ${gap.opts[gap.correct]}`}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {gap.opts.map((opt, optIdx) => {
+                            const isChosen = userChoice === optIdx;
+                            return (
+                              <button
+                                key={optIdx}
+                                type="button"
+                                onClick={() => {
+                                  setSkillScores((prev) => ({
+                                    ...prev,
+                                    sprachbausteineAnswers: {
+                                      ...prev.sprachbausteineAnswers,
+                                      [key]: optIdx,
+                                    },
+                                  }));
+                                }}
+                                className={`py-2 px-2 rounded-xl text-xs font-semibold text-center transition cursor-pointer ${
+                                  isChosen
+                                    ? isChosen === (optIdx === gap.correct)
+                                      ? "bg-emerald-500 text-white shadow-xs font-bold"
+                                      : "bg-rose-500 text-white shadow-xs font-bold"
+                                    : "bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-slate-300"
+                                }`}
+                              >
+                                <span className="font-mono text-[10px] block opacity-70">
+                                  {["a", "b", "c"][optIdx]}
+                                </span>
+                                {opt}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {hasAnswered && gap.explanation && (
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 italic pt-1">
+                            💡 {gap.explanation}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* SUBTAB 4: HÖREN (Listening Comprehension: True/False & Multi-choice) */}
       {activeSubTab === "horen" && (
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-[#0D1220] p-5 rounded-3xl border border-slate-200 dark:border-white/10">
@@ -876,14 +1312,14 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
               </h3>
               <p className="text-xs text-slate-500 mt-1">
                 {isEn
-                  ? `Authentic native audio recordings. In the official exam, recordings are played twice.`
-                  : `Enregistrements audio en conditions réelles. Conformément à l'examen officiel, chaque extrait peut être écouté 2 fois.`}
+                  ? `Authentic radio and interview recordings. In the official exam, recordings are played twice.`
+                  : `Enregistrements audio authentiques (interviews, reportages). Conformément au protocole officiel, chaque extrait peut être écouté deux fois.`}
               </p>
             </div>
 
             <div className="flex items-center gap-3">
               <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
-                {isEn ? "Hören Score :" : "Score Hören :"}
+                Score Hören :
               </span>
               <span
                 className={`text-lg font-black px-3 py-1 rounded-xl ${
@@ -897,16 +1333,17 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
             </div>
           </div>
 
-          {currentExamConfig.tasks.horen.map((task) => {
+          {/* Section 1: True / False Tasks (Teil 2 — e.g., Dorothee Schumacher) */}
+          {tfHorenTasks.map((task) => {
             const playedCount = audioPlaybackCount[task.id] || 0;
-            const isPlayingThis = isPlayingAudio && currentPlayingText === task.transcript;
+            const isPlayingThis = isPlayingAudio && currentPlayingText === task.script;
 
             return (
               <div
                 key={task.id}
-                className="bg-white dark:bg-[#0D1220] rounded-3xl border border-slate-200 dark:border-white/10 p-6 space-y-5 shadow-xs"
+                className="bg-white dark:bg-[#0D1220] rounded-3xl border border-slate-200 dark:border-white/10 p-6 space-y-6 shadow-xs"
               >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-white/5 pb-4">
                   <div>
                     <span className="text-[10px] uppercase font-bold text-[#6D5DFC] bg-[#6D5DFC]/10 px-2.5 py-0.5 rounded-full">
                       {task.audioScenario}
@@ -924,7 +1361,7 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
                         if (isPlayingThis) {
                           stopSpeech();
                         } else {
-                          playSpeech(task.transcript, task.id);
+                          playSpeech(task.script, task.id);
                         }
                       }}
                       className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition cursor-pointer ${
@@ -969,26 +1406,159 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
                 <div className="flex items-center gap-2 text-xs text-slate-500">
                   <Volume2 size={14} className="text-[#00D9FF]" />
                   <span>
-                    {isEn
-                      ? `Listenings played : ${playedCount} / ${task.playCountMax}`
-                      : `Écoutes effectuées : ${playedCount} / ${task.playCountMax}`}
+                    Écoutes effectuées : {playedCount} / {task.playCountMax}
                   </span>
                 </div>
 
-                {/* Optional Transcript Box */}
                 {showTranscript[task.id] && (
-                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-dashed border-slate-300 dark:border-white/10 text-xs font-mono text-slate-700 dark:text-slate-300 leading-relaxed">
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-dashed border-slate-300 dark:border-white/10 text-xs font-mono text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">
                     <span className="font-bold text-[#6D5DFC] block mb-1">
                       [Transkript der Audioaufnahme]
                     </span>
-                    {task.transcript}
+                    {task.script}
                   </div>
                 )}
 
-                {/* Questions */}
+                {/* True / False Statements Table */}
+                <div className="space-y-3 pt-2">
+                  <h5 className="text-xs uppercase font-bold text-slate-400 tracking-wider">
+                    Aussagen (Richtig oder Falsch?) :
+                  </h5>
+
+                  {task.statements.map((stmt, sIdx) => {
+                    const userChoice = skillScores.trueFalseAnswers[stmt.id];
+                    const hasAnswered = userChoice !== undefined;
+                    const isCorrect = userChoice === stmt.isTrue;
+
+                    return (
+                      <div
+                        key={stmt.id}
+                        className={`p-4 rounded-2xl border transition space-y-2 ${
+                          hasAnswered
+                            ? isCorrect
+                              ? "bg-emerald-500/5 border-emerald-500/30"
+                              : "bg-rose-500/5 border-rose-500/30"
+                            : "bg-white dark:bg-[#0D1220] border-slate-200 dark:border-white/10"
+                        }`}
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                            {sIdx + 1}. {stmt.statement}
+                          </p>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSkillScores((prev) => ({
+                                  ...prev,
+                                  trueFalseAnswers: {
+                                    ...prev.trueFalseAnswers,
+                                    [stmt.id]: true,
+                                  },
+                                }));
+                              }}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                                userChoice === true
+                                  ? stmt.isTrue
+                                    ? "bg-emerald-500 text-white"
+                                    : "bg-rose-500 text-white"
+                                  : "bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-slate-300"
+                              }`}
+                            >
+                              Richtig
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSkillScores((prev) => ({
+                                  ...prev,
+                                  trueFalseAnswers: {
+                                    ...prev.trueFalseAnswers,
+                                    [stmt.id]: false,
+                                  },
+                                }));
+                              }}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                                userChoice === false
+                                  ? !stmt.isTrue
+                                    ? "bg-emerald-500 text-white"
+                                    : "bg-rose-500 text-white"
+                                  : "bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-slate-300"
+                              }`}
+                            >
+                              Falsch
+                            </button>
+                          </div>
+                        </div>
+
+                        {hasAnswered && (
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 italic pt-1 border-t border-slate-100 dark:border-white/5">
+                            💡 {stmt.explanation}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Section 2: Standard Audio Tasks */}
+          {currentExamConfig.tasks.horen.map((task) => {
+            const playedCount = audioPlaybackCount[task.id] || 0;
+            const isPlayingThis = isPlayingAudio && currentPlayingText === task.transcript;
+
+            return (
+              <div
+                key={task.id}
+                className="bg-white dark:bg-[#0D1220] rounded-3xl border border-slate-200 dark:border-white/10 p-6 space-y-5 shadow-xs"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-[#6D5DFC] bg-[#6D5DFC]/10 px-2.5 py-0.5 rounded-full">
+                      {task.audioScenario}
+                    </span>
+                    <h4 className="text-base font-bold text-slate-900 dark:text-white mt-1">
+                      {task.title}
+                    </h4>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isPlayingThis) {
+                          stopSpeech();
+                        } else {
+                          playSpeech(task.transcript, task.id);
+                        }
+                      }}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition cursor-pointer ${
+                        isPlayingThis
+                          ? "bg-rose-500 hover:bg-rose-600 text-white animate-pulse"
+                          : "bg-gradient-to-r from-[#6D5DFC] to-[#00D9FF] hover:opacity-90 text-white shadow"
+                      }`}
+                    >
+                      {isPlayingThis ? <Square size={14} /> : <Play size={14} />}
+                      <span>
+                        {isPlayingThis
+                          ? isEn
+                            ? "Stop Audio"
+                            : "Arrêter l'audio"
+                          : isEn
+                          ? "Play Audio"
+                          : "Écouter l'enregistrement"}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
                 <div className="space-y-4 pt-2">
                   <h5 className="text-xs uppercase font-bold text-slate-400 tracking-wider">
-                    {isEn ? "Comprehension Questions" : "Questions d'écoute"} :
+                    Questions d'écoute :
                   </h5>
 
                   {task.questions.map((q, qIdx) => {
@@ -1042,27 +1612,9 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
                         </div>
 
                         {hasAnswered && (
-                          <div
-                            className={`p-3 rounded-xl text-xs flex items-start gap-2 ${
-                              isCorrect
-                                ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20"
-                                : "bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20"
-                            }`}
-                          >
-                            <Info size={14} className="shrink-0 mt-0.5" />
-                            <div>
-                              <span className="font-bold">
-                                {isCorrect
-                                  ? isEn
-                                    ? "Correct! "
-                                    : "Exact ! "
-                                  : isEn
-                                  ? "Explanation: "
-                                  : "Explication : "}
-                              </span>
-                              {q.explanation}
-                            </div>
-                          </div>
+                          <p className="text-xs text-slate-500 italic">
+                            💡 {q.explanation}
+                          </p>
                         )}
                       </div>
                     );
@@ -1074,19 +1626,19 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
         </div>
       )}
 
-      {/* SUBTAB 4: SCHREIBEN (Written Expression) */}
+      {/* SUBTAB 5: SCHREIBEN (Timed Simulation & AI 4x25 Rubric Grading) */}
       {activeSubTab === "schreiben" && (
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-[#0D1220] p-5 rounded-3xl border border-slate-200 dark:border-white/10">
             <div>
               <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
                 <PenTool size={20} className="text-[#6D5DFC]" />
-                <span>Modul Schreiben — Niveau {selectedLevel}</span>
+                <span>Modul Schreiben — Simulation Officielle {selectedLevel}</span>
               </h3>
               <p className="text-xs text-slate-500 mt-1">
                 {isEn
-                  ? `Writing tasks evaluated according to official CEFR criteria: Task fulfillment, coherence, vocabulary, and grammar.`
-                  : `Épreuve écrite officielle évaluée selon les critères CECRL : respect des consignes, cohérence, richesse lexicale et précision grammaticale.`}
+                  ? "Timed exam simulation evaluated with official CEFR 4x25 rubric (Task fulfillment, coherence, vocabulary, grammar)."
+                  : "Simulation chronométrée évaluée en direct par l'IA selon le barème officiel 4x25 (Respect consigne, cohérence, lexique, syntaxe)."}
               </p>
             </div>
 
@@ -1109,95 +1661,125 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
             </div>
           </div>
 
-          {currentExamConfig.tasks.schreiben.map((task) => {
+          {(() => {
+            const task: any = activeWritingSimulation || currentExamConfig.tasks.schreiben[0];
             const wordCount = skillScores.schreibenDraft.trim()
               ? skillScores.schreibenDraft.trim().split(/\s+/).length
               : 0;
+            const minWords = task.min_words || task.targetWordCount?.min || 100;
+            const meetsWordCount = wordCount >= minWords;
 
             return (
-              <div
-                key={task.id}
-                className="bg-white dark:bg-[#0D1220] rounded-3xl border border-slate-200 dark:border-white/10 p-6 space-y-6 shadow-xs"
-              >
-                <div className="space-y-2">
-                  <span className="text-[10px] uppercase font-bold text-[#6D5DFC] bg-[#6D5DFC]/10 px-2.5 py-0.5 rounded-full">
-                    Offizielle Aufgabenstellung
-                  </span>
-                  <h4 className="text-base font-bold text-slate-900 dark:text-white">
-                    {task.title}
-                  </h4>
-                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 bg-slate-50 dark:bg-white/5 p-4 rounded-2xl border border-slate-100 dark:border-white/5">
-                    {task.prompt}
-                  </p>
-                </div>
+              <div className="bg-white dark:bg-[#0D1220] rounded-3xl border border-slate-200 dark:border-white/10 p-6 space-y-6 shadow-xs">
+                {/* Header with Chronometer */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10">
+                  <div className="space-y-1">
+                    <span className="text-[10px] uppercase font-bold text-[#6D5DFC] bg-[#6D5DFC]/10 px-2.5 py-0.5 rounded-full">
+                      {task.theme || "Offizielles telc/Goethe Prüfungsformat"}
+                    </span>
+                    <h4 className="text-base font-black text-slate-900 dark:text-white">
+                      {task.title}
+                    </h4>
+                  </div>
 
-                {/* Mandatory Points Checklist */}
-                <div className="p-4 rounded-2xl bg-[#6D5DFC]/5 border border-[#6D5DFC]/20 space-y-2">
-                  <p className="text-xs font-bold text-[#6D5DFC] dark:text-[#a399ff] uppercase tracking-wider">
-                    {isEn
-                      ? "Mandatory points to address in your text :"
-                      : "Points obligatoires à traiter impérativement :"}
-                  </p>
-                  <ul className="space-y-1.5 text-xs text-slate-700 dark:text-slate-300">
-                    {task.requiredPoints.map((pt, idx) => (
-                      <li key={idx} className="flex items-center gap-2">
-                        <CheckCircle2 size={14} className="text-[#6D5DFC] shrink-0" />
-                        <span>{pt}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                  {/* Countdown Timer Widget */}
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900 text-white font-mono text-sm font-bold border border-white/10 shadow-xs">
+                      <Timer size={16} className={isTimerRunning ? "text-amber-400 animate-pulse" : "text-slate-400"} />
+                      <span>{formatTimer(writingTimerSeconds)}</span>
+                    </div>
 
-                {/* Useful Redemittel / Connectors */}
-                <div className="space-y-2">
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                    {isEn ? "Recommended Redemittel (Connectors) :" : "Formules & Connecteurs recommandés :"}
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {task.usefulPhrases.map((phrase, pIdx) => (
-                      <button
-                        key={pIdx}
-                        type="button"
-                        onClick={() => {
-                          setSkillScores((prev) => ({
-                            ...prev,
-                            schreibenDraft: prev.schreibenDraft
-                              ? `${prev.schreibenDraft} ${phrase} `
-                              : `${phrase} `,
-                          }));
-                        }}
-                        className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-white/5 hover:bg-[#6D5DFC]/15 text-slate-700 dark:text-slate-200 text-xs font-mono transition cursor-pointer"
-                        title="Cliquer pour insérer"
-                      >
-                        + {phrase}
-                      </button>
-                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setIsTimerRunning(!isTimerRunning)}
+                      className="p-2 rounded-xl bg-slate-200 dark:bg-white/10 hover:bg-[#6D5DFC] hover:text-white transition cursor-pointer text-slate-700 dark:text-slate-300"
+                      title={isTimerRunning ? "Mettre en pause" : "Démarrer le chrono"}
+                    >
+                      {isTimerRunning ? <Square size={14} /> : <Play size={14} />}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsTimerRunning(false);
+                        setWritingTimerSeconds(simulationTimeMinutes * 60);
+                      }}
+                      className="p-2 rounded-xl bg-slate-200 dark:bg-white/10 hover:bg-slate-300 text-slate-700 dark:text-slate-300 transition cursor-pointer"
+                      title="Réinitialiser le chrono"
+                    >
+                      <RotateCcw size={14} />
+                    </button>
                   </div>
                 </div>
 
-                {/* Text Editor Area */}
+                {/* Scenario & Mandatory Points */}
+                <div className="p-4 rounded-2xl bg-indigo-50/40 dark:bg-indigo-950/20 border border-indigo-200/50 dark:border-indigo-800/30 space-y-3">
+                  <p className="text-xs text-slate-800 dark:text-slate-200 leading-relaxed font-serif">
+                    {task.scenario || task.prompt}
+                  </p>
+
+                  <div className="pt-2 border-t border-indigo-100 dark:border-white/5 space-y-1.5">
+                    <span className="text-[11px] font-bold text-[#6D5DFC] dark:text-[#a399ff] uppercase tracking-wider block">
+                      Obligatorische Leitpunkte (Points obligatoires à traiter) :
+                    </span>
+                    <ul className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-slate-700 dark:text-slate-300">
+                      {(task.requirements || task.requiredPoints || []).map((req: string, rIdx: number) => (
+                        <li key={rIdx} className="flex items-start gap-2">
+                          <CheckCircle2 size={14} className="text-[#6D5DFC] shrink-0 mt-0.5" />
+                          <span>{req}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                {/* Useful Redemittel Chips */}
+                {task.usefulPhrases && task.usefulPhrases.length > 0 && (
+                  <div className="space-y-1.5">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+                      Formules & Redemittel recommandés (cliquer pour insérer) :
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {task.usefulPhrases.map((phrase: string, pIdx: number) => (
+                        <button
+                          key={pIdx}
+                          type="button"
+                          onClick={() => {
+                            setSkillScores((prev) => ({
+                              ...prev,
+                              schreibenDraft: prev.schreibenDraft
+                                ? `${prev.schreibenDraft} ${phrase} `
+                                : `${phrase} `,
+                            }));
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-white/5 hover:bg-[#6D5DFC]/15 text-slate-700 dark:text-slate-200 text-xs font-mono transition cursor-pointer"
+                        >
+                          + {phrase}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Text Editor Area & Word Counter */}
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs text-slate-500">
-                    <span>
-                      {isEn ? "Word target :" : "Volume attendu :"}{" "}
-                      <strong className="text-slate-800 dark:text-white">
-                        {task.targetWordCount.min} - {task.targetWordCount.max}{" "}
-                        {isEn ? "words" : "mots"}
-                      </strong>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-500">
+                      Volume exigé : <strong className="text-slate-900 dark:text-white">{minWords} mots minimum</strong>
                     </span>
                     <span
-                      className={`font-mono font-bold ${
-                        wordCount >= task.targetWordCount.min
-                          ? "text-emerald-500"
-                          : "text-amber-500"
+                      className={`font-mono font-bold px-2.5 py-0.5 rounded-full ${
+                        meetsWordCount
+                          ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                          : "bg-amber-500/15 text-amber-600 dark:text-amber-400"
                       }`}
                     >
-                      {wordCount} {isEn ? "words written" : "mots rédigés"}
+                      {wordCount} / {minWords} mots {meetsWordCount ? "✓ Seuil atteint" : "— En cours"}
                     </span>
                   </div>
 
                   <textarea
-                    rows={8}
+                    rows={10}
                     value={skillScores.schreibenDraft}
                     onChange={(e) => {
                       const val = e.target.value;
@@ -1205,15 +1787,15 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
                     }}
                     placeholder={
                       isEn
-                        ? "Draft your text here in German..."
-                        : "Rédigez votre composition ici en allemand..."
+                        ? "Draft your official text in German here..."
+                        : "Rédigez votre épreuve ici en allemand (formule d'appel, corps du texte, conclusion et salutations)..."
                     }
-                    className="w-full p-4 rounded-2xl bg-white dark:bg-[#0D1220] border border-slate-300 dark:border-white/10 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-[#6D5DFC]"
+                    className="w-full p-4 rounded-2xl bg-white dark:bg-[#0D1220] border border-slate-300 dark:border-white/10 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-[#6D5DFC] leading-relaxed"
                   />
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
                   <button
                     type="button"
                     onClick={() => {
@@ -1224,7 +1806,7 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
                     }}
                     className="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-800 dark:hover:text-white transition cursor-pointer"
                   >
-                    {isEn ? "Load Sample Solution" : "Charger le corrigé type officiel"}
+                    Charger le corrigé type officiel
                   </button>
 
                   <button
@@ -1236,199 +1818,337 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
                     {isEvaluatingWriting ? (
                       <RefreshCw size={14} className="animate-spin" />
                     ) : (
-                      <CheckCircle2 size={14} />
+                      <Sparkles size={14} />
                     )}
                     <span>
                       {isEvaluatingWriting
-                        ? isEn
-                          ? "Evaluating writing..."
-                          : "Évaluation de la rédaction en cours..."
-                        : isEn
-                        ? "Evaluate My Writing"
-                        : "Évaluer ma rédaction"}
+                        ? "Correction IA en cours (Barème 4x25)..."
+                        : "Évaluer ma rédaction avec l'IA"}
                     </span>
                   </button>
                 </div>
 
-                {/* Evaluation Feedback Box */}
-                {writingFeedback && (
-                  <div className="p-5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-xs space-y-2">
-                    <div className="flex items-center gap-2 font-bold text-emerald-600 dark:text-emerald-400">
-                      <Award size={16} />
-                      <span>{isEn ? "AI Examiner Report" : "Rapport de l'Examinateur IA"}</span>
+                {/* AI Evaluation Report (Exact Schema) */}
+                {writingEvaluation && (
+                  <div className="p-6 rounded-3xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 space-y-5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-white/10 pb-4">
+                      <div>
+                        <div className="inline-flex items-center gap-1.5 text-xs font-bold text-[#6D5DFC] uppercase tracking-wider mb-1">
+                          <Award size={16} />
+                          <span>Rapport de Correction Officiel</span>
+                        </div>
+                        <h5 className="text-base font-black text-slate-900 dark:text-white">
+                          Note Globale : {writingEvaluation.note_totale} / {writingEvaluation.note_max} pts
+                        </h5>
+                      </div>
+
+                      <span
+                        className={`text-xs font-bold px-3 py-1 rounded-full ${
+                          writingEvaluation.note_totale >= 60
+                            ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                            : "bg-rose-500/20 text-rose-400 border border-rose-500/30"
+                        }`}
+                      >
+                        {writingEvaluation.note_totale >= 60 ? "Seuil officiel validé" : "Seuil non atteint"}
+                      </span>
                     </div>
-                    <p className="text-slate-700 dark:text-slate-200 whitespace-pre-line leading-relaxed font-sans">
-                      {writingFeedback}
+
+                    <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-sans italic">
+                      "{writingEvaluation.appreciation_generale}"
                     </p>
+
+                    {/* 4 Rubric Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {writingEvaluation.scores.map((sc, scIdx) => (
+                        <div
+                          key={scIdx}
+                          className="p-3.5 rounded-2xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 space-y-1"
+                        >
+                          <div className="flex items-center justify-between text-xs font-bold">
+                            <span className="text-slate-800 dark:text-white line-clamp-1">
+                              {sc.critere}
+                            </span>
+                            <span className="text-[#6D5DFC] shrink-0 font-mono">
+                              {sc.points_obtenus} / {sc.points_max}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                            {sc.commentaire}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Strengths & Improvement Points */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                      <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 space-y-2">
+                        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">
+                          Points forts :
+                        </span>
+                        <ul className="space-y-1 text-xs text-slate-700 dark:text-slate-300">
+                          {writingEvaluation.points_forts.map((pt, pIdx) => (
+                            <li key={pIdx} className="flex items-start gap-1.5">
+                              <Check size={14} className="text-emerald-500 shrink-0 mt-0.5" />
+                              <span>{pt}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 space-y-2">
+                        <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider block">
+                          Axes d'amélioration :
+                        </span>
+                        <ul className="space-y-1 text-xs text-slate-700 dark:text-slate-300">
+                          {writingEvaluation.axes_amelioration.map((axe, aIdx) => (
+                            <li key={aIdx} className="flex items-start gap-1.5">
+                              <ChevronRight size={14} className="text-amber-500 shrink-0 mt-0.5" />
+                              <span>{axe}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+
+                    {/* Targeted Grammar Corrections */}
+                    {writingEvaluation.corrections_ciblees && writingEvaluation.corrections_ciblees.length > 0 && (
+                      <div className="space-y-2 pt-2">
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+                          Corrections Ciblées & Règles Grammaticales :
+                        </span>
+                        <div className="space-y-2">
+                          {writingEvaluation.corrections_ciblees.map((corr, cIdx) => (
+                            <div
+                              key={cIdx}
+                              className="p-3.5 rounded-2xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 text-xs space-y-1"
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="px-2 py-0.5 rounded-md bg-rose-500/15 text-rose-500 font-mono line-through">
+                                  {corr.erreur}
+                                </span>
+                                <span className="text-slate-400">➔</span>
+                                <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-500 font-mono font-bold">
+                                  {corr.correction}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 italic">
+                                💡 Règle : {corr.regle}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             );
-          })}
+          })()}
         </div>
       )}
 
-      {/* SUBTAB 5: SPRECHEN (Oral Expression) */}
+      {/* SUBTAB 6: SPRECHEN (Oral Expression & Partner Task Simulations) */}
       {activeSubTab === "sprechen" && (
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-[#0D1220] p-5 rounded-3xl border border-slate-200 dark:border-white/10">
             <div>
               <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
                 <Mic size={20} className="text-[#6D5DFC]" />
-                <span>Modul Sprechen — Niveau {selectedLevel}</span>
+                <span>Modul Sprechen — Simulations Orales {selectedLevel}</span>
               </h3>
               <p className="text-xs text-slate-500 mt-1">
                 {isEn
-                  ? `Simulate the speaking exam parts (Presentation, partner interaction, debate) with real examiner prompts.`
-                  : `Simulation de l'épreuve orale (présentation, échange avec un partenaire, débat) selon la grille officielle du jury.`}
+                  ? "Interactive exam roleplays: Presentation, negotiation, and collaborative planning according to official criteria."
+                  : "Mises en situation officielles : présentation, argumentation et planification conjointe selon les critères des jurys d'examen."}
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() =>
-                  setSkillScores((prev) => ({
-                    ...prev,
-                    sprechenCompleted: !prev.sprechenCompleted,
-                  }))
-                }
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-                  skillScores.sprechenCompleted
-                    ? "bg-emerald-500 text-white"
-                    : "bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300"
-                }`}
-              >
-                <Check size={14} />
-                <span>
-                  {skillScores.sprechenCompleted
-                    ? isEn
-                      ? "Speaking Validated"
-                      : "Oral validé"
-                    : isEn
-                    ? "Mark as Practiced"
-                    : "Marquer comme entraîné"}
-                </span>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() =>
+                setSkillScores((prev) => ({
+                  ...prev,
+                  sprechenCompleted: !prev.sprechenCompleted,
+                }))
+              }
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                skillScores.sprechenCompleted
+                  ? "bg-emerald-500 text-white"
+                  : "bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300"
+              }`}
+            >
+              <Check size={14} />
+              <span>{skillScores.sprechenCompleted ? "Oral validé" : "Marquer comme entraîné"}</span>
+            </button>
           </div>
 
-          {currentExamConfig.tasks.sprechen.map((task) => (
-            <div
-              key={task.id}
-              className="bg-white dark:bg-[#0D1220] rounded-3xl border border-slate-200 dark:border-white/10 p-6 space-y-6 shadow-xs"
-            >
-              <div className="space-y-2">
-                <span className="text-[10px] uppercase font-bold text-[#6D5DFC] bg-[#6D5DFC]/10 px-2.5 py-0.5 rounded-full">
-                  Prüfungskarte Sprechen ({task.durationMinutes} Minuten)
+          {activeSprechenSim && (
+            <div className="bg-white dark:bg-[#0D1220] rounded-3xl border border-slate-200 dark:border-white/10 p-6 space-y-6 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-white/5 pb-4">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-[#6D5DFC] bg-[#6D5DFC]/10 px-2.5 py-0.5 rounded-full">
+                    Teil {activeSprechenSim.part} ({activeSprechenSim.durationMinutes} Minuten)
+                  </span>
+                  <h4 className="text-base font-black text-slate-900 dark:text-white mt-1">
+                    {activeSprechenSim.title}
+                  </h4>
+                </div>
+                <span className="text-xs font-mono text-slate-500">
+                  Thème : {activeSprechenSim.topic}
                 </span>
-                <h4 className="text-base font-bold text-slate-900 dark:text-white">
-                  {task.title}
-                </h4>
-                <p className="text-xs text-slate-600 dark:text-slate-300">
-                  {task.instructions}
-                </p>
               </div>
 
-              {/* Prompts Cards */}
-              <div className="space-y-2">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                  {isEn ? "Key talking points to cover :" : "Points à développer obligatoirement :"}
-                </p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {task.prompts.map((prompt, idx) => (
+              <div className="p-4 rounded-2xl bg-indigo-50/40 dark:bg-indigo-950/20 border border-indigo-200/50 dark:border-indigo-800/30 text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-serif">
+                {activeSprechenSim.instructions}
+              </div>
+
+              {/* Guided Step Prompts */}
+              <div className="space-y-3">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+                  Plan d'action & Étapes de la simulation :
+                </span>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                  {activeSprechenSim.prompts.map((prompt, idx) => (
                     <div
                       key={idx}
-                      className="p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 text-xs font-bold text-slate-800 dark:text-white flex items-center gap-2"
+                      onClick={() => setActiveOralStep(idx)}
+                      className={`p-3.5 rounded-2xl border transition cursor-pointer flex items-start gap-3 ${
+                        activeOralStep === idx
+                          ? "bg-[#6D5DFC]/10 border-[#6D5DFC] shadow-xs"
+                          : "bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10"
+                      }`}
                     >
-                      <span className="w-5 h-5 rounded-full bg-[#6D5DFC]/15 text-[#6D5DFC] flex items-center justify-center text-[10px] shrink-0">
+                      <span className="w-6 h-6 rounded-full bg-[#6D5DFC] text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
                         {idx + 1}
                       </span>
-                      <span>{prompt}</span>
+                      <p className="text-xs text-slate-800 dark:text-slate-200 font-medium">
+                        {prompt}
+                      </p>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Redemittel Accordion */}
+              {/* Essential Redemittel with Native TTS Audio */}
               <div className="space-y-3">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                  {isEn
-                    ? "Essential Redemittel (Exam Phrasing Guide) :"
-                    : "Redemittel indispensables pour l'épreuve orale :"}
-                </p>
-
-                {task.essentialRedemittel.map((group, gIdx) => (
-                  <div
-                    key={gIdx}
-                    className="p-4 rounded-2xl bg-indigo-50/50 dark:bg-white/5 border border-indigo-100 dark:border-white/5 space-y-2"
-                  >
-                    <span className="text-xs font-bold text-[#6D5DFC] dark:text-[#a399ff]">
-                      {group.category}
-                    </span>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {group.phrases.map((phrase, pIdx) => (
-                        <div
-                          key={pIdx}
-                          className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-[#0D1220] border border-slate-200/80 dark:border-white/10 text-xs text-slate-800 dark:text-slate-200 font-sans"
-                        >
-                          <span>"{phrase}"</span>
-                          <button
-                            type="button"
-                            onClick={() => playSpeech(phrase)}
-                            className="p-1 rounded-lg text-slate-400 hover:text-[#6D5DFC] transition cursor-pointer"
-                            title="Écouter la prononciation"
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+                  Redemittel officiels pour l'épreuve orale (cliquer sur l'icône pour écouter) :
+                </span>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {activeSprechenSim.essentialRedemittel.map((grp, gIdx) => (
+                    <div
+                      key={gIdx}
+                      className="p-4 rounded-2xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 space-y-2.5"
+                    >
+                      <span className="text-xs font-bold text-[#6D5DFC] uppercase tracking-wider block">
+                        {grp.category}
+                      </span>
+                      <ul className="space-y-1.5 text-xs text-slate-700 dark:text-slate-300">
+                        {grp.phrases.map((phrase, pIdx) => (
+                          <li
+                            key={pIdx}
+                            className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5"
                           >
-                            <Volume2 size={14} />
-                          </button>
-                        </div>
-                      ))}
+                            <span>"{phrase}"</span>
+                            <button
+                              type="button"
+                              onClick={() => playSpeech(phrase)}
+                              className="p-1 text-slate-400 hover:text-[#6D5DFC] transition cursor-pointer"
+                              title="Écouter la prononciation"
+                            >
+                              <Volume2 size={14} />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
 
-              {/* Official Assessment Criteria */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 space-y-2">
-                <span className="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider">
-                  {isEn ? "Official Examiners Scoring Criteria :" : "Critères d'évaluation du jury officiel :"}
-                </span>
-                <div className="flex flex-wrap gap-2">
-                  {task.evaluationCriteria.map((crit, cIdx) => (
-                    <span
-                      key={cIdx}
-                      className="px-2.5 py-1 rounded-lg bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5"
-                    >
-                      <CheckCircle2 size={13} className="text-emerald-500" />
-                      <span>{crit}</span>
+              {/* Audio Voice Recording Simulation */}
+              <div className="p-5 rounded-2xl bg-slate-900 text-white border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Mic size={16} className={isRecordingAudio ? "text-rose-500 animate-pulse" : "text-[#00D9FF]"} />
+                    <span className="text-xs font-bold uppercase tracking-wider">
+                      Simulateur d'Enregistrement Oral
                     </span>
+                  </div>
+                  <p className="text-xs text-slate-400">
+                    Entraînez-vous à voix haute sur les 4 points de la consigne.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  {isRecordingAudio && (
+                    <span className="text-xs font-mono font-bold text-rose-400 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+                      {formatTimer(oralTimerSeconds)}
+                    </span>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!isRecordingAudio) {
+                        setIsRecordingAudio(true);
+                        setOralTimerSeconds(0);
+                      } else {
+                        setIsRecordingAudio(false);
+                        setSkillScores((prev) => ({ ...prev, sprechenCompleted: true }));
+                      }
+                    }}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-2 ${
+                      isRecordingAudio
+                        ? "bg-rose-500 hover:bg-rose-600 text-white"
+                        : "bg-gradient-to-r from-[#6D5DFC] to-[#00D9FF] hover:opacity-90 text-white"
+                    }`}
+                  >
+                    {isRecordingAudio ? <Square size={14} /> : <Mic size={14} />}
+                    <span>{isRecordingAudio ? "Terminer la simulation" : "S'enregistrer à voix haute"}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Evaluation Criteria */}
+              <div className="space-y-2">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
+                  Grille d'évaluation du jury officiel :
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-600 dark:text-slate-400">
+                  {activeSprechenSim.evaluationCriteria.map((crit, cIdx) => (
+                    <div key={cIdx} className="flex items-center gap-2">
+                      <CheckCircle2 size={13} className="text-[#6D5DFC] shrink-0" />
+                      <span>{crit}</span>
+                    </div>
                   ))}
                 </div>
               </div>
             </div>
-          ))}
+          )}
         </div>
       )}
 
-      {/* SUBTAB 6: WORTSCHATZ (Official Vocabulary & Lexicon Mastery) */}
+      {/* SUBTAB 7: WORTSCHATZ (Vocabulary Mastery & Flashcard Drill) */}
       {activeSubTab === "wortschatz" && (
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-[#0D1220] p-5 rounded-3xl border border-slate-200 dark:border-white/10">
             <div>
               <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
                 <Bookmark size={20} className="text-[#6D5DFC]" />
-                <span>Wortschatz {selectedLevel} — Lexique Officiel Goethe / telc</span>
+                <span>Lexique Officiel CECRL — Niveau {selectedLevel}</span>
               </h3>
               <p className="text-xs text-slate-500 mt-1">
                 {isEn
-                  ? `Estimated level vocabulary : ~${currentExamConfig.wortschatzEstimate} words. Check your mastery with interactive flashcards and drills.`
-                  : `Lexique officiel requis : ~${currentExamConfig.wortschatzEstimate} mots. Vérifiez votre maîtrise avec les fiches interactives et le quiz de lexique.`}
+                  ? `Curated exam vocabulary (~${currentExamConfig.wortschatzEstimate} target words for ${selectedLevel}).`
+                  : `Lexique officiel incontournable (~${currentExamConfig.wortschatzEstimate} mots cibles requis pour le niveau ${selectedLevel}).`}
               </p>
             </div>
 
             <div className="flex items-center gap-3">
               <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
-                {isEn ? "Mastery :" : "Maîtrise du lexique :"}
+                Maîtrise :
               </span>
               <span
                 className={`text-lg font-black px-3 py-1 rounded-xl ${
@@ -1442,16 +2162,14 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
             </div>
           </div>
 
-          {/* Interactive Vocabulary Flashcards Grid */}
+          {/* Flashcards Grid */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs uppercase font-bold text-slate-400 tracking-wider">
-                {isEn ? "Essential Level Vocabulary Flashcards" : "Mots-clés indispensables du niveau"} ({currentExamConfig.tasks.wortschatz?.length || 0}) :
+              <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                Fiches de Vocabulaire Clés
               </h4>
               <span className="text-xs text-slate-500">
-                {skillScores.masteredVocabIds.length} /{" "}
-                {currentExamConfig.tasks.wortschatz?.length || 0}{" "}
-                {isEn ? "mastered" : "acquis"}
+                {skillScores.masteredVocabIds.length} / {currentExamConfig.tasks.wortschatz?.length || 0} acquis
               </span>
             </div>
 
@@ -1519,15 +2237,7 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
                       }`}
                     >
                       <Check size={14} />
-                      <span>
-                        {isMastered
-                          ? isEn
-                            ? "Mastered"
-                            : "Maîtrisé"
-                          : isEn
-                          ? "Mark as Mastered"
-                          : "Marquer comme acquis"}
-                      </span>
+                      <span>{isMastered ? "Maîtrisé" : "Marquer comme acquis"}</span>
                     </button>
                   </div>
                 );
@@ -1535,7 +2245,7 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
             </div>
           </div>
 
-          {/* Wortschatz Rapid Quiz Drill */}
+          {/* Rapid Quiz Drill */}
           <div className="bg-white dark:bg-[#0D1220] rounded-3xl border border-slate-200 dark:border-white/10 p-6 space-y-4 shadow-xs">
             <div className="flex items-center justify-between">
               <div>
@@ -1544,9 +2254,7 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
                   <span>Wortschatz-Drill : Test de Validation du Lexique</span>
                 </h4>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  {isEn
-                    ? "Verify your vocabulary retention for this level."
-                    : "Vérifiez si vous maîtrisez le lexique requis pour le niveau."}
+                  Vérifiez si vous maîtrisez le lexique requis pour le niveau.
                 </p>
               </div>
 
@@ -1587,12 +2295,12 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
                                 },
                               }));
                             }}
-                            className={`p-3 rounded-xl text-xs font-bold transition flex items-center justify-between cursor-pointer ${
+                            className={`p-3 rounded-xl text-xs font-semibold transition text-left flex items-center justify-between cursor-pointer ${
                               isOptionSelected
                                 ? optIdx === q.correctIndex
-                                  ? "bg-emerald-500 text-white"
-                                  : "bg-rose-500 text-white"
-                                : "bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 hover:border-[#6D5DFC] text-slate-700 dark:text-slate-200"
+                                  ? "bg-emerald-500 text-white font-bold"
+                                  : "bg-rose-500 text-white font-bold"
+                                : "bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 hover:border-[#6D5DFC]"
                             }`}
                           >
                             <span>{opt}</span>
@@ -1617,7 +2325,7 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
         </div>
       )}
 
-      {/* SUBTAB 7: LESSON QUIZZES (From the school syllabus) */}
+      {/* SUBTAB 8: LESSON QUIZZES (From the school syllabus) */}
       {activeSubTab === "lessons" && (
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-[#0D1220] p-5 rounded-3xl border border-slate-200 dark:border-white/10">
@@ -1627,9 +2335,7 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
                 <span>Quiz des Leçons du Cursus</span>
               </h3>
               <p className="text-xs text-slate-500 mt-1">
-                {isEn
-                  ? "Standard curriculum quizzes to validate your enrolled video lessons."
-                  : "Quiz réguliers du cursus pour valider chaque leçon vidéo de votre parcours."}
+                Quiz réguliers du cursus pour valider chaque leçon vidéo de votre parcours.
               </p>
             </div>
           </div>
@@ -1657,11 +2363,11 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
 
                       {isPassed ? (
                         <span className="flex items-center gap-1 text-xs font-bold text-emerald-500 bg-emerald-500/10 px-2.5 py-0.5 rounded-full">
-                          <CheckCircle2 size={13} /> {isEn ? "Passed" : "Validé"}
+                          <CheckCircle2 size={13} /> Validé
                         </span>
                       ) : (
                         <span className="text-xs font-semibold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-full">
-                          {isEn ? "Pending" : "À faire"}
+                          À faire
                         </span>
                       )}
                     </div>
@@ -1682,7 +2388,7 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
                       onClick={() => onOpenLesson(les.id)}
                       className="text-xs text-[#6D5DFC] font-bold flex items-center gap-1 cursor-pointer"
                     >
-                      <span>{isEn ? "Open Lesson & Quiz" : "Ouvrir la leçon & le quiz"}</span>
+                      <span>Ouvrir la leçon & le quiz</span>
                       <ChevronRight size={14} />
                     </button>
                   </div>

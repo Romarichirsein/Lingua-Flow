@@ -1,4 +1,31 @@
 import { CEFRLevel, SupportedLanguage } from "../types";
+import {
+  A1_MATCHING_LESEN,
+  A1_SPRACHBAUSTEINE,
+  A1_TRUE_FALSE_HOREN,
+  A1_SCHREIBEN_SIMULATION,
+  A1_SPRECHEN_SIMULATION,
+  A2_MATCHING_LESEN,
+  A2_SPRACHBAUSTEINE,
+  A2_TRUE_FALSE_HOREN,
+  A2_SCHREIBEN_SIMULATION,
+  A2_SPRECHEN_SIMULATION,
+  B1_MATCHING_LESEN,
+  B1_SPRACHBAUSTEINE,
+  B1_TRUE_FALSE_HOREN,
+  B1_SCHREIBEN_SIMULATION,
+  B1_SPRECHEN_SIMULATION,
+  B2_MATCHING_LESEN,
+  B2_SPRACHBAUSTEINE,
+  B2_TRUE_FALSE_HOREN,
+  B2_SCHREIBEN_SIMULATION,
+  B2_SPRECHEN_SIMULATION,
+  C1_MATCHING_LESEN,
+  C1_SPRACHBAUSTEINE,
+  C1_TRUE_FALSE_HOREN,
+  C1_SCHREIBEN_SIMULATION,
+  C1_SPRECHEN_SIMULATION,
+} from "./prufungExtendedData";
 
 export interface ExamQuestion {
   id: string;
@@ -62,6 +89,91 @@ export interface VocabularyItem {
   theme: string;
 }
 
+export interface ExamMatchingHeadline {
+  id: string;
+  label: string;
+}
+
+export interface ExamMatchingLesenTask {
+  id: string;
+  part: number; // Teil 1, 2, 3
+  title: string;
+  textType: string;
+  theme: string;
+  instructions: string;
+  texts: string[];
+  headlines: ExamMatchingHeadline[];
+  answers: Record<string, string>; // textIndex (string "0", "1"...) -> headlineId
+  explanations?: Record<string, string>;
+}
+
+export interface ExamSprachbausteineGap {
+  n: number;
+  opts: [string, string, string];
+  correct: number;
+  explanation?: string;
+}
+
+export interface ExamSprachbausteineTask {
+  id: string;
+  part: number; // Teil 1 ou Teil 2
+  title: string;
+  theme: string;
+  instructions: string;
+  context?: string;
+  parts: Array<string | ExamSprachbausteineGap>;
+}
+
+export interface ExamHorenStatement {
+  id: string;
+  statement: string;
+  isTrue: boolean;
+  explanation: string;
+}
+
+export interface ExamHorenTrueFalseTask {
+  id: string;
+  part: number;
+  title: string;
+  theme: string;
+  audioScenario: string;
+  script: string;
+  playCountMax: number;
+  statements: ExamHorenStatement[];
+}
+
+export interface ExamSchreibenRubricItem {
+  critere: string;
+  points: number;
+}
+
+export interface ExamSchreibenSimulationTask {
+  id: string;
+  part: number;
+  title: string;
+  theme: string;
+  scenario: string;
+  requirements: string[];
+  min_words: number;
+  time_minutes: number;
+  rubric: ExamSchreibenRubricItem[];
+  sampleSolution: string;
+  usefulPhrases: string[];
+}
+
+export interface ExamSprechenSimulationTask {
+  id: string;
+  part: number;
+  title: string;
+  durationMinutes: number;
+  instructions: string;
+  topic: string;
+  partnerTask?: string;
+  prompts: string[];
+  essentialRedemittel: Array<{ category: string; phrases: string[] }>;
+  evaluationCriteria: string[];
+}
+
 export interface LevelExamConfig {
   level: CEFRLevel;
   officialExamNameDe: string;
@@ -78,9 +190,14 @@ export interface LevelExamConfig {
   wortschatzEstimate: number;
   tasks: {
     lesen: ExamLesenTask[];
+    matchingLesen?: ExamMatchingLesenTask[];
+    sprachbausteine?: ExamSprachbausteineTask[];
     horen: ExamHorenTask[];
+    trueFalseHoren?: ExamHorenTrueFalseTask[];
     schreiben: ExamSchreibenTask[];
+    schreibenSimulation?: ExamSchreibenSimulationTask[];
     sprechen: ExamSprechenTask[];
+    sprechenSimulation?: ExamSprechenSimulationTask[];
     wortschatz: VocabularyItem[];
     wortschatzQuiz: ExamQuestion[];
   };
@@ -257,6 +374,11 @@ Max Mustermann`,
           ],
         },
       ],
+      matchingLesen: A1_MATCHING_LESEN,
+      sprachbausteine: A1_SPRACHBAUSTEINE,
+      trueFalseHoren: A1_TRUE_FALSE_HOREN,
+      schreibenSimulation: A1_SCHREIBEN_SIMULATION,
+      sprechenSimulation: A1_SPRECHEN_SIMULATION,
       wortschatz: [
         {
           id: "w-a1-1",
@@ -469,6 +591,11 @@ Liebe Grüße!`,
           ],
         },
       ],
+      matchingLesen: A2_MATCHING_LESEN,
+      sprachbausteine: A2_SPRACHBAUSTEINE,
+      trueFalseHoren: A2_TRUE_FALSE_HOREN,
+      schreibenSimulation: A2_SCHREIBEN_SIMULATION,
+      sprechenSimulation: A2_SPRECHEN_SIMULATION,
       wortschatz: [
         {
           id: "w-a2-1",
@@ -702,6 +829,11 @@ Besser wäre es, klare Regeln aufzustellen: Smartphones dürfen nur dann eingesc
           ],
         },
       ],
+      matchingLesen: B1_MATCHING_LESEN,
+      sprachbausteine: B1_SPRACHBAUSTEINE,
+      trueFalseHoren: B1_TRUE_FALSE_HOREN,
+      schreibenSimulation: B1_SCHREIBEN_SIMULATION,
+      sprechenSimulation: B1_SPRECHEN_SIMULATION,
       wortschatz: [
         {
           id: "w-b1-1",
@@ -932,6 +1064,11 @@ Daher sollte der Gesetzgeber ein verbindliches "Recht auf Reparatur" verankern. 
           ],
         },
       ],
+      matchingLesen: B2_MATCHING_LESEN,
+      sprachbausteine: B2_SPRACHBAUSTEINE,
+      trueFalseHoren: B2_TRUE_FALSE_HOREN,
+      schreibenSimulation: B2_SCHREIBEN_SIMULATION,
+      sprechenSimulation: B2_SPRECHEN_SIMULATION,
       wortschatz: [
         {
           id: "w-b2-1",
@@ -1115,6 +1252,11 @@ Ein Paradigmenwechsel hin zur Postwachstumsökonomie (Degrowth) impliziert mithi
           ],
         },
       ],
+      matchingLesen: C1_MATCHING_LESEN,
+      sprachbausteine: C1_SPRACHBAUSTEINE,
+      trueFalseHoren: C1_TRUE_FALSE_HOREN,
+      schreibenSimulation: C1_SCHREIBEN_SIMULATION,
+      sprechenSimulation: C1_SPRECHEN_SIMULATION,
       wortschatz: [
         {
           id: "w-c1-1",
