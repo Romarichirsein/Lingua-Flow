@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Student, School, Program, UILocale, ThemeMode } from "../../types";
+import { Student, School, Program, UILocale, ThemeMode, ActivityLog } from "../../types";
 import { translations } from "../../lib/translations";
 import { computeDaysRemaining } from "../../lib/syncEngine";
 import { NeonButton } from "../common/NeonButton";
@@ -19,30 +19,37 @@ import {
   CheckCircle2,
   AlertCircle,
   Lock,
+  History,
+  ChevronRight,
+  Clock,
 } from "lucide-react";
 
 interface StudentProfileTabProps {
   student: Student;
   school: School;
   program: Program | undefined;
+  auditLogs?: ActivityLog[];
   locale: UILocale;
   theme?: ThemeMode;
   onUpdateTheme?: (theme: ThemeMode) => void;
   onUpdateLocale: (locale: UILocale) => void;
   onUpdateStudent: (student: Student) => void;
   onAddLog: (action: string, details: string) => void;
+  onNavigateTab?: (tab: any) => void;
 }
 
 export const StudentProfileTab: React.FC<StudentProfileTabProps> = ({
   student,
   school,
   program,
+  auditLogs = [],
   locale,
   theme = "dark",
   onUpdateTheme,
   onUpdateLocale,
   onUpdateStudent,
   onAddLog,
+  onNavigateTab,
 }) => {
   const t = translations[locale];
 
@@ -325,6 +332,80 @@ export const StudentProfileTab: React.FC<StudentProfileTabProps> = ({
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Full-width Personal Audit & Activity Card */}
+      <div className="bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 rounded-3xl p-6 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+              <History size={17} className="text-indigo-500" />
+              {locale === "en" ? "Recent Activity & Personal Audit Trail" : "Journal d'Activité & Audit de l'Espace"}
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              {locale === "en"
+                ? "Certified timeline of your lessons, quizzes, exam simulations, and session logins."
+                : "Traçabilité certifiée de vos leçons validées, scores aux quiz, examens et sessions."}
+            </p>
+          </div>
+
+          {onNavigateTab && (
+            <button
+              type="button"
+              onClick={() => onNavigateTab("audit")}
+              className="px-4 py-2 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 font-bold text-xs transition flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
+            >
+              <span>{locale === "en" ? "View Full Audit Trail" : "Accéder à l'Audit Complet"}</span>
+              <ChevronRight size={14} />
+            </button>
+          )}
+        </div>
+
+        {(() => {
+          const recentLogs = (auditLogs || []).filter((log) => {
+            return (
+              log.targetId === student.id ||
+              log.entityId === student.id ||
+              log.actorName === student.name ||
+              (log.details && log.details.includes(student.name)) ||
+              (log.action && log.action.includes(student.name))
+            );
+          }).slice(0, 4);
+
+          if (recentLogs.length === 0) {
+            return (
+              <div className="p-5 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 text-center text-xs text-slate-500 dark:text-slate-400">
+                {locale === "en"
+                  ? "No activity logged yet. Your coursework progress will be recorded here automatically."
+                  : "Aucune activité récente enregistrée pour le moment. Vos validations de cours apparaîtront ici."}
+              </div>
+            );
+          }
+
+          return (
+            <div className="divide-y divide-slate-100 dark:divide-white/5">
+              {recentLogs.map((log) => (
+                <div key={log.id} className="py-2.5 flex items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="font-bold text-slate-900 dark:text-white truncate">{log.action}</p>
+                      <p className="text-slate-500 dark:text-slate-400 truncate text-[11px]">{log.details}</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-mono shrink-0">
+                    {new Date(log.timestamp).toLocaleDateString(locale === "en" ? "en-US" : "fr-FR", {
+                      day: "2-digit",
+                      month: "short",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

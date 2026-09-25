@@ -56,6 +56,7 @@ interface StudentPrufungTabProps {
   locale: UILocale;
   onCompleteLesson: (lessonId: string) => void;
   onOpenLesson: (lessonId: string) => void;
+  onAddLog?: (action: string, details: string, status?: "success" | "warning" | "error", extra?: any) => void;
 }
 
 type PrufungSubTab =
@@ -97,6 +98,7 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
   locale,
   onCompleteLesson,
   onOpenLesson,
+  onAddLog,
 }) => {
   const t = translations[locale];
   const isEn = locale === "en";
@@ -453,6 +455,16 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
       setSkillScores((prev) => ({ ...prev, schreibenCompleted: meetsWords }));
     } finally {
       setIsEvaluatingWriting(false);
+      if (onAddLog) {
+        onAddLog(
+          isEn ? "Prüfung Exam Writing Simulation" : "Épreuve Prüfung Expression Écrite",
+          isEn
+            ? `Writing simulation task evaluated (${selectedLevel} CEFR rubric).`
+            : `Simulation d'expression écrite évaluée selon le barème officiel ${selectedLevel}.`,
+          "success",
+          { entityType: "evaluation" }
+        );
+      }
     }
   };
 

@@ -16,6 +16,7 @@ import {
   FileCheck,
   Sparkles,
   Bot,
+  History,
 } from "lucide-react";
 import { SidebarTabs, TabDefinition } from "../common/SidebarTabs";
 import { SchoolLogo } from "../common/SchoolLogo";
@@ -27,6 +28,7 @@ export type StudentTab =
   | "chat"
   | "evaluations"
   | "progress"
+  | "audit"
   | "notifications"
   | "profile";
 
@@ -102,6 +104,13 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({
       shortLabel: locale === "en" ? "Certificate" : "Certificat",
       description: t.student.tabs.progress.desc,
       icon: <Award size={18} />,
+    },
+    {
+      id: "audit",
+      label: (t.student.tabs as any).audit?.label || (locale === "en" ? "Audit & Activity" : "Journal d'Audit"),
+      shortLabel: locale === "en" ? "Audit" : "Audit",
+      description: (t.student.tabs as any).audit?.desc || (locale === "en" ? "Certified activity trail & history" : "Traçabilité et historique personnel"),
+      icon: <History size={18} />,
     },
     {
       id: "notifications",

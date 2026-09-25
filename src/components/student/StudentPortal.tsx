@@ -10,6 +10,7 @@ import {
   UILocale,
   Announcement,
   ThemeMode,
+  ActivityLog,
 } from "../../types";
 import { translations } from "../../lib/translations";
 import { StudentLayout, StudentTab } from "../layouts/StudentLayout";
@@ -28,6 +29,7 @@ import { InteractiveLessonPlayer } from "./InteractiveLessonPlayer";
 import { AIChatTutor } from "./AIChatTutor";
 import { StudentPrufungTab } from "./StudentPrufungTab";
 import { StudentProgressTab } from "./StudentProgressTab";
+import { StudentAuditTab } from "./StudentAuditTab";
 import { StudentNotificationsTab } from "./StudentNotificationsTab";
 import { StudentProfileTab } from "./StudentProfileTab";
 import { ModuleUnlockedModal } from "../common/CelebrationEffects";
@@ -51,6 +53,7 @@ interface StudentPortalProps {
   student: Student;
   school: School;
   programs: Program[];
+  auditLogs?: ActivityLog[];
   activeSubpath?: string;
   submissions?: AIWritingSubmission[];
   announcements?: Announcement[];
@@ -58,7 +61,7 @@ interface StudentPortalProps {
   onUpdateTheme?: (theme: ThemeMode) => void;
   onUpdateStudent: (student: Student) => void;
   onUpdateLocale?: (locale: UILocale) => void;
-  onAddLog: (action: string, details: string, status?: "success" | "warning" | "error") => void;
+  onAddLog: (action: string, details: string, status?: "success" | "warning" | "error", extra?: any) => void;
   onSaveSubmission?: (submission: AIWritingSubmission) => void;
 }
 
@@ -67,6 +70,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
   student,
   school,
   programs,
+  auditLogs = [],
   activeSubpath = "dashboard",
   submissions = [],
   announcements = [],
@@ -88,6 +92,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
     "chat",
     "evaluations",
     "progress",
+    "audit",
     "notifications",
     "profile",
   ];
@@ -101,6 +106,25 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
   const switchTab = (tab: StudentTab) => {
     setActiveTab(tab);
     navigateTo(`/eleve/${studentSlug}/${tab}`);
+  };
+
+  // Dedicated helper to ensure all student activities are logged with student identification and school context
+  const handleStudentLog = (
+    action: string,
+    details: string,
+    status: "success" | "warning" | "error" = "success",
+    extra?: any
+  ) => {
+    onAddLog(action, details, status, {
+      actorRole: "student",
+      actorName: student.name,
+      schoolId: school.id,
+      schoolName: school.name,
+      targetId: student.id,
+      entityId: student.id,
+      entityType: "student",
+      ...extra,
+    });
   };
 
   // Get current program assigned to this student
@@ -156,7 +180,10 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
 
     // Update state and logs
     onUpdateStudent(result.student);
-    onAddLog(result.activityLog.action, result.activityLog.details);
+    handleStudentLog(result.activityLog.action, result.activityLog.details, "success", {
+      entityType: "lesson",
+      entityId: lessonId,
+    });
 
     // Save personal completion notifications strictly isolated to this student
     if (result.newNotifications && result.newNotifications.length > 0) {
@@ -472,6 +499,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
             locale={locale}
             onCompleteLesson={handleCompleteLesson}
             onOpenLesson={handleOpenSpecificLesson}
+            onAddLog={handleStudentLog}
           />
         )}
 
@@ -486,7 +514,19 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
           />
         )}
 
-        {/* 8. NOTIFICATIONS TAB */}
+        {/* 8. PERSONAL AUDIT & ACTIVITY TAB */}
+        {activeTab === "audit" && (
+          <StudentAuditTab
+            student={student}
+            school={school}
+            auditLogs={auditLogs}
+            locale={locale}
+            onAddLog={handleStudentLog}
+            onNavigateTab={(tab) => switchTab(tab)}
+          />
+        )}
+
+        {/* 9. NOTIFICATIONS TAB */}
         {activeTab === "notifications" && (
           <StudentNotificationsTab
             student={student}
@@ -497,18 +537,20 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
           />
         )}
 
-        {/* 9. PROFILE & SETTINGS TAB */}
+        {/* 10. PROFILE & SETTINGS TAB */}
         {activeTab === "profile" && (
           <StudentProfileTab
             student={student}
             school={school}
             program={activeProgram}
+            auditLogs={auditLogs}
             locale={locale}
             theme={theme}
             onUpdateTheme={onUpdateTheme}
             onUpdateLocale={onUpdateLocale}
             onUpdateStudent={onUpdateStudent}
-            onAddLog={onAddLog}
+            onAddLog={handleStudentLog}
+            onNavigateTab={(tab) => switchTab(tab)}
           />
         )}
       </StudentLayout>

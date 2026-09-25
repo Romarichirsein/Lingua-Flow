@@ -375,6 +375,7 @@ export const translations: Record<UILocale, Record<string, any>> = {
         chat: { label: "Coach Linguistique", desc: "Coach et tuteur linguistique interactif" },
         evaluations: { label: "Prüfung", desc: "Préparation officielle (Sprechen, Hören, Schreiben, Lesen, Wortschatz)" },
         progress: { label: "Bilan & Certificat", desc: "Attestation officielle de réussite" },
+        audit: { label: "Journal d'Audit", desc: "Traçabilité certifiée de vos leçons, quiz et examens" },
         notifications: { label: "Notifications", desc: "Alertes d'accès et retours" },
         profile: { label: "Mon Profil", desc: "Paramètres, préférences et contrat école" },
       }
@@ -766,6 +767,7 @@ export const translations: Record<UILocale, Record<string, any>> = {
         chat: { label: "Language Coach", desc: "Interactive language and conversation coach" },
         evaluations: { label: "Prüfung", desc: "Official CEFR exam prep (Sprechen, Hören, Schreiben, Lesen, Wortschatz)" },
         progress: { label: "Review & Certificate", desc: "Official graduation certificate" },
+        audit: { label: "Audit & Activity", desc: "Certified history of your lessons, quizzes and exams" },
         notifications: { label: "Notifications", desc: "Access alerts and instructor feedback" },
         profile: { label: "My Profile", desc: "Settings, preferences and school contract" },
       }

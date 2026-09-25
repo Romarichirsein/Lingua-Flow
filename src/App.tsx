@@ -223,17 +223,23 @@ export default function App() {
     const finalSchoolId = extra?.schoolId || activeSchool?.id;
     const finalSchoolName = extra?.schoolName || activeSchool?.name;
 
+    const fallbackActorName = role === "super_admin"
+      ? "Super Admin"
+      : role === "school_admin"
+      ? (activeSchool?.managerName || "Directeur d'École")
+      : (currentStudent?.name || currentUserName || "Élève");
+
     const newLog: ActivityLog = {
       id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       action,
       details,
       actorRole: extra?.actorRole || role,
-      actorName: extra?.actorName || currentUserName || (role === "super_admin" ? "Super Admin" : "Directeur d'École"),
+      actorName: extra?.actorName || currentUserName || fallbackActorName,
       schoolId: finalSchoolId,
       schoolName: finalSchoolName,
-      entityType: extra?.entityType || "school",
-      entityId: extra?.entityId,
-      targetId: extra?.targetId || finalSchoolId,
+      entityType: extra?.entityType || (role === "student" ? "student" : "school"),
+      entityId: extra?.entityId || (role === "student" ? currentStudent?.id : undefined),
+      targetId: extra?.targetId || (role === "student" ? currentStudent?.id : finalSchoolId),
       previousValue: extra?.previousValue,
       newValue: extra?.newValue,
       ipAddress: extra?.ipAddress || "192.168.1.42",
@@ -581,6 +587,7 @@ export default function App() {
                       student={currentStudent}
                       school={currentSchool}
                       programs={data.programs}
+                      auditLogs={data.logs}
                       submissions={data.aiSubmissions || []}
                       announcements={data.announcements || []}
                       activeSubpath={currentRoute.subpath || "dashboard"}
@@ -597,11 +604,31 @@ export default function App() {
                         });
                         handleAddLog(
                           "Rédaction Validée",
-                          `L'élève ${currentStudent.name} a soumis un texte sur "${newSub.topic}" (Score: ${newSub.result.overallScore || newSub.result.score?.grammar || 80}/100).`
+                          `L'élève ${currentStudent.name} a soumis un texte sur "${newSub.topic}" (Score: ${newSub.result.overallScore || newSub.result.score?.grammar || 80}/100).`,
+                          "success",
+                          {
+                            actorRole: "student",
+                            actorName: currentStudent.name,
+                            targetId: currentStudent.id,
+                            entityId: newSub.id,
+                            entityType: "ai",
+                            schoolId: currentSchool.id,
+                            schoolName: currentSchool.name,
+                          }
                         );
                       }}
                       onUpdateLocale={setLocale}
-                      onAddLog={handleAddLog}
+                      onAddLog={(action, details, status = "success", extra = {}) =>
+                        handleAddLog(action, details, status, {
+                          actorRole: "student",
+                          actorName: currentStudent.name,
+                          targetId: currentStudent.id,
+                          entityId: currentStudent.id,
+                          schoolId: currentSchool.id,
+                          schoolName: currentSchool.name,
+                          ...extra,
+                        })
+                      }
                     />
                   </motion.div>
                 ) : (

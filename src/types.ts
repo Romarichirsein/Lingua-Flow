@@ -337,7 +337,7 @@ export interface ActivityLog {
   actorName: string;
   schoolName?: string;
   schoolId?: string;
-  entityType?: "school" | "student" | "program" | "announcement" | "config" | "security" | "enrollment" | "ai";
+  entityType?: "school" | "student" | "program" | "announcement" | "config" | "security" | "enrollment" | "ai" | "lesson" | "quiz" | "evaluation" | string;
   entityId?: string;
   targetId?: string;
   previousValue?: string;
