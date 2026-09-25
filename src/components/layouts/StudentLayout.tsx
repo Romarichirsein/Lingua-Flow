@@ -84,7 +84,7 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({
     },
     {
       id: "chat",
-      label: t.student.tabs.chat.label,
+      label: "LinguaFlow AI",
       shortLabel: "LinguaFlow AI",
       description: t.student.tabs.chat.desc,
       icon: <Bot size={18} className="text-cyan-400" />,

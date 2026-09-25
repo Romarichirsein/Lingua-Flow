@@ -1138,8 +1138,8 @@ export const SchoolStudentsTab: React.FC<SchoolStudentsTabProps> = ({
               </span>
               <span>
                 {isEn
-                  ? `Are you sure you want to permanently delete learner ${deletingStudent?.name}? All their lesson progress, completed exercises and AI corrections will be lost.`
-                  : `Êtes-vous certain de vouloir supprimer définitivement l'élève ${deletingStudent?.name} ? Toute sa progression, devoirs et corrections IA seront supprimés.`}
+                  ? `Are you sure you want to permanently delete learner ${deletingStudent?.name}? All their lesson progress, completed exercises and corrections will be lost.`
+                  : `Êtes-vous certain de vouloir supprimer définitivement l'élève ${deletingStudent?.name} ? Toute sa progression, devoirs et corrections seront supprimés.`}
               </span>
             </div>
           </div>

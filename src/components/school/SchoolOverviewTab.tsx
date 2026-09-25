@@ -257,8 +257,8 @@ export const SchoolOverviewTab: React.FC<SchoolOverviewTabProps> = ({
                 </div>
                 <p className="text-slate-600 dark:text-white/70 text-[11px]">
                   {isEn
-                    ? "Renew their subscription to prevent access suspension to lessons and AI tutoring."
-                    : "Renouvelez leur abonnement pour éviter l'interruption des cours et du tuteur IA."}
+                    ? "Renew their subscription to prevent access suspension to lessons and language tutoring."
+                    : "Renouvelez leur abonnement pour éviter l'interruption des cours et du tuteur pédagogique."}
                 </p>
                 <button
                   type="button"
@@ -650,10 +650,10 @@ export const SchoolOverviewTab: React.FC<SchoolOverviewTabProps> = ({
           </div>
           <div>
             <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-              {isEn ? "Quizzes & AI Essays" : "Quiz & Rédactions IA"}
+              {isEn ? "Quizzes & Written Essays" : "Quiz & Devoirs Écrits"}
             </h4>
             <p className="text-xs text-slate-500 dark:text-white/60 mt-0.5">
-              {isEn ? "Inspect tests & AI corrections" : "Consulter les tests et devoirs corrigés"}
+              {isEn ? "Inspect tests & essay corrections" : "Consulter les tests et devoirs corrigés"}
             </p>
           </div>
         </div>

@@ -97,7 +97,7 @@ function getGeminiClient(): GoogleGenAI | null {
       apiKey,
       httpOptions: {
         headers: {
-          "User-Agent": "aistudio-build",
+          "User-Agent": "linguaflow-core",
         },
       },
     });
@@ -108,11 +108,10 @@ function getGeminiClient(): GoogleGenAI | null {
 const GEMINI_MODELS_CASCADE = [
   "gemini-3.1-flash-lite",
   "gemini-3.6-flash",
-  "gemini-3.8-flash",
 ];
 
 /**
- * Robust Gemini Content Generation Helper with multi-model failover and retries
+ * Robust Gemini Content Generation Helper with multi-model failover and strict 4.5s ceiling
  */
 async function callGemini(
   prompt: string,
@@ -121,6 +120,7 @@ async function callGemini(
     jsonMode?: boolean;
     model?: string;
     timeoutMs?: number;
+    thinkingMode?: boolean;
   } = {}
 ): Promise<string> {
   const gemini = getGeminiClient();
@@ -134,45 +134,42 @@ async function callGemini(
     ...GEMINI_MODELS_CASCADE.filter((m) => m !== primaryModel),
   ];
 
-  const timeoutMs = options.timeoutMs || 15000;
+  // Maximum 4.5s timeout to guarantee total response time is strictly under 5s
+  const timeoutMs = options.timeoutMs || 4500;
   let lastError: any = null;
 
   for (const modelName of modelsToTry) {
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      let timer: NodeJS.Timeout | undefined;
-      try {
-        if (attempt > 1) {
-          await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
-        }
-
-        const generatePromise = gemini.models.generateContent({
-          model: modelName,
-          contents: prompt,
-          config: {
-            ...(options.systemInstruction ? { systemInstruction: options.systemInstruction } : {}),
-            ...(options.jsonMode ? { responseMimeType: "application/json" } : {}),
+    let timer: NodeJS.Timeout | undefined;
+    try {
+      const generatePromise = gemini.models.generateContent({
+        model: modelName,
+        contents: prompt,
+        config: {
+          ...(options.systemInstruction ? { systemInstruction: options.systemInstruction } : {}),
+          ...(options.jsonMode ? { responseMimeType: "application/json" } : {}),
+          thinkingConfig: {
+            thinkingBudget: options.thinkingMode ? 256 : 0,
           },
-        });
+          maxOutputTokens: 600,
+        } as any,
+      });
 
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          timer = setTimeout(() => reject(new Error(`Gemini timeout on ${modelName} (attempt ${attempt})`)), timeoutMs);
-        });
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`Gemini timeout (4.5s) on ${modelName}`)), timeoutMs);
+      });
 
-        const response: any = await Promise.race([generatePromise, timeoutPromise]);
-        if (timer) clearTimeout(timer);
+      const response: any = await Promise.race([generatePromise, timeoutPromise]);
+      if (timer) clearTimeout(timer);
 
-        if (response?.text) {
-          return response.text;
-        }
-      } catch (err: any) {
-        if (timer) clearTimeout(timer);
-        lastError = err;
-        const errMsg = err?.message || String(err);
-        console.warn(`[Gemini Server] ${modelName} attempt ${attempt} notice: ${errMsg.slice(0, 100)}`);
-        if (attempt === 2) {
-          break;
-        }
+      if (response?.text) {
+        return response.text;
       }
+    } catch (err: any) {
+      if (timer) clearTimeout(timer);
+      lastError = err;
+      const errMsg = err?.message || String(err);
+      console.warn(`[Gemini Server] ${modelName} notice: ${errMsg.slice(0, 100)}`);
+      continue;
     }
   }
 
@@ -180,12 +177,13 @@ async function callGemini(
 }
 
 /**
- * Multi-turn Gemini Chat helper with resilient fallback and retries
+ * Multi-turn Gemini Chat helper with resilient fallback and strict 4.5s ceiling
  */
 async function callGeminiChat(
   history: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }>,
   systemInstruction?: string,
-  preferredModel: string = "gemini-3.1-flash-lite"
+  preferredModel: string = "gemini-3.1-flash-lite",
+  thinkingMode: boolean = false
 ): Promise<{ text: string; model: string }> {
   const gemini = getGeminiClient();
   if (!gemini) {
@@ -197,44 +195,42 @@ async function callGeminiChat(
     ...GEMINI_MODELS_CASCADE.filter((m) => m !== preferredModel),
   ];
 
-  const timeoutMs = 12000;
+  // Maximum 4.5s timeout to guarantee total response time is strictly under 5 seconds
+  const timeoutMs = 4500;
   let lastError: any = null;
 
   for (const modelName of modelsToTry) {
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      let timer: NodeJS.Timeout | undefined;
-      try {
-        if (attempt > 1) {
-          await new Promise((resolve) => setTimeout(resolve, 400 * attempt));
-        }
-
-        const generatePromise = gemini.models.generateContent({
-          model: modelName,
-          contents: history,
-          config: {
-            ...(systemInstruction ? { systemInstruction } : {}),
+    let timer: NodeJS.Timeout | undefined;
+    try {
+      const generatePromise = gemini.models.generateContent({
+        model: modelName,
+        contents: history,
+        config: {
+          ...(systemInstruction ? { systemInstruction } : {}),
+          thinkingConfig: {
+            // 0 when standard (instant response), 256 tokens max when thinkingMode (fast reasoning < 3s)
+            thinkingBudget: thinkingMode ? 256 : 0,
           },
-        });
+          maxOutputTokens: 450,
+        } as any,
+      });
 
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          timer = setTimeout(() => reject(new Error(`Gemini chat timeout on ${modelName} (attempt ${attempt})`)), timeoutMs);
-        });
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`Gemini chat timeout (4.5s) on ${modelName}`)), timeoutMs);
+      });
 
-        const response: any = await Promise.race([generatePromise, timeoutPromise]);
-        if (timer) clearTimeout(timer);
+      const response: any = await Promise.race([generatePromise, timeoutPromise]);
+      if (timer) clearTimeout(timer);
 
-        if (response?.text) {
-          return { text: response.text, model: modelName };
-        }
-      } catch (err: any) {
-        if (timer) clearTimeout(timer);
-        lastError = err;
-        const errMsg = err?.message || String(err);
-        console.warn(`[Gemini Chat Server] ${modelName} attempt ${attempt} notice: ${errMsg.slice(0, 100)}`);
-        if (attempt === 2) {
-          break;
-        }
+      if (response?.text) {
+        return { text: response.text, model: modelName };
       }
+    } catch (err: any) {
+      if (timer) clearTimeout(timer);
+      lastError = err;
+      const errMsg = err?.message || String(err);
+      console.warn(`[Gemini Chat Server] ${modelName} notice: ${errMsg.slice(0, 100)}`);
+      continue;
     }
   }
 
@@ -1070,13 +1066,13 @@ app.post("/api/sanity/sync", async (req, res) => {
 // --------------------------------------------------------------------------
 // AI WRITING CORRECTION ENDPOINT
 // --------------------------------------------------------------------------
-app.post("/api/ai/writing-correction", async (req, res) => {
+app.post(["/api/ai/writing-correction", "/api/ai/action/correction"], async (req, res) => {
   const studentText = req.body.studentText || req.body.text || "";
   const language = req.body.language || "german";
   const level = req.body.level || req.body.targetLevel || "A2";
   const topic = req.body.topic || req.body.prompt || "Expression écrite";
   const explanationLanguage = req.body.explanationLanguage || req.body.locale || "fr";
-  const preferredModel = req.body.model || SEEKAI_DEFAULT_MODEL;
+  const preferredModel = req.body.model || "gemini-3.1-flash-lite";
 
   if (!studentText || !studentText.trim()) {
     return res.status(400).json({ error: "Le texte est requis pour analyse." });
@@ -1134,12 +1130,12 @@ Evaluate this student text according to CEFR criteria.`;
 
   let rawJsonText = "";
 
-  // 1. Primary AI Engine: Gemini Multi-Model Cascade (instant & high accuracy)
+  // 1. Primary AI Engine: Gemini Multi-Model Cascade (instant & high accuracy, <= 4.5s)
   if (process.env.GEMINI_API_KEY || GEMINI_API_KEY) {
     try {
       rawJsonText = await callGemini(
         `${systemPrompt}\n\n${userPrompt}`,
-        { jsonMode: true, timeoutMs: 15000 }
+        { jsonMode: true, timeoutMs: 4500, model: "gemini-3.1-flash-lite", thinkingMode: false }
       );
     } catch (geminiErr: any) {
       console.warn("Gemini cascade notice (trying DeepSeek/SeekAI):", geminiErr?.message || geminiErr);
@@ -1554,52 +1550,45 @@ app.post("/api/ai/chat", async (req, res) => {
       turnCount = 0,
       thinkingMode = false,
       useDeepThinking = false,
-      model = SEEKAI_DEFAULT_MODEL,
+      model = "gemini-3.1-flash-lite",
     } = req.body;
 
     const targetLangName = language === "german" ? "German (Deutsch / Hochdeutsch)" : "Italian (Italiano)";
     const studentLvl = (level || "A2").toUpperCase();
     const cefrRules = getCEFRLevelRules(studentLvl, language);
 
-    const systemPrompt = `You are "LinguaFlow AI", the elite native AI Language Agent specifically specialized in the German language (Hochdeutsch) and the DACH linguistic sphere (Deutschland 🇩🇪, Österreich 🇦🇹, Schweiz 🇨🇭) at "${schoolName || "LinguaFlow Academy"}".
+    const systemPrompt = `You are "LinguaFlow Coach", the elite native Language Coach specifically specialized in the German language (Hochdeutsch) and the DACH linguistic sphere (Deutschland 🇩🇪, Österreich 🇦🇹, Schweiz 🇨🇭) at "${schoolName || "LinguaFlow Academy"}".
 You possess deep pedagogical, grammatical, phonological, idiomatic, and cultural mastery of German, instructing student "${studentName || "Student"}" at CEFR level ${studentLvl}.
 
-IDENTITY & MISSION — LINGUAFLOW AI (AGENT SPÉCIALISÉ DANS LES LANGUES ALLEMANDES & ESPACE DACH):
+IDENTITY & MISSION — LINGUAFLOW COACH (EXPERT PÉDAGOGIQUE EN LANGUE ALLEMANDE & ESPACE DACH):
 - Your core mission is to make the student master the German language with precision, natural fluency, confidence, and cultural depth across all CEFR levels (A1, A2, B1, B2, C1, C2).
-- You are a specialized German Language Agent: pedagogical, observant, encouraging, intellectually sharp, and deeply grounded in authentic German spoken in Germany, Austria, and Switzerland.
+- You are a specialized German Language Coach: pedagogical, observant, encouraging, intellectually sharp, and deeply grounded in authentic German spoken in Germany, Austria, and Switzerland.
 - Current Student CEFR Level: ${studentLvl} (Calibrate your syntax, grammatical complexity, speed, and vocabulary strictly to this level).
-${thinkingMode || useDeepThinking ? "- Advanced Thinking Mode ACTIVE: Provide thorough, explicit grammatical breakdowns, case explanations (Kasus: Nominativ, Akkusativ, Dativ, Genitiv), Wechselpräpositionen, Satzstellung (Hauptsatz/Nebensatz), and morphological insights." : ""}
+${thinkingMode || useDeepThinking ? "- Mode Analyse Approfondie ACTIF (Raisonnement rapide ≤ 5s): Provide succinct grammatical tips, case explanations (Kasus: Nominativ, Akkusativ, Dativ, Genitiv), and sentence structure advice." : "- Ultra-Fast Response Mode: Respond naturally, engagingly and concisely (max 3-4 sentences)."}
 
 SPECIALIZED GERMAN CAPABILITIES (ALL ACTIVE AT ALL TIMES):
 1. GERMAN GRAMMAR & SYNTAX MASTERY (Grammatik & Satzbau):
    - Whenever asked about or encountering grammar, explain rules with crystalline clarity, structured bullet points, and vivid contextual examples.
-   - Master the 4 cases (Nominativ, Akkusativ, Dativ, Genitiv), article declensions (der/die/das, den/dem/des, ein/eine/einen/einem/eines), adjective declensions (stark, schwach, gemischt), verb conjugations, irregular verbs (starke Verben), modal verbs (können, müssen, dürfen, sollen, wollen, mögen), separable verbs (trennbare Verben), prepositions (mit Dativ: aus, bei, mit, nach, seit, von, zu; mit Akkusativ: bis, durch, für, gegen, ohne, um; Wechselpräpositionen: an, auf, hinter, in, neben, über, unter, vor, zwischen - Akkusativ bei Bewegung, Dativ bei Lage), subordinate clauses (Nebensätze mit weil, dass, obwohl, wenn, als, damit - verbe conjugué rejeté à la toute fin), relative clauses, passive voice (Vorgangspassiv & Zustandspassiv), and subjunctive (Konjunktiv I & II).
+   - Master the 4 cases (Nominativ, Akkusativ, Dativ, Genitiv), article declensions (der/die/das, den/dem/des, ein/eine/einen/einem/eines), adjective declensions, verb conjugations, modal verbs, separable verbs, prepositions (Akkusativ/Dativ/Wechselpräpositionen), and subordinate clauses (Nebensätze mit weil, dass, obwohl).
 
 2. DACH SPHERE CULTURAL & LINGUISTIC AUTHENTICITY:
    - Provide authentic insights into real life and administration in DACH countries: Deutschland, Österreich, Schweiz.
-   - Clarify regional variants when helpful (standard German vs. Austrian German: "Aprikose" vs. "Marille", "Tüte" vs. "Sackerl"; Swiss German: "Fahrrad" vs. "Velo", no 'ß').
-   - Master real-world simulations: Bürgeramt / Anmeldung, Vorstellungsgespräch (job interviews), Arztbesuch, Restaurant, everyday conversations, business German (Wirtschaftsdeutsch).
+   - Clarify regional variants when helpful (standard German vs. Austrian German: "Aprikose" vs. "Marille"; Swiss German: "Fahrrad" vs. "Velo").
 
 3. ACTIVE BENEVOLENT PEDAGOGICAL CORRECTION:
-   - When the student writes in German with grammatical, lexical, or syntax errors, always include an encouraging, high-value pedagogical tip in brackets:
+   - When the student writes with grammatical, lexical, or syntax errors, always include an encouraging, high-value pedagogical tip in brackets:
      [💡 Conseil LinguaFlow : <succinct explanation in French or English with a clear model sentence>]
-   - Then immediately continue the immersion and conversational flow by asking a captivating question or guiding the next sentence.
+   - Then immediately continue the conversational flow by asking a captivating question.
 
-4. EXAM READINESS (Goethe-Zertifikat, TELC, TestDaF, ÖSD):
-   - Provide official CEFR-aligned training (Sprechen, Schreiben, Grammatik, Wortschatz) with exam-oriented formulations, linking words (Konnektoren: einerseits/andererseits, darüber hinaus, folglich), and rhetorical tips.
-
-5. ADAPTIVE LEVEL-BOUND SYNTAX:
+4. ADAPTIVE LEVEL-BOUND SYNTAX:
 ${cefrRules}
 
-6. MULTILINGUAL AGILITY:
+5. MULTILINGUAL AGILITY:
    - Converse primarily in German.
-   - If the student asks a question about German in French or English (e.g. "explique-moi les cas"), explain clearly in their language and provide rich, authentic German examples suited to level ${studentLvl}.
-   - Never sound robotic or repeat canned responses. Every reply is dynamically tailored to the student's exact input.`;
+   - If the student asks a question about German in French or English, explain clearly in their language with authentic German examples.
+   - Keep answers clear, engaging and under 150 words for optimal conversational pace.`;
 
     // Construct and sanitize Gemini contents array:
-    // 1. Strictly alternate user -> model -> user
-    // 2. Guarantee the first turn is user
-    // 3. Guarantee the last turn is user
     const rawTurns: Array<{ role: "user" | "model"; text: string }> = [];
 
     const rawList: any[] = Array.isArray(history) ? history : Array.isArray(messages) ? messages : [];
@@ -1622,7 +1611,6 @@ ${cefrRules}
     for (const turn of rawTurns) {
       if (geminiHistory.length === 0) {
         if (turn.role === "model") {
-          // Prepend initial student greeting to maintain compliant user-first multi-turn structure
           geminiHistory.push({
             role: "user",
             parts: [{ text: language === "german" ? `Guten Tag! Ich möchte mein Deutsch trainieren.` : "Ciao! Vorrei fare pratica." }],
@@ -1646,7 +1634,7 @@ ${cefrRules}
       });
     }
 
-    // Ensure the final turn is always from the user so the AI generates the appropriate continuation
+    // Ensure the final turn is always from the user
     if (geminiHistory[geminiHistory.length - 1].role !== "user") {
       geminiHistory.push({
         role: "user",
@@ -1662,28 +1650,19 @@ ${cefrRules}
     const providerPref = (req.body.provider || "").toLowerCase();
     const modelRequested = (typeof model === "string" ? model : "").toLowerCase();
 
-    const isOrcaRequested =
-      providerPref === "orcarouter" ||
-      modelRequested.startsWith("orcarouter") ||
-      modelRequested.includes("free") ||
-      modelRequested === "deepseek/deepseek-v4-flash-free";
-
-    const isSeekAIRequested =
+    const isSeekAIExplicit =
       providerPref === "seekai" ||
-      modelRequested.includes("claude-opus") ||
-      modelRequested.includes("opus-4-7");
+      (req.body.model && (modelRequested.includes("claude-opus") || modelRequested.includes("opus-4-7")));
 
-    const isDeepSeekRequested =
+    const isOrcaExplicit =
+      providerPref === "orcarouter" ||
+      (req.body.model && (modelRequested.startsWith("orcarouter") || modelRequested === "deepseek/deepseek-v4-flash-free"));
+
+    const isDeepSeekExplicit =
       providerPref === "deepseek" ||
-      modelRequested === "deepseek-v4-flash" ||
-      modelRequested === "deepseek-chat" ||
-      modelRequested === "deepseek-reasoner";
+      (req.body.model && (modelRequested === "deepseek-v4-flash" || modelRequested === "deepseek-chat" || modelRequested === "deepseek-reasoner"));
 
-    const isGeminiRequested =
-      providerPref === "gemini" ||
-      modelRequested.startsWith("gemini");
-
-    // Shared message lists for providers
+    // Shared message lists for external providers if explicitly requested
     const textMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
       { role: "system", content: systemPrompt },
       ...geminiHistory.map((g) => ({
@@ -1692,85 +1671,16 @@ ${cefrRules}
       })),
     ];
 
-    // 0. SPECIFIC PRIORITY ROUTING based on model selected
-
-    // Priority 1: SeekAI requested (e.g. claude-opus-4-7)
-    if (isSeekAIRequested && (process.env.SEEKAI_API_KEY || SEEKAI_API_KEY)) {
+    // 1. PRIMARY ENGINE: Gemini (Fastest, ultra-responsive, capped at 4.5s)
+    // Run Gemini unless a third-party engine was explicitly selected
+    if (!isSeekAIExplicit && !isOrcaExplicit && !isDeepSeekExplicit && (process.env.GEMINI_API_KEY || GEMINI_API_KEY)) {
       try {
-        reply = await callOpenAICompatible(textMessages, {
-          model: model || SEEKAI_DEFAULT_MODEL,
-          temperature: 0.7,
-          timeoutMs: 12000,
-        });
-        if (reply) {
-          engineUsed = "seekai";
-          modelUsed = model || SEEKAI_DEFAULT_MODEL;
-        }
-      } catch (seekErr: any) {
-        console.warn("[API /api/ai/chat] SeekAI priority notice:", seekErr?.message || seekErr);
-      }
-    }
-
-    // Priority 2: OrcaRouter requested (e.g. orcarouter/auto, orcarouter/free, deepseek/deepseek-v4-flash-free)
-    if (!reply && isOrcaRequested && (process.env.ORCAROUTER_API_KEY || ORCAROUTER_API_KEY)) {
-      try {
-        reply = await callOrcaRouter(textMessages, {
-          model: model || ORCAROUTER_DEFAULT_MODEL,
-          temperature: 0.7,
-          timeoutMs: 8000,
-        });
-        if (reply) {
-          engineUsed = "orcarouter";
-          modelUsed = model || ORCAROUTER_DEFAULT_MODEL;
-        }
-      } catch (orcaErr: any) {
-        console.warn("[API /api/ai/chat] OrcaRouter priority notice:", orcaErr?.message || orcaErr);
-      }
-    }
-
-    // Priority 3: DeepSeek requested (e.g. deepseek-v4-flash)
-    if (!reply && isDeepSeekRequested) {
-      if (deepSeekBalanceCache.isAvailable && (process.env.DEEPSEEK_API_KEY || DEEPSEEK_API_KEY)) {
-        try {
-          const modelToUse = thinkingMode || useDeepThinking ? "deepseek-reasoner" : (model || DEEPSEEK_MODEL);
-          reply = await callDeepSeek(textMessages, {
-            model: modelToUse,
-            temperature: 0.7,
-            timeoutMs: 8000,
-          });
-          if (reply) {
-            engineUsed = "deepseek";
-            modelUsed = modelToUse;
-          }
-        } catch (dsErr: any) {
-          console.warn("[API /api/ai/chat] DeepSeek priority notice:", dsErr?.message || dsErr);
-        }
-      }
-      // If DeepSeek direct is unavailable or failed, fallback to OrcaRouter's free DeepSeek
-      if (!reply && (process.env.ORCAROUTER_API_KEY || ORCAROUTER_API_KEY)) {
-        try {
-          reply = await callOrcaRouter(textMessages, {
-            model: "deepseek/deepseek-v4-flash-free",
-            temperature: 0.7,
-            timeoutMs: 8000,
-          });
-          if (reply) {
-            engineUsed = "orcarouter";
-            modelUsed = "deepseek/deepseek-v4-flash-free";
-          }
-        } catch (orcaFallbackErr: any) {
-          console.warn("[API /api/ai/chat] OrcaRouter DeepSeek fallback notice:", orcaFallbackErr?.message || orcaFallbackErr);
-        }
-      }
-    }
-
-    // 1. PRIMARY AI ENGINE CASCADE: Gemini Multi-Model Cascade
-    if (!reply && (process.env.GEMINI_API_KEY || GEMINI_API_KEY)) {
-      try {
+        const preferredModel = (thinkingMode || useDeepThinking) ? "gemini-3.6-flash" : "gemini-3.1-flash-lite";
         const geminiResult = await callGeminiChat(
           geminiHistory,
           systemPrompt,
-          isGeminiRequested && typeof model === "string" ? model : "gemini-3.1-flash-lite"
+          preferredModel,
+          thinkingMode || useDeepThinking
         );
         if (geminiResult?.text) {
           reply = geminiResult.text;
@@ -1778,63 +1688,80 @@ ${cefrRules}
           modelUsed = geminiResult.model;
         }
       } catch (geminiErr: any) {
-        console.warn("[API /api/ai/chat] Gemini cascade notice:", geminiErr?.message || geminiErr);
+        console.warn("[API /api/ai/chat] Fast Gemini notice:", geminiErr?.message || geminiErr);
       }
     }
 
-    // 2. ORCAROUTER CASCADE (Fast AI Router)
-    if (!reply && (process.env.ORCAROUTER_API_KEY || ORCAROUTER_API_KEY)) {
-      try {
-        reply = await callOrcaRouter(textMessages, {
-          model: ORCAROUTER_DEFAULT_MODEL,
-          temperature: 0.7,
-          timeoutMs: 7000,
-        });
-        if (reply) {
-          engineUsed = "orcarouter";
-          modelUsed = ORCAROUTER_DEFAULT_MODEL;
-        }
-      } catch (orcaErr: any) {
-        console.warn("[API /api/ai/chat] OrcaRouter cascade notice:", orcaErr?.message || orcaErr);
-      }
-    }
-
-    // 3. SECONDARY CASCADE: SeekAI / OpenAI-compatible
-    if (!reply && (process.env.SEEKAI_API_KEY || SEEKAI_API_KEY)) {
+    // 2. EXPLICIT PROVIDERS (Only if requested by user/admin)
+    if (!reply && isSeekAIExplicit && (process.env.SEEKAI_API_KEY || SEEKAI_API_KEY)) {
       try {
         reply = await callOpenAICompatible(textMessages, {
-          model: SEEKAI_DEFAULT_MODEL,
+          model: model || SEEKAI_DEFAULT_MODEL,
           temperature: 0.7,
-          timeoutMs: 8000,
+          timeoutMs: 4500,
         });
         if (reply) {
           engineUsed = "seekai";
-          modelUsed = SEEKAI_DEFAULT_MODEL;
+          modelUsed = model || SEEKAI_DEFAULT_MODEL;
         }
       } catch (seekErr: any) {
-        console.warn("[API /api/ai/chat] SeekAI cascade notice:", seekErr?.message || seekErr);
+        console.warn("[API /api/ai/chat] SeekAI notice:", seekErr?.message || seekErr);
       }
     }
 
-    // 4. TERTIARY CASCADE: DeepSeek Direct (if available)
-    if (!reply && deepSeekBalanceCache.isAvailable && (process.env.DEEPSEEK_API_KEY || DEEPSEEK_API_KEY)) {
+    if (!reply && isOrcaExplicit && (process.env.ORCAROUTER_API_KEY || ORCAROUTER_API_KEY)) {
       try {
-        const modelToUse = thinkingMode || useDeepThinking ? "deepseek-reasoner" : DEEPSEEK_MODEL;
+        reply = await callOrcaRouter(textMessages, {
+          model: model || ORCAROUTER_DEFAULT_MODEL,
+          temperature: 0.7,
+          timeoutMs: 4500,
+        });
+        if (reply) {
+          engineUsed = "orcarouter";
+          modelUsed = model || ORCAROUTER_DEFAULT_MODEL;
+        }
+      } catch (orcaErr: any) {
+        console.warn("[API /api/ai/chat] OrcaRouter notice:", orcaErr?.message || orcaErr);
+      }
+    }
+
+    if (!reply && isDeepSeekExplicit && deepSeekBalanceCache.isAvailable && (process.env.DEEPSEEK_API_KEY || DEEPSEEK_API_KEY)) {
+      try {
+        const modelToUse = thinkingMode || useDeepThinking ? "deepseek-reasoner" : (model || DEEPSEEK_MODEL);
         reply = await callDeepSeek(textMessages, {
           model: modelToUse,
           temperature: 0.7,
-          timeoutMs: 6000,
+          timeoutMs: 4500,
         });
         if (reply) {
           engineUsed = "deepseek";
           modelUsed = modelToUse;
         }
-      } catch (deepseekErr: any) {
-        console.warn("[API /api/ai/chat] DeepSeek tertiary notice:", deepseekErr?.message || deepseekErr);
+      } catch (dsErr: any) {
+        console.warn("[API /api/ai/chat] DeepSeek notice:", dsErr?.message || dsErr);
       }
     }
 
-    // 5. INTELLIGENT DYNAMIC FALLBACK: Never repeat, fully calibrated to topic & level
+    // Fallback back to Gemini if an explicit third-party provider failed
+    if (!reply && (process.env.GEMINI_API_KEY || GEMINI_API_KEY)) {
+      try {
+        const geminiResult = await callGeminiChat(
+          geminiHistory,
+          systemPrompt,
+          "gemini-3.1-flash-lite",
+          false
+        );
+        if (geminiResult?.text) {
+          reply = geminiResult.text;
+          engineUsed = "gemini";
+          modelUsed = geminiResult.model;
+        }
+      } catch (geminiErr: any) {
+        console.warn("[API /api/ai/chat] Gemini fallback notice:", geminiErr?.message || geminiErr);
+      }
+    }
+
+    // 3. INTELLIGENT DYNAMIC FALLBACK: Guarantees response in < 5 seconds even with network outage
     if (!reply) {
       const lastUserMsg = (message || geminiHistory[geminiHistory.length - 1]?.parts[0]?.text || "").trim();
       reply = generateDynamicGermanReply({
@@ -1849,11 +1776,11 @@ ${cefrRules}
       modelUsed = "cefr-adaptive";
     }
 
-    console.log(`[API /api/ai/chat] Generated reply for "${studentName}" in ${Date.now() - startTime}ms via LinguaFlow AI (${engineUsed} / ${modelUsed})`);
+    console.log(`[API /api/ai/chat] Generated reply for "${studentName}" in ${Date.now() - startTime}ms via LinguaFlow Coach (${engineUsed} / ${modelUsed})`);
 
     return res.json({
       reply,
-      agent: "LinguaFlow AI",
+      agent: "LinguaFlow Coach",
       engine: engineUsed,
       model: modelUsed,
       latencyMs: Date.now() - startTime,

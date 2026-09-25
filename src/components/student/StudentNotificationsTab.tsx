@@ -134,10 +134,10 @@ export const StudentNotificationsTab: React.FC<StudentNotificationsTabProps> = (
       {
         id: "notif-3",
         type: "ai",
-        title: locale === "en" ? "LinguaFlow AI Tutor Available" : "Tuteur IA LinguaFlow disponible",
+        title: locale === "en" ? "LinguaFlow Language Coach Available" : "Coach Linguistique LinguaFlow disponible",
         message: locale === "en"
-          ? "Converse in immersion with LinguaFlow AI and get instant feedback on cases, grammar and pronunciation."
-          : "Échangez en immersion avec LinguaFlow AI et obtenez des explications instantanées sur les cas, déclinaisons et tournures.",
+          ? "Converse in immersion with your coach and get instant feedback on cases, grammar and pronunciation."
+          : "Échangez en immersion avec votre coach et obtenez des explications instantanées sur les cas, déclinaisons et tournures.",
         date: locale === "en" ? "3 days ago" : "Il y a 3 jours",
         read: readIds.includes("notif-3"),
         actionTab: "chat",

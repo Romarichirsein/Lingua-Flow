@@ -596,7 +596,7 @@ export default function App() {
                           aiSubmissions: [newSub, ...(data.aiSubmissions || []).filter((s) => s.id !== newSub.id)],
                         });
                         handleAddLog(
-                          "Rédaction IA Validée",
+                          "Rédaction Validée",
                           `L'élève ${currentStudent.name} a soumis un texte sur "${newSub.topic}" (Score: ${newSub.result.overallScore || newSub.result.score?.grammar || 80}/100).`
                         );
                       }}

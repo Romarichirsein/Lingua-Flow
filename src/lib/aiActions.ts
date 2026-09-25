@@ -47,7 +47,7 @@ export async function aiCorrectionAction(
     language,
     level,
     topic,
-    model = "gemini-3-1-pro",
+    model = "gemini-3.1-flash-lite",
     locale = "fr",
   } = params;
 
@@ -78,10 +78,14 @@ export async function aiCorrectionAction(
   }
 
   try {
-    // 2. Call backend endpoint /api/ai/action/correction or /api/ai/writing/evaluate
+    // 2. Call backend endpoint with strict 4.8s abort ceiling
+    const controller = new AbortController();
+    const abortTimer = setTimeout(() => controller.abort(), 4800);
+
     const response = await fetch("/api/ai/action/correction", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
       body: JSON.stringify({
         studentId,
         studentName,
@@ -96,6 +100,7 @@ export async function aiCorrectionAction(
         locale,
       }),
     });
+    clearTimeout(abortTimer);
 
     if (!response.ok) {
       const errorText = await response.text();

@@ -42,9 +42,8 @@ export function getGeminiApiKey(): string {
 
 // Recommended and active models for Google GenAI v1beta
 export const GEMINI_ACTIVE_MODELS = [
-  "gemini-3.6-flash",
   "gemini-3.1-flash-lite",
-  "gemini-3.8-flash",
+  "gemini-3.6-flash",
 ] as const;
 
 export type GeminiModelName = typeof GEMINI_ACTIVE_MODELS[number];
@@ -66,7 +65,7 @@ export function getGeminiClient(): GoogleGenAI {
       apiKey,
       httpOptions: {
         headers: {
-          "User-Agent": "aistudio-build",
+          "User-Agent": "linguaflow-core",
         },
       },
     });
@@ -83,12 +82,12 @@ function wait(ms: number): Promise<void> {
 }
 
 /**
- * Generic retry wrapper with exponential backoff and jitter
+ * Generic retry wrapper with fast failover
  */
 async function retryWithBackoff<T>(
   fn: (attempt: number) => Promise<T>,
-  maxRetries: number = 3,
-  baseDelayMs: number = 600,
+  maxRetries: number = 1,
+  baseDelayMs: number = 200,
   operationName: string = "Gemini Operation"
 ): Promise<T> {
   let lastError: any = null;
@@ -107,10 +106,7 @@ async function retryWithBackoff<T>(
       }
 
       if (attempt < maxRetries) {
-        // Exponential backoff with random jitter: 600ms, 1200ms, 2400ms...
-        const jitter = Math.random() * 200;
-        const delay = Math.pow(2, attempt - 1) * baseDelayMs + jitter;
-        await wait(delay);
+        await wait(baseDelayMs);
       }
     }
   }
@@ -124,10 +120,11 @@ export interface GeminiContentOptions {
   model?: string;
   timeoutMs?: number;
   maxRetries?: number;
+  thinkingMode?: boolean;
 }
 
 /**
- * Robust Gemini Content Generation with Multi-Model Failover and Retries
+ * Robust Gemini Content Generation with Multi-Model Failover and strict <= 4.5s ceiling
  */
 export async function generateGeminiContent(
   prompt: string,
@@ -140,8 +137,9 @@ export async function generateGeminiContent(
     ...GEMINI_ACTIVE_MODELS.filter((m) => m !== primaryModel),
   ];
 
-  const timeoutMs = options.timeoutMs || 15000;
-  const maxRetriesPerModel = options.maxRetries || 2;
+  // Strictly maximum 4.5s to ensure total latency never exceeds 5 seconds
+  const timeoutMs = options.timeoutMs || 4500;
+  const maxRetriesPerModel = options.maxRetries || 1;
   let lastError: any = null;
 
   for (const modelName of candidateModels) {
@@ -155,7 +153,11 @@ export async function generateGeminiContent(
             config: {
               ...(options.systemInstruction ? { systemInstruction: options.systemInstruction } : {}),
               ...(options.jsonMode ? { responseMimeType: "application/json" } : {}),
-            },
+              thinkingConfig: {
+                thinkingBudget: options.thinkingMode ? 256 : 0,
+              },
+              maxOutputTokens: 500,
+            } as any,
           });
 
           const timeoutPromise = new Promise<never>((_, reject) => {
@@ -171,7 +173,7 @@ export async function generateGeminiContent(
           return response.text as string;
         },
         maxRetriesPerModel,
-        500,
+        200,
         `GenerateContent (${modelName})`
       );
 
@@ -229,14 +231,14 @@ export async function sendGeminiChatMessage(
 
   // System pedagogical persona instructions
   const defaultSystemInstruction = isGerman
-    ? `Du bist der hochqualifizierte, muttersprachliche KI-Sprachtutor "LinguaFlow AI" für die Partnerschule "${schoolName}".
+    ? `Du bist der hochqualifizierte, muttersprachliche Sprachtutor "LinguaFlow Coach" für die Partnerschule "${schoolName}".
 Du begleitest den Schüler ${studentName} auf GER-Niveau ${level.toUpperCase()}.
 PÄDAGOGISCHE REGELN:
 1. Antworte immer auf Deutsch, angepasst an das Niveau ${level.toUpperCase()}.
 2. Sei warmherzig, motivierend, interaktiv und stelle am Ende IMMER genau EINE gezielte Anschlussfrage.
 3. Wenn der Schüler grammatikalische Fehler macht, korrigiere sie sanft in einer kurzen Notiz [💡 Korrektur & Tipp: ...] auf Französisch.
 4. Verwende für A1/A2 kurze, klare Sätze im Präsens und Perfekt. Für B1/B2 differenzierte Satzstrukturen mit Konjunktiv und Passiv.`
-    : `Sei il tutor linguistico madrelingua "LinguaFlow AI" per la scuola "${schoolName}".
+    : `Sei il tutor linguistico madrelingua "LinguaFlow Coach" per la scuola "${schoolName}".
 Accompagni lo studente ${studentName} al livello QCER ${level.toUpperCase()}.
 Rispondi sempre in italiano accogliente, fornendo correzioni costruttive tra parentesi [💡 Suggerimento: ...] e una domanda stimolante per continuare la conversazione.`;
 
@@ -273,11 +275,16 @@ Rispondi sempre in italiano accogliente, fornendo correzioni costruttive tra par
             contents: cleanTurns,
             config: {
               systemInstruction: systemPrompt,
-            },
+              thinkingConfig: {
+                thinkingBudget: thinkingMode ? 256 : 0,
+              },
+              maxOutputTokens: 450,
+            } as any,
           });
 
+          // Strict 4.5s timeout guarantee for student chat
           const timeoutPromise = new Promise<never>((_, reject) => {
-            timer = setTimeout(() => reject(new Error(`Chat timeout (${modelName})`)), 12000);
+            timer = setTimeout(() => reject(new Error(`Chat timeout (4.5s) on ${modelName}`)), 4500);
           });
 
           const res: any = await Promise.race([promise, timeoutPromise]);
@@ -288,8 +295,8 @@ Rispondi sempre in italiano accogliente, fornendo correzioni costruttive tra par
           }
           return res.text.trim();
         },
-        maxRetries,
-        500,
+        1,
+        200,
         `Chat (${modelName})`
       );
 

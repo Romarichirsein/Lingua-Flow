@@ -214,7 +214,7 @@ export const SchoolEvaluationsTab: React.FC<SchoolEvaluationsTabProps> = ({
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">
-              {isEn ? "Evaluations, Quizzes & AI Homework" : "Évaluations, Quiz & Devoirs IA"}
+              {isEn ? "Evaluations, Quizzes & Written Homework" : "Évaluations, Quiz & Devoirs Écrits"}
             </h2>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#6D5DFC]/10 text-[#6D5DFC] dark:text-[#a399ff]">
               {school.language === "german" ? "Allemand 🇩🇪" : "Italien 🇮🇹"}
@@ -222,8 +222,8 @@ export const SchoolEvaluationsTab: React.FC<SchoolEvaluationsTabProps> = ({
           </div>
           <p className="text-xs text-slate-500 dark:text-white/60 mt-0.5">
             {isEn
-              ? "Build interactive multiple-choice tests, set passing thresholds, and review Gemini AI essay corrections."
-              : "Créez vos quiz interactifs QCM/Vrai-Faux, ajustez les scores de passage et inspectez les rédactions corrigées par l'IA."}
+              ? "Build interactive multiple-choice tests, set passing thresholds, and review essay corrections."
+              : "Créez vos quiz interactifs QCM/Vrai-Faux, ajustez les scores de passage et inspectez les rédactions et devoirs corrigés."}
           </p>
         </div>
 
@@ -469,13 +469,13 @@ export const SchoolEvaluationsTab: React.FC<SchoolEvaluationsTabProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="p-4 rounded-2xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10">
               <span className="text-xs text-slate-500 dark:text-white/50 font-bold uppercase tracking-wider block mb-1">
-                {isEn ? "Average AI Essay Score" : "Moyenne Rédactions IA"}
+                {isEn ? "Average Written Essay Score" : "Moyenne Devoirs Écrits"}
               </span>
               <span className="text-2xl font-black text-[#00D9FF] font-mono">
                 {averageAiScore}/100
               </span>
               <span className="text-[11px] text-slate-400 dark:text-white/40 block mt-1">
-                {schoolSubmissions.length} {isEn ? "evaluated essays" : "devoirs évalués par l'IA"}
+                {schoolSubmissions.length} {isEn ? "evaluated essays" : "devoirs et rédactions évalués"}
               </span>
             </div>
 
@@ -511,7 +511,7 @@ export const SchoolEvaluationsTab: React.FC<SchoolEvaluationsTabProps> = ({
             <div className="space-y-3">
               <div>
                 <div className="flex justify-between text-xs text-slate-700 dark:text-white/80 mb-1">
-                  <span>{isEn ? "Grammar & Structure (Quiz & AI)" : "Grammaire & Structure (Quiz & IA)"}</span>
+                  <span>{isEn ? "Grammar & Structure (Quiz & Essays)" : "Grammaire & Structure (Quiz & Devoirs)"}</span>
                   <span className="font-bold font-mono">87%</span>
                 </div>
                 <ProgressBar progress={87} color="green" size="sm" />
@@ -789,7 +789,7 @@ export const SchoolEvaluationsTab: React.FC<SchoolEvaluationsTabProps> = ({
       <Modal
         isOpen={Boolean(inspectingSubmission)}
         onClose={() => setInspectingSubmission(null)}
-        title={`${isEn ? "AI Essay Dossier" : "Rapport Pédagogique IA"} • ${inspectingSubmission?.studentName}`}
+        title={`${isEn ? "Pedagogical Dossier" : "Rapport Pédagogique"} • ${inspectingSubmission?.studentName}`}
         size="lg"
       >
         {inspectingSubmission && (
@@ -832,11 +832,11 @@ export const SchoolEvaluationsTab: React.FC<SchoolEvaluationsTabProps> = ({
               </div>
             )}
 
-            {/* AI Corrected Text */}
+            {/* Corrected Text */}
             {inspectingSubmission.result?.correctedVersion && (
               <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 text-xs">
                 <span className="font-bold text-emerald-500 block mb-1">
-                  {isEn ? "Optimal Corrected Version (Gemini AI):" : "Version Optimale Corrigée (Gemini IA) :"}
+                  {isEn ? "Optimal Corrected Version:" : "Version Optimale Corrigée :"}
                 </span>
                 <p className="text-slate-800 dark:text-white/90 leading-relaxed font-mono">
                   {inspectingSubmission.result.correctedVersion}

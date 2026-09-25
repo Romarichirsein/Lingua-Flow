@@ -540,7 +540,7 @@ export async function runSuperAdminDiagnostic(customStorage?: StorageAdapter): P
     },
     {
       id: "ann-global-valid",
-      title: "Mise à jour du tuteur IA",
+      title: "Mise à jour du tuteur pédagogique",
       content: "Tous les élèves et écoles ont accès aux nouveautés.",
       target: "all",
       priority: "info",

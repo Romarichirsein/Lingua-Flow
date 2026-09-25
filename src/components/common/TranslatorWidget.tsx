@@ -215,7 +215,7 @@ ${text}
                   <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
                     <span>Traducteur Bilingue</span>
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-500 dark:text-indigo-400">
-                      IA Gemini
+                      FR ⇄ EN
                     </span>
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400">

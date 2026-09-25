@@ -497,7 +497,7 @@ export const SchoolStudentDetailModal: React.FC<SchoolStudentDetailModalProps> =
                     {sub.result?.correctedVersion && (
                       <div className="p-3 rounded-xl bg-emerald-500/5 text-xs text-slate-800 dark:text-white/90 border border-emerald-500/20">
                         <span className="font-bold text-emerald-500 block mb-1">
-                          {isEn ? "AI Corrected Version:" : "Version corrigée optimale par l'IA :"}
+                          {isEn ? "Optimal Corrected Version:" : "Version corrigée optimale :"}
                         </span>
                         {sub.result.correctedVersion}
                       </div>

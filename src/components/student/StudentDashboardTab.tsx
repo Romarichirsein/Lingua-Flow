@@ -23,7 +23,7 @@ import {
   Check,
   ChevronRight,
   Sparkles,
-  Bot,
+  GraduationCap,
 } from "lucide-react";
 
 interface StudentDashboardTabProps {
@@ -350,22 +350,22 @@ export const StudentDashboardTab: React.FC<StudentDashboardTabProps> = ({
               </p>
             </div>
 
-            {/* AI Tutor card */}
+            {/* Language Coach card */}
             <div
               onClick={onOpenChat}
               className="group bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-amber-500/10 hover:from-indigo-500/20 hover:to-purple-500/20 border border-indigo-500/30 rounded-3xl p-5 transition cursor-pointer shadow-xs space-y-2"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-indigo-600 dark:text-cyan-400">
-                  <Bot size={18} className="text-cyan-400" />
-                  <span className="font-extrabold text-xs">LinguaFlow AI</span>
+                  <GraduationCap size={18} className="text-cyan-400" />
+                  <span className="font-extrabold text-xs">LinguaFlow Coach</span>
                 </div>
                 <ArrowRight size={14} className="text-cyan-400 group-hover:translate-x-1 transition" />
               </div>
               <p className="text-xs text-slate-600 dark:text-slate-300">
                 {locale === "en"
-                  ? "Converse with LinguaFlow AI, your specialized German language agent for grammar, cases (Akk/Dat), roleplay, and CEFR exams."
-                  : "Entraînez-vous avec LinguaFlow AI, votre agent IA spécialisé en allemand : cas, déclinaisons, simulations DACH et examens CECRL."}
+                  ? "Converse with your dedicated language coach, automatically calibrated to your CEFR level."
+                  : "Entraînez-vous avec votre coach linguistique dédié, calibré automatiquement sur votre niveau CECRL."}
               </p>
             </div>
           </div>

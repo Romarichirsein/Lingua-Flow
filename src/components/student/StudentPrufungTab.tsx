@@ -506,7 +506,7 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
             <p className="text-sm text-slate-300 max-w-2xl leading-relaxed">
               {isEn
                 ? `Official exam simulations based on real certification benchmarks (telccfree & deuropa). Complete Lesen, Sprachbausteine, Hören, Schreiben, Sprechen and Wortschatz.`
-                : `Entraînement officiel calqué sur les sujets réels d'examen (telccfree & deuropa). Maîtrisez le Lesen, les Sprachbausteine, le Hören, le Schreiben avec correction IA, le Sprechen et le Wortschatz.`}
+                : `Entraînement officiel calqué sur les sujets réels d'examen (telccfree & deuropa). Maîtrisez le Lesen, les Sprachbausteine, le Hören, le Schreiben avec correction instantanée, le Sprechen et le Wortschatz.`}
             </p>
 
             <div className="flex flex-wrap items-center gap-4 pt-1 text-xs text-slate-300">
@@ -841,7 +841,7 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
                   {currentExamConfig.schreibenTimeMinutes} minutes
                 </p>
                 <p className="text-[11px] text-slate-500">
-                  Barème officiel 4x25 points & IA
+                  Barème officiel 4x25 points
                 </p>
               </div>
 
@@ -1638,7 +1638,7 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
               <p className="text-xs text-slate-500 mt-1">
                 {isEn
                   ? "Timed exam simulation evaluated with official CEFR 4x25 rubric (Task fulfillment, coherence, vocabulary, grammar)."
-                  : "Simulation chronométrée évaluée en direct par l'IA selon le barème officiel 4x25 (Respect consigne, cohérence, lexique, syntaxe)."}
+                  : "Simulation chronométrée évaluée en direct selon le barème officiel 4x25 (Respect consigne, cohérence, lexique, syntaxe)."}
               </p>
             </div>
 
@@ -1822,8 +1822,8 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
                     )}
                     <span>
                       {isEvaluatingWriting
-                        ? "Correction IA en cours (Barème 4x25)..."
-                        : "Évaluer ma rédaction avec l'IA"}
+                        ? "Correction en cours (Barème 4x25)..."
+                        : "Évaluer ma rédaction"}
                     </span>
                   </button>
                 </div>

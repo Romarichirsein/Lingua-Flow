@@ -636,7 +636,7 @@ export const INITIAL_LOGS: ActivityLog[] = [
     actorRole: "super_admin",
     actorName: "Super Admin",
     action: "Surveillance Globale SaaS",
-    details: "Vérification automatisée de l infrastructure d IA, streaming vidéo et quotas partenaires.",
+    details: "Vérification automatisée de l infrastructure d apprentissage, streaming vidéo et quotas partenaires.",
     ipAddress: "127.0.0.1",
     status: "success",
   },
@@ -645,8 +645,8 @@ export const INITIAL_LOGS: ActivityLog[] = [
 export const INITIAL_ANNOUNCEMENTS: Announcement[] = [
   {
     id: "ann-1",
-    title: "Mise à jour majeure du Tuteur IA & Correction Grammaticale",
-    content: "L'assistant d'expression écrite prend désormais en charge l'évaluation fine des niveaux A1 à C1 avec retours phonétiques et contextuels pour l'allemand et l'italien.",
+    title: "Mise à jour majeure du Tuteur Pédagogique & Correction Grammaticale",
+    content: "L'atelier d'expression écrite prend désormais en charge l'évaluation fine des niveaux A1 à C1 avec retours phonétiques et contextuels pour l'allemand et l'italien.",
     target: "all",
     priority: "info",
     createdAt: "2026-08-20",
