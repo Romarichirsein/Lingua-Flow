@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   RefreshCw,
 } from "lucide-react";
+import { UILocale } from "../../types";
 
 interface UniversalVideoPlayerProps {
   videoUrl: string;
@@ -22,12 +23,13 @@ interface UniversalVideoPlayerProps {
   className?: string;
   autoPlay?: boolean;
   onEnded?: () => void;
+  locale?: UILocale;
 }
 
 export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
   videoUrl,
   poster,
-  title = "Leçon Vidéo",
+  title,
   watermarkText,
   watermarkEmail,
   watermarkSessionId,
@@ -35,7 +37,15 @@ export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
   className = "",
   autoPlay = false,
   onEnded,
+  locale,
 }) => {
+  const activeLocale: UILocale =
+    locale ||
+    (typeof window !== "undefined" &&
+      (localStorage.getItem("linguaflow_locale_preference") as UILocale)) ||
+    "fr";
+  const isEn = activeLocale === "en";
+
   const [resolvedUrl, setResolvedUrl] = useState<string>(videoUrl);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [hasError, setHasError] = useState<boolean>(false);
@@ -98,10 +108,10 @@ export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
     // Extract only primitive details to avoid circular structure errors with HTMLVideoElement / FiberNode in console loggers
     const mediaError = e.currentTarget?.error;
     const errorCode = mediaError?.code;
-    const errorMsg = mediaError?.message || "Format vidéo non supporté ou flux inaccessible";
+    const errorMsg = mediaError?.message || (isEn ? "Unsupported video format or stream unreachable" : "Format vidéo non supporté ou flux inaccessible");
     console.warn("Video playback error on URL:", resolvedUrl, { errorCode, errorMsg });
     setHasError(true);
-    setErrorMessage("Le format ou l'accès à ce flux vidéo n'a pas pu être chargé par le navigateur.");
+    setErrorMessage(isEn ? "The format or access to this video stream could not be loaded by your browser." : "Le format ou l'accès à ce flux vidéo n'a pas pu être chargé par le navigateur.");
   };
 
   const handleRetry = () => {
@@ -130,7 +140,7 @@ export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
           className="h-full w-full border-0 pointer-events-auto"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
-          title={title}
+          title={title || (isEn ? "Video Lesson" : "Leçon Vidéo")}
         />
       ) : hasError ? (
         /* Error Diagnostic Fallback Card */
@@ -139,9 +149,11 @@ export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
             <AlertTriangle size={24} />
           </div>
           <div>
-            <h4 className="text-sm font-bold text-slate-100">Lecture vidéo indisponible</h4>
+            <h4 className="text-sm font-bold text-slate-100">
+              {isEn ? "Video playback unavailable" : "Lecture vidéo indisponible"}
+            </h4>
             <p className="text-xs text-slate-400 max-w-md mt-1">
-              {errorMessage || "Le fichier source est inaccessible ou le format vidéo n'est pas supporté par ce navigateur."}
+              {errorMessage || (isEn ? "The source file is unreachable or the video format is not supported by this browser." : "Le fichier source est inaccessible ou le format vidéo n'est pas supporté par ce navigateur.")}
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
@@ -151,7 +163,7 @@ export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
               className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-white transition cursor-pointer"
             >
               <RefreshCw size={13} />
-              <span>Réessayer</span>
+              <span>{isEn ? "Retry" : "Réessayer"}</span>
             </button>
           </div>
         </div>
@@ -194,7 +206,7 @@ export const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
             <span>{watermarkEmail || ""}</span>
           </div>
           <div className="flex items-center justify-between text-[8px] font-mono text-white/60">
-            <span>FLUX PROTÉGÉ • TÉLÉCHARGEMENT & PARTAGE STRICTEMENT INTERDITS</span>
+            <span>{isEn ? "PROTECTED STREAM • DOWNLOADING & SHARING STRICTLY FORBIDDEN" : "FLUX PROTÉGÉ • TÉLÉCHARGEMENT & PARTAGE STRICTEMENT INTERDITS"}</span>
             <span>{currentTimeStr}</span>
           </div>
         </div>

@@ -214,11 +214,11 @@ export const Header: React.FC<HeaderProps> = ({
               id="header-translator-btn"
               type="button"
               onClick={onOpenTranslator}
-              title={locale === "en" ? "English ⇄ French Translator" : "Traducteur Anglais ⇄ Français"}
+              title={locale === "en" ? "Bilingual Translator (FR ⇄ DE / EN ⇄ DE)" : "Traducteur Bilingue (FR ⇄ DE / EN ⇄ DE)"}
               className="flex items-center gap-1.5 h-9 sm:h-10 px-3 rounded-xl border border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-[#6D5DFC] transition cursor-pointer shadow-2xs"
             >
               <Languages size={14} className="text-[#6D5DFC]" />
-              <span className="hidden lg:inline">{locale === "en" ? "Translate EN ⇄ FR" : "Traducteur EN ⇄ FR"}</span>
+              <span className="hidden lg:inline">{locale === "en" ? "Translator (DE)" : "Traducteur (DE)"}</span>
             </button>
           )}
 
@@ -237,7 +237,15 @@ export const Header: React.FC<HeaderProps> = ({
             id="mobile-menu-toggle-btn"
             type="button"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            aria-label={isMobileMenuOpen ? "Fermer le menu" : "Ouvrir le menu"}
+            aria-label={
+              isMobileMenuOpen
+                ? locale === "en"
+                  ? "Close menu"
+                  : "Fermer le menu"
+                : locale === "en"
+                ? "Open menu"
+                : "Ouvrir le menu"
+            }
             aria-expanded={isMobileMenuOpen}
             className={`flex h-10 w-10 items-center justify-center rounded-xl border transition cursor-pointer ${
               isMobileMenuOpen
@@ -358,7 +366,7 @@ export const Header: React.FC<HeaderProps> = ({
                     className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 text-xs font-bold transition cursor-pointer"
                   >
                     <Languages size={14} />
-                    <span>{locale === "en" ? "Open Translator (EN ⇄ FR)" : "Ouvrir le Traducteur (EN ⇄ FR)"}</span>
+                    <span>{locale === "en" ? "Open Translator (FR ⇄ DE / EN ⇄ DE)" : "Ouvrir le Traducteur (FR ⇄ DE / EN ⇄ DE)"}</span>
                   </button>
                 )}
 

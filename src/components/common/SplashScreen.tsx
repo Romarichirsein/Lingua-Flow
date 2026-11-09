@@ -1,37 +1,63 @@
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { ArrowRight, ShieldCheck, Check } from "lucide-react";
+import { UILocale } from "../../types";
 
 interface SplashScreenProps {
   onComplete: () => void;
+  locale?: UILocale;
 }
 
-export const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
+export const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, locale = "fr" }) => {
   const [progress, setProgress] = useState(0);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const isEn = locale === "en";
 
-  const steps = [
-    {
-      title: "Initialisation du noyau LinguaFlow SaaS",
-      sub: "Chargement du moteur applicatif et des configurations sécurisées",
-    },
-    {
-      title: "Curriculums CECRL Allemand 🇩🇪 & Italien 🇮🇹",
-      sub: "Vérification des référentiels officiels de niveau A1 à C2",
-    },
-    {
-      title: "Cloisonnement & Isolation Multi-Écoles",
-      sub: "Activation du chiffrement des sessions et règles de protection",
-    },
-    {
-      title: "Moteur d'Examen & Certification Prüfung",
-      sub: "Prêt pour les simulations : Sprechen, Hören, Schreiben, Lesen",
-    },
-    {
-      title: "Environnement prêt • Bienvenue",
-      sub: "Ouverture de votre espace de travail personnalisé",
-    },
-  ];
+  const steps = isEn
+    ? [
+        {
+          title: "LinguaFlow SaaS Core Initialization",
+          sub: "Loading application engine and hardened security configurations",
+        },
+        {
+          title: "CEFR German 🇩🇪 & Italian 🇮🇹 Curricula",
+          sub: "Verifying official competency frameworks from A1 to C2",
+        },
+        {
+          title: "Multi-Tenant Partitioning & Workspace Isolation",
+          sub: "Enabling session cryptography and data protection rules",
+        },
+        {
+          title: "Examination Engine & Prüfung Certification",
+          sub: "Ready for simulations: Sprechen, Hören, Schreiben, Lesen",
+        },
+        {
+          title: "Environment Ready • Welcome",
+          sub: "Launching your personalized linguistic workspace",
+        },
+      ]
+    : [
+        {
+          title: "Initialisation du noyau LinguaFlow SaaS",
+          sub: "Chargement du moteur applicatif et des configurations sécurisées",
+        },
+        {
+          title: "Curriculums CECRL Allemand 🇩🇪 & Italien 🇮🇹",
+          sub: "Vérification des référentiels officiels de niveau A1 à C2",
+        },
+        {
+          title: "Cloisonnement & Isolation Multi-Écoles",
+          sub: "Activation du chiffrement des sessions et règles de protection",
+        },
+        {
+          title: "Moteur d'Examen & Certification Prüfung",
+          sub: "Prêt pour les simulations : Sprechen, Hören, Schreiben, Lesen",
+        },
+        {
+          title: "Environnement prêt • Bienvenue",
+          sub: "Ouverture de votre espace de travail personnalisé",
+        },
+      ];
 
   useEffect(() => {
     const duration = 10000; // exactly 10 seconds
@@ -250,7 +276,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
             <div className="relative z-20 mt-1.5 flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/5 border border-white/10">
               <span className="h-1.5 w-1.5 rounded-full bg-[#00D9FF] animate-pulse" />
               <span className="text-[9px] font-bold tracking-widest text-slate-300 uppercase font-mono">
-                SaaS Académie
+                {isEn ? "SaaS Academy" : "SaaS Académie"}
               </span>
             </div>
           </div>
@@ -312,7 +338,9 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
           onClick={onComplete}
           className="group inline-flex items-center gap-2 text-[11px] font-medium text-white/40 hover:text-white transition-all py-1.5 px-4 rounded-full border border-white/5 hover:border-white/20 hover:bg-white/5 cursor-pointer backdrop-blur-sm"
         >
-          <span>Accéder directement ({secondsRemaining}s)</span>
+          <span>
+            {isEn ? `Access directly (${secondsRemaining}s)` : `Accéder directement (${secondsRemaining}s)`}
+          </span>
           <ArrowRight
             size={12}
             className="transition-transform group-hover:translate-x-0.5 text-[#00D9FF]"
@@ -320,7 +348,9 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
         </button>
 
         <p className="text-[10px] font-mono text-white/30 text-center">
-          Plateforme E-Learning Multi-Écoles • Allemand & Italien
+          {isEn
+            ? "Multi-School E-Learning Platform • German & Italian"
+            : "Plateforme E-Learning Multi-Écoles • Allemand & Italien"}
         </p>
       </div>
 

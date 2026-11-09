@@ -28,6 +28,7 @@ import { StudentProgramsTab } from "./StudentProgramsTab";
 import { InteractiveLessonPlayer } from "./InteractiveLessonPlayer";
 import { AIChatTutor } from "./AIChatTutor";
 import { StudentPrufungTab } from "./StudentPrufungTab";
+import { AIWritingAssistant } from "./AIWritingAssistant";
 import { StudentProgressTab } from "./StudentProgressTab";
 import { StudentAuditTab } from "./StudentAuditTab";
 import { StudentNotificationsTab } from "./StudentNotificationsTab";
@@ -43,6 +44,7 @@ import {
   Layers,
   HelpCircle,
   Award,
+  PenTool,
   ChevronRight,
   Unlock,
   Check,
@@ -102,6 +104,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
     : "dashboard";
 
   const [activeTab, setActiveTab] = useState<StudentTab>(initialTab);
+  const [evalSubTab, setEvalSubTab] = useState<"prufung" | "writing">("prufung");
 
   const switchTab = (tab: StudentTab) => {
     setActiveTab(tab);
@@ -489,18 +492,67 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
           <AIChatTutor student={student} school={school} locale={locale} />
         )}
 
-        {/* 6. PRÜFUNG & ZERTIFIZIERUNG TAB */}
+        {/* 6. PRÜFUNG & ATELIER D'ÉCRITURE IA TAB */}
         {activeTab === "evaluations" && (
-          <StudentPrufungTab
-            student={student}
-            school={school}
-            program={activeProgram}
-            allLessons={allLessons}
-            locale={locale}
-            onCompleteLesson={handleCompleteLesson}
-            onOpenLesson={handleOpenSpecificLesson}
-            onAddLog={handleStudentLog}
-          />
+          <div className="space-y-6">
+            {/* Sub-tab Switcher: Prüfung vs Writing Assistant */}
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-[#1E293B] p-2 rounded-2xl border border-slate-200 dark:border-white/10 shadow-sm">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEvalSubTab("prufung")}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition ${
+                    evalSubTab === "prufung"
+                      ? "bg-[#6D5DFC] text-white shadow-md shadow-[#6D5DFC]/20"
+                      : "text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5"
+                  }`}
+                >
+                  <Award size={15} />
+                  <span>{locale === "en" ? "Official Exam Simulator & Certificate" : "Simulateur d'Examen & Certification"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEvalSubTab("writing")}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition ${
+                    evalSubTab === "writing"
+                      ? "bg-[#6D5DFC] text-white shadow-md shadow-[#6D5DFC]/20"
+                      : "text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5"
+                  }`}
+                >
+                  <PenTool size={15} />
+                  <span>{locale === "en" ? "AI Writing Assistant & Essays" : "Atelier de Rédaction & Devoirs IA"}</span>
+                </button>
+              </div>
+              <div className="hidden sm:flex items-center gap-2 text-[11px] font-semibold text-slate-500 dark:text-white/50 px-3">
+                <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-white/80 font-bold">
+                  {school.language === "german" ? "🇩🇪 DACH (Allemand)" : "🇮🇹 Italiano"}
+                </span>
+                <span>•</span>
+                <span className="font-mono font-bold text-[#6D5DFC]">Niveau {student.level}</span>
+              </div>
+            </div>
+
+            {evalSubTab === "prufung" ? (
+              <StudentPrufungTab
+                student={student}
+                school={school}
+                program={activeProgram}
+                allLessons={allLessons}
+                locale={locale}
+                onCompleteLesson={handleCompleteLesson}
+                onOpenLesson={handleOpenSpecificLesson}
+                onAddLog={handleStudentLog}
+              />
+            ) : (
+              <AIWritingAssistant
+                student={student}
+                school={school}
+                locale={locale}
+                submissions={submissions}
+                onSaveSubmission={onSaveSubmission}
+              />
+            )}
+          </div>
         )}
 
         {/* 7. CERTIFICATE & PROGRESS TAB */}
@@ -562,6 +614,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
         moduleOrder={unlockedModuleModal.moduleOrder}
         totalLessons={unlockedModuleModal.totalLessons}
         language={school.language}
+        locale={locale}
         onClose={() =>
           setUnlockedModuleModal((prev) => ({ ...prev, isOpen: false }))
         }

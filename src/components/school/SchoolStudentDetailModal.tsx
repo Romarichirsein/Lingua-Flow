@@ -122,7 +122,7 @@ export const SchoolStudentDetailModal: React.FC<SchoolStudentDetailModalProps> =
                   {student.name}
                 </h3>
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#6D5DFC]/10 text-[#6D5DFC] dark:text-[#a399ff] border border-[#6D5DFC]/30">
-                  Niveau {student.level}
+                  {isEn ? "Level" : "Niveau"} {student.level}
                 </span>
                 <span
                   className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
@@ -149,7 +149,7 @@ export const SchoolStudentDetailModal: React.FC<SchoolStudentDetailModalProps> =
                   </span>
                 )}
                 <span className="font-semibold text-slate-700 dark:text-white/80">
-                  {school.language === "german" ? "Allemand 🇩🇪" : "Italien 🇮🇹"}
+                  {school.language === "german" ? (isEn ? "German 🇩🇪" : "Allemand 🇩🇪") : (isEn ? "Italian 🇮🇹" : "Italien 🇮🇹")}
                 </span>
               </div>
             </div>
@@ -164,7 +164,7 @@ export const SchoolStudentDetailModal: React.FC<SchoolStudentDetailModalProps> =
                   onSelectStudentTab(student.id);
                 }}
                 className="flex-1 sm:flex-initial px-3 py-2 rounded-xl bg-[#6D5DFC]/10 hover:bg-[#6D5DFC]/20 text-[#6D5DFC] dark:text-[#a399ff] border border-[#6D5DFC]/30 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer min-h-[40px]"
-                title="Tester l'interface en tant qu'élève"
+                title={isEn ? "Test interface as student" : "Tester l'interface en tant qu'élève"}
               >
                 <ExternalLink size={14} />
                 <span>{isEn ? "Student Portal View" : "Aperçu Espace Élève"}</span>
@@ -353,7 +353,7 @@ export const SchoolStudentDetailModal: React.FC<SchoolStudentDetailModalProps> =
                         }
                       }}
                       className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-white/80 border border-slate-200 dark:border-white/10 text-xs font-bold transition flex items-center gap-1 cursor-pointer min-h-[38px]"
-                      title="Remettre la progression à zéro"
+                      title={isEn ? "Reset progress to zero" : "Remettre la progression à zéro"}
                     >
                       <RefreshCw size={13} />
                       <span>{isEn ? "Reset Progress" : "Remise à zéro"}</span>
@@ -375,8 +375,8 @@ export const SchoolStudentDetailModal: React.FC<SchoolStudentDetailModalProps> =
             ) : (
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-xs text-slate-500 dark:text-white/60 mb-1">
-                  <span>Programme : <b className="text-slate-800 dark:text-white">{enrolledProgram.title}</b></span>
-                  <span>{enrolledProgram.level} • {school.language === "german" ? "Allemand 🇩🇪" : "Italien 🇮🇹"}</span>
+                  <span>{isEn ? "Program: " : "Programme : "}<b className="text-slate-800 dark:text-white">{enrolledProgram.title}</b></span>
+                  <span>{enrolledProgram.level} • {school.language === "german" ? (isEn ? "German 🇩🇪" : "Allemand 🇩🇪") : (isEn ? "Italian 🇮🇹" : "Italien 🇮🇹")}</span>
                 </div>
 
                 {(enrolledProgram.modules || []).map((module, mIdx) => {
@@ -532,7 +532,11 @@ export const SchoolStudentDetailModal: React.FC<SchoolStudentDetailModalProps> =
 
                 {(student.phone || (student as any).whatsappNumber) && (
                   <a
-                    href={`https://wa.me/${(student.phone || (student as any).whatsappNumber || "").replace(/[^0-9]/g, "")}?text=Bonjour%20${encodeURIComponent(student.name)},%20voici%20vos%20accès%20pour%20la%20plateforme%20${encodeURIComponent(school.name)}%20:%0A%0A- Identifiant : ${encodeURIComponent(student.username || student.email)}%0A- Mot de passe : ${encodeURIComponent(student.password || "student123")}%0A- Espace de cours : ${encodeURIComponent(window.location.origin + "/#/connexion")}`}
+                    href={`https://wa.me/${(student.phone || (student as any).whatsappNumber || "").replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
+                      isEn
+                        ? `Hello ${student.name}, here are your credentials for the ${school.name} platform:\n\n- Username: ${student.username || student.email}\n- Password: ${student.password || "student123"}\n- Course portal: ${window.location.origin}/#/connexion`
+                        : `Bonjour ${student.name}, voici vos accès pour la plateforme ${school.name} :\n\n- Identifiant : ${student.username || student.email}\n- Mot de passe : ${student.password || "student123"}\n- Espace de cours : ${window.location.origin}/#/connexion`
+                    )}`}
                     target="_blank"
                     rel="noreferrer"
                     className="px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 text-xs font-bold transition flex items-center gap-1.5"
@@ -574,7 +578,7 @@ export const SchoolStudentDetailModal: React.FC<SchoolStudentDetailModalProps> =
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
                         className="text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
-                        title={showPassword ? "Masquer" : "Afficher"}
+                        title={showPassword ? (isEn ? "Hide" : "Masquer") : (isEn ? "Show" : "Afficher")}
                       >
                         {showPassword ? <EyeOff size={13} /> : <Eye size={13} />}
                       </button>
@@ -668,7 +672,7 @@ export const SchoolStudentDetailModal: React.FC<SchoolStudentDetailModalProps> =
         {/* Modal Footer */}
         <div className="pt-4 border-t border-slate-200 dark:border-white/10 flex items-center justify-between">
           <span className="text-xs text-slate-500 dark:text-white/50">
-            ID Élève : <span className="font-mono">{student.id}</span>
+            {isEn ? "Student ID: " : "ID Élève : "}<span className="font-mono">{student.id}</span>
           </span>
           <NeonButton variant="ghost" size="sm" onClick={onClose}>
             {isEn ? "Close Dossier" : "Fermer"}

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { Sparkles, Award, CheckCircle2, Unlock, Trophy, ArrowRight } from "lucide-react";
 import { NeonButton } from "./NeonButton";
 import { unlockedModule, isReducedMotion } from "../../lib/motionVariants";
+import { UILocale } from "../../types";
 
 // Web Audio API Synthesizer for victory sounds
 export const playCelebrationSound = (type: "lesson" | "module" | "quiz" = "lesson") => {
@@ -173,6 +174,7 @@ interface ModuleUnlockedModalProps {
   moduleOrder: number;
   totalLessons: number;
   language: string;
+  locale?: UILocale;
   onClose: () => void;
   onContinue: () => void;
 }
@@ -183,9 +185,17 @@ export const ModuleUnlockedModal: React.FC<ModuleUnlockedModalProps> = ({
   moduleOrder,
   totalLessons,
   language,
+  locale,
   onClose,
   onContinue,
 }) => {
+  const activeLocale: UILocale =
+    locale ||
+    (typeof window !== "undefined" &&
+      (localStorage.getItem("linguaflow_locale_preference") as UILocale)) ||
+    "fr";
+  const isEn = activeLocale === "en";
+
   useEffect(() => {
     if (isOpen) {
       playCelebrationSound("module");
@@ -235,7 +245,7 @@ export const ModuleUnlockedModal: React.FC<ModuleUnlockedModalProps> = ({
             {/* Badges */}
             <div className="flex items-center justify-center gap-2 mb-3">
               <span className="rounded-full bg-indigo-500/20 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-indigo-300 border border-indigo-500/30">
-                🎉 Nouveau Palier Atteint
+                {isEn ? "🎉 New Milestone Reached" : "🎉 Nouveau Palier Atteint"}
               </span>
               <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-emerald-300 border border-emerald-500/30">
                 +100 XP
@@ -244,43 +254,53 @@ export const ModuleUnlockedModal: React.FC<ModuleUnlockedModalProps> = ({
 
             {/* Title & Description */}
             <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white mb-2">
-              Module {moduleOrder} Débloqué !
+              {isEn ? `Module ${moduleOrder} Unlocked!` : `Module ${moduleOrder} Débloqué !`}
             </h2>
             <p className="text-sm font-semibold text-cyan-300 mb-4">
               « {moduleTitle} »
             </p>
             <p className="text-xs text-slate-300 leading-relaxed max-w-md mx-auto mb-6">
-              Félicitations pour votre persévérance ! Vous venez de déverrouiller{" "}
-              <strong>{totalLessons} nouvelles leçons immersives</strong> en{" "}
-              {language === "german" ? "allemand" : "italien"}.
+              {isEn ? (
+                <>
+                  Congratulations on your perseverance! You have just unlocked{" "}
+                  <strong>{totalLessons} new immersive lessons</strong> in{" "}
+                  {language === "german" ? "German" : "Italian"}.
+                </>
+              ) : (
+                <>
+                  Félicitations pour votre persévérance ! Vous venez de déverrouiller{" "}
+                  <strong>{totalLessons} nouvelles leçons immersives</strong> en{" "}
+                  {language === "german" ? "allemand" : "italien"}.
+                </>
+              )}
             </p>
 
             {/* Progress highlight card */}
             <div className="mb-6 rounded-2xl bg-white/5 p-4 border border-white/10 flex items-center justify-around text-center">
               <div>
                 <span className="text-[10px] uppercase tracking-wider text-slate-400 block font-bold">
-                  Statut
+                  {isEn ? "Status" : "Statut"}
                 </span>
                 <span className="text-xs font-black text-emerald-400 flex items-center gap-1 mt-0.5 justify-center">
-                  <CheckCircle2 size={13} /> Accessible
+                  <CheckCircle2 size={13} /> {isEn ? "Available" : "Accessible"}
                 </span>
               </div>
               <div className="h-8 w-px bg-white/10" />
               <div>
                 <span className="text-[10px] uppercase tracking-wider text-slate-400 block font-bold">
-                  Contenu
+                  {isEn ? "Content" : "Contenu"}
                 </span>
                 <span className="text-xs font-black text-white mt-0.5 block">
-                  {totalLessons} Leçons & Quiz
+                  {totalLessons} {isEn ? "Lessons & Quizzes" : "Leçons & Quiz"}
                 </span>
               </div>
               <div className="h-8 w-px bg-white/10" />
               <div>
                 <span className="text-[10px] uppercase tracking-wider text-slate-400 block font-bold">
-                  Objectif
+                  {isEn ? "Target" : "Objectif"}
                 </span>
                 <span className="text-xs font-black text-indigo-400 mt-0.5 block">
-                  Maîtrise CECRL
+                  {isEn ? "CEFR Mastery" : "Maîtrise CECRL"}
                 </span>
               </div>
             </div>
@@ -292,7 +312,7 @@ export const ModuleUnlockedModal: React.FC<ModuleUnlockedModalProps> = ({
                 onClick={onClose}
                 className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition cursor-pointer"
               >
-                Fermer
+                {isEn ? "Close" : "Fermer"}
               </button>
               <NeonButton
                 variant="primary"
@@ -304,7 +324,7 @@ export const ModuleUnlockedModal: React.FC<ModuleUnlockedModalProps> = ({
                 icon={<ArrowRight size={16} />}
                 className="w-full sm:w-auto shadow-lg shadow-indigo-500/30"
               >
-                Explorer ce Module
+                {isEn ? "Explore this Module" : "Explorer ce Module"}
               </NeonButton>
             </div>
           </motion.div>

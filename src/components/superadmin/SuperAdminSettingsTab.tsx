@@ -26,6 +26,7 @@ export const SuperAdminSettingsTab: React.FC<SuperAdminSettingsTabProps> = ({
   onUpdateConfig,
   onAddLog,
 }) => {
+  const isEn = locale === "en";
   const [form, setForm] = useState({
     platformName: config.platformName || "LinguaFlow",
     supportEmail: config.supportEmail || "support@linguaflow.io",
@@ -46,7 +47,11 @@ export const SuperAdminSettingsTab: React.FC<SuperAdminSettingsTabProps> = ({
   const [syncResult, setSyncResult] = useState<string | null>(null);
 
   // AI Test Prompt
-  const [testPrompt, setTestPrompt] = useState("Explique la règle d'accord du participe passé en allemand (Perfekt) en une phrase.");
+  const [testPrompt, setTestPrompt] = useState(
+    isEn
+      ? "Explain the German past participle agreement rule (Perfekt) in one sentence."
+      : "Explique la règle d'accord du participe passé en allemand (Perfekt) en une phrase."
+  );
   const [testModelResponse, setTestModelResponse] = useState<string | null>(null);
   const [isTestingModel, setIsTestingModel] = useState(false);
 
@@ -109,18 +114,24 @@ export const SuperAdminSettingsTab: React.FC<SuperAdminSettingsTabProps> = ({
       });
       const data = await res.json();
       if (data.success) {
-        setSyncResult(`Synchronisation réussie (${data.count || 3} documents enregistrés)`);
+        setSyncResult(
+          isEn
+            ? `Sync successful (${data.count || 3} documents saved)`
+            : `Synchronisation réussie (${data.count || 3} documents enregistrés)`
+        );
         onAddLog(
           "Sanity CMS Sync",
-          `Synchronisation des cours et configurations sur Sanity (Project: ${SANITY_CONFIG.projectId}).`,
+          isEn
+            ? `Courses and configurations synced to Sanity (Project: ${SANITY_CONFIG.projectId}).`
+            : `Synchronisation des cours et configurations sur Sanity (Project: ${SANITY_CONFIG.projectId}).`,
           "success"
         );
         checkSanity();
       } else {
-        setSyncResult(`Erreur: ${data.error}`);
+        setSyncResult(isEn ? `Error: ${data.error}` : `Erreur: ${data.error}`);
       }
     } catch (err: any) {
-      setSyncResult(`Erreur réseau: ${err.message}`);
+      setSyncResult(isEn ? `Network error: ${err.message}` : `Erreur réseau: ${err.message}`);
     } finally {
       setIsSyncingSanity(false);
     }
@@ -147,10 +158,14 @@ export const SuperAdminSettingsTab: React.FC<SuperAdminSettingsTabProps> = ({
       const data = await res.json();
       const duration = Date.now() - startTime;
       setTestModelResponse(
-        data.reply || data.error || `Réponse reçue (${duration}ms): Aucun texte retourné.`
+        data.reply ||
+          data.error ||
+          (isEn
+            ? `Response received (${duration}ms): No text returned.`
+            : `Réponse reçue (${duration}ms): Aucun texte retourné.`)
       );
     } catch (err: any) {
-      setTestModelResponse(`Erreur: ${err.message}`);
+      setTestModelResponse(isEn ? `Error: ${err.message}` : `Erreur: ${err.message}`);
     } finally {
       setIsTestingModel(false);
     }
@@ -171,8 +186,10 @@ export const SuperAdminSettingsTab: React.FC<SuperAdminSettingsTabProps> = ({
 
     onUpdateConfig(updated);
     onAddLog(
-      "Configuration Plateforme",
-      `Paramètres système sauvegardés. Modèle IA: ${form.aiModel}, Température: ${form.aiCorrectionTemperature}.`,
+      isEn ? "Platform Configuration" : "Configuration Plateforme",
+      isEn
+        ? `System settings saved. AI Model: ${form.aiModel}, Temperature: ${form.aiCorrectionTemperature}.`
+        : `Paramètres système sauvegardés. Modèle IA: ${form.aiModel}, Température: ${form.aiCorrectionTemperature}.`,
       "success"
     );
     setIsSaved(true);
@@ -185,10 +202,12 @@ export const SuperAdminSettingsTab: React.FC<SuperAdminSettingsTabProps> = ({
       <div className="bg-white/90 dark:bg-[#0D1220]/90 backdrop-blur-md p-4 sm:p-5 rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h3 className="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white">
-            Paramètres Généraux, Moteur IA & Sanity CMS
+            {isEn ? "General Settings, AI Engine & Sanity CMS" : "Paramètres Généraux, Moteur IA & Sanity CMS"}
           </h3>
           <p className="text-xs text-slate-500 dark:text-white/50">
-            Intégration Sanity.io ({SANITY_CONFIG.projectId}), modèles LLM (Gemini 3.1 Pro, GPT-5.4, DeepSeek) et identité SaaS
+            {isEn
+              ? `Sanity.io integration (${SANITY_CONFIG.projectId}), LLM models (Gemini 3.1 Pro, GPT-5.4, DeepSeek), and SaaS identity`
+              : `Intégration Sanity.io (${SANITY_CONFIG.projectId}), modèles LLM (Gemini 3.1 Pro, GPT-5.4, DeepSeek) et identité SaaS`}
           </p>
         </div>
 
@@ -197,7 +216,7 @@ export const SuperAdminSettingsTab: React.FC<SuperAdminSettingsTabProps> = ({
           className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#6D5DFC] to-[#00D9FF] text-white text-xs font-bold shadow-md hover:opacity-95 transition min-h-[42px] cursor-pointer"
         >
           {isSaved ? <Check size={16} /> : <Save size={16} />}
-          <span>{isSaved ? "Enregistré !" : "Sauvegarder les Paramètres"}</span>
+          <span>{isSaved ? (isEn ? "Saved!" : "Enregistré !") : (isEn ? "Save Settings" : "Sauvegarder les Paramètres")}</span>
         </button>
       </div>
 
@@ -214,11 +233,13 @@ export const SuperAdminSettingsTab: React.FC<SuperAdminSettingsTabProps> = ({
                 <h4 className="font-extrabold text-sm text-slate-900 dark:text-white flex items-center gap-2">
                   Sanity.io Headless CMS
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                    Connecté
+                    {isEn ? "Connected" : "Connecté"}
                   </span>
                 </h4>
                 <p className="text-slate-400">
-                  Gestion centralisée du contenu éducatif, cours et annonces
+                  {isEn
+                    ? "Centralized management of educational content, courses, and announcements"
+                    : "Gestion centralisée du contenu éducatif, cours et annonces"}
                 </p>
               </div>
             </div>
@@ -228,7 +249,7 @@ export const SuperAdminSettingsTab: React.FC<SuperAdminSettingsTabProps> = ({
               onClick={checkSanity}
               disabled={isCheckingSanity}
               className="p-2 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-white/80 transition cursor-pointer"
-              title="Tester la connexion"
+              title={isEn ? "Test connection" : "Tester la connexion"}
             >
               <RefreshCw size={14} className={isCheckingSanity ? "animate-spin" : ""} />
             </button>
@@ -258,7 +279,9 @@ export const SuperAdminSettingsTab: React.FC<SuperAdminSettingsTabProps> = ({
                 </span>
               </div>
               <div className="p-3 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10">
-                <span className="text-[10px] text-slate-400 block">Documents Indexés</span>
+                <span className="text-[10px] text-slate-400 block">
+                  {isEn ? "Indexed Documents" : "Documents Indexés"}
+                </span>
                 <span className="font-mono font-bold text-[#6D5DFC]">
                   {sanityStatus?.documentCount ?? "3"} docs
                 </span>
@@ -274,7 +297,15 @@ export const SuperAdminSettingsTab: React.FC<SuperAdminSettingsTabProps> = ({
                 className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold flex items-center justify-center gap-2 hover:opacity-90 transition cursor-pointer"
               >
                 <RefreshCw size={14} className={isSyncingSanity ? "animate-spin" : ""} />
-                <span>{isSyncingSanity ? "Synchronisation en cours..." : "Synchroniser LinguaFlow vers Sanity"}</span>
+                <span>
+                  {isSyncingSanity
+                    ? isEn
+                      ? "Syncing in progress..."
+                      : "Synchronisation en cours..."
+                    : isEn
+                    ? "Sync LinguaFlow to Sanity"
+                    : "Synchroniser LinguaFlow vers Sanity"}
+                </span>
               </button>
 
               {syncResult && (
@@ -294,10 +325,12 @@ export const SuperAdminSettingsTab: React.FC<SuperAdminSettingsTabProps> = ({
             </div>
             <div>
               <h4 className="font-extrabold text-sm text-slate-900 dark:text-white">
-                Moteur Pédagogique & Modèles IA
+                {isEn ? "Pedagogical Engine & AI Models" : "Moteur Pédagogique & Modèles IA"}
               </h4>
               <p className="text-slate-400">
-                Sélection du modèle LLM pour la correction et le tuteur de conversation
+                {isEn
+                  ? "LLM model selection for correction and conversation tutor"
+                  : "Sélection du modèle LLM pour la correction et le tuteur de conversation"}
               </p>
             </div>
           </div>
@@ -305,41 +338,66 @@ export const SuperAdminSettingsTab: React.FC<SuperAdminSettingsTabProps> = ({
           <div className="space-y-3.5 pt-2">
             <div>
               <label className="block font-bold text-slate-700 dark:text-white/80 mb-1">
-                Modèle IA Actif
+                {isEn ? "Active AI Model" : "Modèle IA Actif"}
               </label>
               <select
                 value={form.aiModel}
                 onChange={(e) => setForm({ ...form, aiModel: e.target.value })}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white font-bold focus:outline-none focus:ring-2 focus:ring-[#00D9FF]"
               >
-                <option value="orcarouter/auto">OrcaRouter Auto (Routage IA Optimal Ultra-Rapide)</option>
-                <option value="orcarouter/free">OrcaRouter Free (Accès Gratuit & Haute Résilience)</option>
-                <option value="deepseek/deepseek-v4-flash-free">DeepSeek V4 Flash Free [OrcaRouter] (Haute Vitesse & Raisonnement)</option>
-                <option value="claude-opus-4-7">Claude Opus 4.7 [SeekAI] (Raisonnement Linguistique Avancé)</option>
-                <option value="deepseek-v4-flash">DeepSeek V4 Flash Direct (Raisonnement)</option>
-                <option value="gemini-3-1-pro">Gemini 3.1 Pro (Multimodal & Pédagogie Avancée)</option>
-                <option value="gpt-5-4">GPT-5.4 (Excellence Rédactionnelle & Grammaire)</option>
+                <option value="qwen/qwen3.8-27b">
+                  {isEn ? "Qwen 3.8 27B [Iteracompute] (Ultra-Fast <3s Instant Tutor)" : "Qwen 3.8 27B [Iteracompute] (Tuteur Instantané Ultra-Rapide <3s)"}
+                </option>
+                <option value="orcarouter/auto">
+                  {isEn ? "OrcaRouter Auto (Ultra-Fast Optimal AI Routing)" : "OrcaRouter Auto (Routage IA Optimal Ultra-Rapide)"}
+                </option>
+                <option value="orcarouter/free">
+                  {isEn ? "OrcaRouter Free (Free Access & High Resilience)" : "OrcaRouter Free (Accès Gratuit & Haute Résilience)"}
+                </option>
+                <option value="deepseek/deepseek-v4-flash-free">
+                  {isEn ? "DeepSeek V4 Flash Free [OrcaRouter] (High Speed & Reasoning)" : "DeepSeek V4 Flash Free [OrcaRouter] (Haute Vitesse & Raisonnement)"}
+                </option>
+                <option value="claude-opus-4-7">
+                  {isEn ? "Claude Opus 4.7 [SeekAI] (Advanced Linguistic Reasoning)" : "Claude Opus 4.7 [SeekAI] (Raisonnement Linguistique Avancé)"}
+                </option>
+                <option value="deepseek-v4-flash">
+                  {isEn ? "DeepSeek V4 Flash Direct (Reasoning)" : "DeepSeek V4 Flash Direct (Raisonnement)"}
+                </option>
+                <option value="gemini-3-1-pro">
+                  {isEn ? "Gemini 3.1 Pro (Multimodal & Advanced Pedagogy)" : "Gemini 3.1 Pro (Multimodal & Pédagogie Avancée)"}
+                </option>
+                <option value="gpt-5-4">
+                  {isEn ? "GPT-5.4 (Writing Excellence & Grammar)" : "GPT-5.4 (Excellence Rédactionnelle & Grammaire)"}
+                </option>
               </select>
             </div>
 
             <div>
               <label className="block font-bold text-slate-700 dark:text-white/80 mb-1">
-                Rigueur de Correction CECRL
+                {isEn ? "CEFR Correction Strictness" : "Rigueur de Correction CECRL"}
               </label>
               <select
                 value={form.aiCorrectionStrictness}
                 onChange={(e) => setForm({ ...form, aiCorrectionStrictness: e.target.value as any })}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white font-bold focus:outline-none focus:ring-2 focus:ring-[#00D9FF]"
               >
-                <option value="lenient">Bienveillante (Tolère fautes mineures, encourage l'élève)</option>
-                <option value="standard">Standard (Correction équilibrée selon niveau CECRL)</option>
-                <option value="strict">Exigeante (Grammaire stricte, orthographe académique)</option>
+                <option value="lenient">
+                  {isEn ? "Lenient (Tolerates minor errors, encourages learner)" : "Bienveillante (Tolère fautes mineures, encourage l'élève)"}
+                </option>
+                <option value="standard">
+                  {isEn ? "Standard (Balanced correction according to CEFR level)" : "Standard (Correction équilibrée selon niveau CECRL)"}
+                </option>
+                <option value="strict">
+                  {isEn ? "Strict (Strict grammar, academic spelling)" : "Exigeante (Grammaire stricte, orthographe académique)"}
+                </option>
               </select>
             </div>
 
             <div>
               <div className="flex justify-between font-bold mb-1">
-                <span className="text-slate-700 dark:text-white/80">Température de Créativité</span>
+                <span className="text-slate-700 dark:text-white/80">
+                  {isEn ? "Creativity Temperature" : "Température de Créativité"}
+                </span>
                 <span className="font-mono text-[#00D9FF]">{form.aiCorrectionTemperature}</span>
               </div>
               <input
@@ -354,8 +412,8 @@ export const SuperAdminSettingsTab: React.FC<SuperAdminSettingsTabProps> = ({
                 className="w-full accent-[#00D9FF] cursor-pointer"
               />
               <div className="flex justify-between text-[10px] text-slate-400 font-mono mt-1">
-                <span>0.0 (Déterministe & Précis)</span>
-                <span>1.0 (Créatif & Fluide)</span>
+                <span>{isEn ? "0.0 (Deterministic & Precise)" : "0.0 (Déterministe & Précis)"}</span>
+                <span>{isEn ? "1.0 (Creative & Fluent)" : "1.0 (Créatif & Fluide)"}</span>
               </div>
             </div>
           </div>
@@ -369,10 +427,10 @@ export const SuperAdminSettingsTab: React.FC<SuperAdminSettingsTabProps> = ({
             </div>
             <div>
               <h4 className="font-extrabold text-sm text-slate-900 dark:text-white">
-                Test Direct du Moteur IA ({form.aiModel})
+                {isEn ? `Direct AI Engine Test (${form.aiModel})` : `Test Direct du Moteur IA (${form.aiModel})`}
               </h4>
               <p className="text-slate-400">
-                Envoyer une requête de vérification au tuteur linguistique
+                {isEn ? "Send a verification query to the language tutor" : "Envoyer une requête de vérification au tuteur linguistique"}
               </p>
             </div>
           </div>
@@ -380,7 +438,7 @@ export const SuperAdminSettingsTab: React.FC<SuperAdminSettingsTabProps> = ({
           <div className="space-y-3 pt-2">
             <div>
               <label className="block font-bold text-slate-700 dark:text-white/80 mb-1">
-                Prompt de Test
+                {isEn ? "Test Prompt" : "Prompt de Test"}
               </label>
               <div className="flex gap-2">
                 <input
@@ -388,7 +446,7 @@ export const SuperAdminSettingsTab: React.FC<SuperAdminSettingsTabProps> = ({
                   value={testPrompt}
                   onChange={(e) => setTestPrompt(e.target.value)}
                   className="flex-1 px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#00D9FF]"
-                  placeholder="Posez une question en allemand ou italien..."
+                  placeholder={isEn ? "Ask a question in German or Italian..." : "Posez une question en allemand ou italien..."}
                 />
                 <button
                   type="button"
@@ -397,7 +455,9 @@ export const SuperAdminSettingsTab: React.FC<SuperAdminSettingsTabProps> = ({
                   className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#6D5DFC] to-[#00D9FF] text-white font-bold flex items-center gap-1.5 hover:opacity-90 transition cursor-pointer"
                 >
                   <Send size={14} className={isTestingModel ? "animate-pulse" : ""} />
-                  <span>{isTestingModel ? "Envoi..." : "Tester"}</span>
+                  <span>
+                    {isTestingModel ? (isEn ? "Sending..." : "Envoi...") : (isEn ? "Test" : "Tester")}
+                  </span>
                 </button>
               </div>
             </div>
@@ -405,7 +465,7 @@ export const SuperAdminSettingsTab: React.FC<SuperAdminSettingsTabProps> = ({
             {testModelResponse && (
               <div className="p-3.5 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 space-y-1">
                 <span className="text-[10px] uppercase font-bold text-[#00D9FF] block">
-                  Réponse du Tuteur ({form.aiModel}) :
+                  {isEn ? `Tutor Response (${form.aiModel}):` : `Réponse du Tuteur (${form.aiModel}) :`}
                 </span>
                 <p className="text-slate-800 dark:text-white/90 leading-relaxed font-sans">
                   {testModelResponse}
@@ -423,10 +483,10 @@ export const SuperAdminSettingsTab: React.FC<SuperAdminSettingsTabProps> = ({
             </div>
             <div>
               <h4 className="font-extrabold text-sm text-slate-900 dark:text-white">
-                Identité de la Plateforme SaaS
+                {isEn ? "SaaS Platform Identity" : "Identité de la Plateforme SaaS"}
               </h4>
               <p className="text-slate-400">
-                Informations globales de marque et maintenance SaaS
+                {isEn ? "Global branding information and SaaS maintenance" : "Informations globales de marque et maintenance SaaS"}
               </p>
             </div>
           </div>
@@ -434,7 +494,7 @@ export const SuperAdminSettingsTab: React.FC<SuperAdminSettingsTabProps> = ({
           <div className="space-y-3 pt-2">
             <div>
               <label className="block font-bold text-slate-700 dark:text-white/80 mb-1">
-                Nom Commercial du SaaS
+                {isEn ? "SaaS Commercial Name" : "Nom Commercial du SaaS"}
               </label>
               <input
                 type="text"
@@ -446,7 +506,7 @@ export const SuperAdminSettingsTab: React.FC<SuperAdminSettingsTabProps> = ({
 
             <div>
               <label className="block font-bold text-slate-700 dark:text-white/80 mb-1">
-                E-mail Support Super Admin
+                {isEn ? "Super Admin Support Email" : "E-mail Support Super Admin"}
               </label>
               <input
                 type="email"
@@ -459,9 +519,13 @@ export const SuperAdminSettingsTab: React.FC<SuperAdminSettingsTabProps> = ({
             {/* Maintenance Mode Toggle */}
             <div className="p-3.5 rounded-2xl bg-amber-500/5 border border-amber-500/20 flex items-center justify-between">
               <div>
-                <p className="font-bold text-slate-900 dark:text-white">Mode Maintenance SaaS</p>
+                <p className="font-bold text-slate-900 dark:text-white">
+                  {isEn ? "SaaS Maintenance Mode" : "Mode Maintenance SaaS"}
+                </p>
                 <p className="text-[11px] text-slate-400">
-                  Affiche une page de maintenance aux élèves pendant les mises à jour
+                  {isEn
+                    ? "Displays a maintenance page to students during updates"
+                    : "Affiche une page de maintenance aux élèves pendant les mises à jour"}
                 </p>
               </div>
 

@@ -220,8 +220,10 @@ export const SchoolStudentsTab: React.FC<SchoolStudentsTabProps> = ({
 
     onUpdateStudents(updated);
     onAddLog(
-      "Modification d'un élève",
-      `Informations mises à jour pour l'élève ${formData.name}.`,
+      isEn ? "Student Modification" : "Modification d'un élève",
+      isEn
+        ? `Information updated for student ${formData.name}.`
+        : `Informations mises à jour pour l'élève ${formData.name}.`,
       "success"
     );
     setEditingStudent(null);
@@ -232,8 +234,10 @@ export const SchoolStudentsTab: React.FC<SchoolStudentsTabProps> = ({
     const updated = students.map((s) => (s.id === student.id ? { ...s, status: newStatus } : s));
     onUpdateStudents(updated);
     onAddLog(
-      "Changement de statut élève",
-      `Statut de ${student.name} passé à ${newStatus.toUpperCase()}.`,
+      isEn ? "Student Status Change" : "Changement de statut élève",
+      isEn
+        ? `Status of ${student.name} changed to ${newStatus.toUpperCase()}.`
+        : `Statut de ${student.name} passé à ${newStatus.toUpperCase()}.`,
       newStatus === "active" ? "success" : "warning"
     );
     if (selectedStudentForDetail?.id === student.id) {
@@ -254,8 +258,10 @@ export const SchoolStudentsTab: React.FC<SchoolStudentsTabProps> = ({
 
     onUpdateStudents(updated);
     onAddLog(
-      "Prolongation de formation",
-      `Période d'accès de ${student.name} prolongée de +${months} mois (jusqu'au ${newEndDateStr}).`,
+      isEn ? "Training Extension" : "Prolongation de formation",
+      isEn
+        ? `Access period of ${student.name} extended by +${months} months (until ${newEndDateStr}).`
+        : `Période d'accès de ${student.name} prolongée de +${months} mois (jusqu'au ${newEndDateStr}).`,
       "success"
     );
     setExtendStudent(null);
@@ -274,8 +280,10 @@ export const SchoolStudentsTab: React.FC<SchoolStudentsTabProps> = ({
     const updated = students.filter((s) => s.id !== deletingStudent.id);
     onUpdateStudents(updated);
     onAddLog(
-      "Suppression définitive élève",
-      `L'élève ${deletingStudent.name} (${deletingStudent.email}) a été supprimé.`,
+      isEn ? "Student Deletion" : "Suppression définitive élève",
+      isEn
+        ? `Learner ${deletingStudent.name} (${deletingStudent.email}) was deleted.`
+        : `L'élève ${deletingStudent.name} (${deletingStudent.email}) a été supprimé.`,
       "warning"
     );
     setDeletingStudent(null);
@@ -339,8 +347,10 @@ export const SchoolStudentsTab: React.FC<SchoolStudentsTabProps> = ({
       if (newEnrolled.length > 0) {
         onUpdateStudents([...newEnrolled, ...students]);
         onAddLog(
-          "Importation CSV Élèves",
-          `${newEnrolled.length} élèves importés avec succès (${skippedCount} ignorés).`,
+          isEn ? "CSV Student Import" : "Importation CSV Élèves",
+          isEn
+            ? `${newEnrolled.length} students imported successfully (${skippedCount} skipped).`
+            : `${newEnrolled.length} élèves importés avec succès (${skippedCount} ignorés).`,
           "success"
         );
         setCsvFeedback(
@@ -365,7 +375,9 @@ export const SchoolStudentsTab: React.FC<SchoolStudentsTabProps> = ({
 
   // CSV Export
   const handleExportCsv = () => {
-    const headers = "ID,Nom,Email,Telephone,Langue,Niveau,Statut,Progression,DateDebut,DateFin\n";
+    const headers = isEn
+      ? "ID,Name,Email,Phone,Language,Level,Status,Progress,StartDate,EndDate\n"
+      : "ID,Nom,Email,Telephone,Langue,Niveau,Statut,Progression,DateDebut,DateFin\n";
     const rows = filteredStudents
       .map(
         (s) =>
@@ -408,7 +420,7 @@ export const SchoolStudentsTab: React.FC<SchoolStudentsTabProps> = ({
             type="button"
             onClick={handleExportCsv}
             className="px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer min-h-[42px]"
-            title="Exporter la liste des élèves en CSV"
+            title={isEn ? "Export student roster as CSV" : "Exporter la liste des élèves en CSV"}
           >
             <Download size={14} />
             <span>{isEn ? "Export CSV" : "Exporter CSV"}</span>
@@ -418,7 +430,7 @@ export const SchoolStudentsTab: React.FC<SchoolStudentsTabProps> = ({
             type="button"
             onClick={() => setIsCsvImportOpen(true)}
             className="px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer min-h-[42px]"
-            title="Importer des élèves par lot"
+            title={isEn ? "Batch import students" : "Importer des élèves par lot"}
           >
             <Upload size={14} />
             <span>{isEn ? "Import CSV" : "Importer CSV"}</span>
@@ -487,11 +499,11 @@ export const SchoolStudentsTab: React.FC<SchoolStudentsTabProps> = ({
             className="px-3 py-2 rounded-xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 text-xs text-slate-800 dark:text-white font-medium"
           >
             <option value="all">{isEn ? "All Levels (CEFR)" : "Tous les Niveaux"}</option>
-            <option value="A1">Niveau A1</option>
-            <option value="A2">Niveau A2</option>
-            <option value="B1">Niveau B1</option>
-            <option value="B2">Niveau B2</option>
-            <option value="C1">Niveau C1</option>
+            <option value="A1">{isEn ? "Level A1" : "Niveau A1"}</option>
+            <option value="A2">{isEn ? "Level A2" : "Niveau A2"}</option>
+            <option value="B1">{isEn ? "Level B1" : "Niveau B1"}</option>
+            <option value="B2">{isEn ? "Level B2" : "Niveau B2"}</option>
+            <option value="C1">{isEn ? "Level C1" : "Niveau C1"}</option>
           </select>
 
           {/* Status Filter */}
@@ -579,7 +591,7 @@ export const SchoolStudentsTab: React.FC<SchoolStudentsTabProps> = ({
                           {student.level}
                         </span>
                         <span className="text-[11px] text-slate-500 dark:text-white/60">
-                          {school.language === "german" ? "Allemand 🇩🇪" : "Italien 🇮🇹"}
+                          {school.language === "german" ? (isEn ? "German 🇩🇪" : "Allemand 🇩🇪") : (isEn ? "Italian 🇮🇹" : "Italien 🇮🇹")}
                         </span>
                       </div>
                     </td>
@@ -594,7 +606,7 @@ export const SchoolStudentsTab: React.FC<SchoolStudentsTabProps> = ({
                       <div className="w-28 space-y-1">
                         <div className="flex justify-between text-[10px] text-slate-500 dark:text-white/60">
                           <span>{student.progressPercent}%</span>
-                          <span>{(student.completedLessons || []).length} leçons</span>
+                          <span>{(student.completedLessons || []).length} {isEn ? "lessons" : "leçons"}</span>
                         </div>
                         <ProgressBar progress={student.progressPercent} color="cyan" size="sm" />
                       </div>
@@ -614,7 +626,13 @@ export const SchoolStudentsTab: React.FC<SchoolStudentsTabProps> = ({
                               : "text-slate-400 dark:text-white/40"
                           }`}
                         >
-                          {daysRemaining <= 0 ? "Expiré" : `${daysRemaining}j restants`}
+                          {daysRemaining <= 0
+                            ? isEn
+                              ? "Expired"
+                              : "Expiré"
+                            : isEn
+                            ? `${daysRemaining}d remaining`
+                            : `${daysRemaining}j restants`}
                         </span>
                       </div>
                     </td>
@@ -645,7 +663,7 @@ export const SchoolStudentsTab: React.FC<SchoolStudentsTabProps> = ({
                             type="button"
                             onClick={() => onSelectStudentTab(student.id)}
                             className="p-2 rounded-lg text-slate-400 hover:text-[#6D5DFC] hover:bg-[#6D5DFC]/10 transition"
-                            title="Ouvrir l'espace d'apprentissage de l'élève"
+                            title={isEn ? "Open student learning workspace" : "Ouvrir l'espace d'apprentissage de l'élève"}
                           >
                             <ExternalLink size={14} />
                           </button>
@@ -661,7 +679,7 @@ export const SchoolStudentsTab: React.FC<SchoolStudentsTabProps> = ({
                             }
                           }}
                           className="p-2 rounded-lg text-slate-400 hover:text-[#20E3A2] hover:bg-[#20E3A2]/10 transition cursor-pointer"
-                          title="Identifiants & Accès de connexion"
+                          title={isEn ? "Credentials & Login Access" : "Identifiants & Accès de connexion"}
                         >
                           <Key size={14} />
                         </button>
@@ -681,7 +699,7 @@ export const SchoolStudentsTab: React.FC<SchoolStudentsTabProps> = ({
                             setEditingStudent(student);
                           }}
                           className="p-2 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition"
-                          title="Modifier les informations"
+                          title={isEn ? "Edit student information" : "Modifier les informations"}
                         >
                           <Edit2 size={14} />
                         </button>
@@ -690,7 +708,7 @@ export const SchoolStudentsTab: React.FC<SchoolStudentsTabProps> = ({
                           type="button"
                           onClick={() => setExtendStudent(student)}
                           className="p-2 rounded-lg text-slate-400 hover:text-[#20E3A2] hover:bg-[#20E3A2]/10 transition"
-                          title="Prolonger la période d'accès"
+                          title={isEn ? "Extend access period" : "Prolonger la période d'accès"}
                         >
                           <Calendar size={14} />
                         </button>
@@ -699,7 +717,7 @@ export const SchoolStudentsTab: React.FC<SchoolStudentsTabProps> = ({
                           type="button"
                           onClick={() => setDeletingStudent(student)}
                           className="p-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition"
-                          title="Supprimer l'élève"
+                          title={isEn ? "Delete student" : "Supprimer l'élève"}
                         >
                           <Trash2 size={14} />
                         </button>
@@ -755,7 +773,7 @@ export const SchoolStudentsTab: React.FC<SchoolStudentsTabProps> = ({
                   {student.level} • {school.language === "german" ? "🇩🇪" : "🇮🇹"}
                 </span>
                 <span className="font-mono text-slate-500 dark:text-white/60">
-                  {student.progressPercent}% terminé
+                  {student.progressPercent}% {isEn ? "completed" : "terminé"}
                 </span>
               </div>
 
@@ -769,7 +787,8 @@ export const SchoolStudentsTab: React.FC<SchoolStudentsTabProps> = ({
       {totalPages > 1 && (
         <div className="flex items-center justify-between pt-2">
           <span className="text-xs text-slate-500 dark:text-white/50">
-            Page {currentPage} / {totalPages} ({filteredStudents.length} élèves)
+            {isEn ? "Page" : "Page"} {currentPage} / {totalPages} ({filteredStudents.length}{" "}
+            {isEn ? "students" : "élèves"})
           </span>
           <div className="flex items-center gap-1.5">
             <button
@@ -812,8 +831,10 @@ export const SchoolStudentsTab: React.FC<SchoolStudentsTabProps> = ({
             setSelectedStudentForDetail({ ...selectedStudentForDetail, progressPercent: 0, completedLessons: [] });
           }
           onAddLog(
-            "Réinitialisation progression",
-            `Progression de l'élève ${student.name} remise à zéro.`,
+            isEn ? "Progress Reset" : "Réinitialisation progression",
+            isEn
+              ? `Progress of student ${student.name} reset to zero.`
+              : `Progression de l'élève ${student.name} remise à zéro.`,
             "warning"
           );
         }}
@@ -836,9 +857,10 @@ export const SchoolStudentsTab: React.FC<SchoolStudentsTabProps> = ({
           )}
 
           <div className="p-3 rounded-2xl bg-[#6D5DFC]/10 border border-[#6D5DFC]/20 text-xs text-slate-700 dark:text-white/80 flex items-center justify-between">
-            <span>Langue enseignée autorisée :</span>
+            <span>{isEn ? "Authorized taught language:" : "Langue enseignée autorisée :"}</span>
             <span className="font-bold text-[#6D5DFC] dark:text-[#a399ff]">
-              {school.language === "german" ? "Allemand 🇩🇪" : "Italien 🇮🇹"} (Verrouillé)
+              {school.language === "german" ? (isEn ? "German 🇩🇪" : "Allemand 🇩🇪") : (isEn ? "Italian 🇮🇹" : "Italien 🇮🇹")}{" "}
+              ({isEn ? "Locked" : "Verrouillé"})
             </span>
           </div>
 
@@ -893,11 +915,11 @@ export const SchoolStudentsTab: React.FC<SchoolStudentsTabProps> = ({
                 onChange={(e) => setFormData({ ...formData, level: e.target.value as CEFRLevel })}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white font-bold"
               >
-                <option value="A1">A1 - Débutant</option>
-                <option value="A2">A2 - Élémentaire</option>
-                <option value="B1">B1 - Intermédiaire</option>
-                <option value="B2">B2 - Intermédiaire Avancé</option>
-                <option value="C1">C1 - Autonome / Avancé</option>
+                <option value="A1">A1 - {isEn ? "Beginner" : "Débutant"}</option>
+                <option value="A2">A2 - {isEn ? "Elementary" : "Élémentaire"}</option>
+                <option value="B1">B1 - {isEn ? "Intermediate" : "Intermédiaire"}</option>
+                <option value="B2">B2 - {isEn ? "Upper-Intermediate" : "Intermédiaire Avancé"}</option>
+                <option value="C1">C1 - {isEn ? "Autonomous / Advanced" : "Autonome / Avancé"}</option>
               </select>
             </div>
 
@@ -1170,7 +1192,7 @@ export const SchoolStudentsTab: React.FC<SchoolStudentsTabProps> = ({
           </p>
 
           <div className="p-3 rounded-xl bg-slate-50 dark:bg-black/30 font-mono text-[11px] text-slate-500 dark:text-white/50 border border-slate-200 dark:border-white/10">
-            Exemple :<br />
+            {isEn ? "Example:" : "Exemple :"}<br />
             Klaus Müller, klaus@example.com, +49151234567, A1<br />
             Anja Weber, anja@example.com, +49152345678, A2
           </div>
@@ -1179,7 +1201,7 @@ export const SchoolStudentsTab: React.FC<SchoolStudentsTabProps> = ({
             rows={6}
             value={csvRawText}
             onChange={(e) => setCsvRawText(e.target.value)}
-            placeholder="Collez votre contenu CSV ici..."
+            placeholder={isEn ? "Paste your CSV content here..." : "Collez votre contenu CSV ici..."}
             className="w-full p-3.5 rounded-2xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-[#00D9FF]"
           />
 

@@ -55,7 +55,26 @@ export default function App() {
   const [isTranslatorOpen, setIsTranslatorOpen] = useState(false);
 
   const [role, setRole] = useState<UserRole>("student");
-  const [locale, setLocale] = useState<UILocale>("fr");
+  const [locale, setLocale] = useState<UILocale>(() => {
+    try {
+      const saved = localStorage.getItem("linguaflow_locale_preference") as UILocale;
+      if (saved === "fr" || saved === "en") {
+        return saved;
+      }
+    } catch {
+      // fallback
+    }
+    return "fr";
+  });
+
+  // Sync locale preference to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem("linguaflow_locale_preference", locale);
+    } catch {
+      // ignore
+    }
+  }, [locale]);
   const [theme, setTheme] = useState<ThemeMode>(() => {
     try {
       const saved = localStorage.getItem("linguaflow_theme_preference") as ThemeMode;
@@ -173,7 +192,50 @@ export default function App() {
     };
   }, [handleRouteChange]);
 
-  // Synchronize registered schools and students with backend server
+  // Bidirectional synchronization of registered schools and students with backend server
+  useEffect(() => {
+    fetch("/api/users/sync")
+      .then((res) => res.json())
+      .then((resData) => {
+        if (resData.success && Array.isArray(resData.schools) && Array.isArray(resData.students)) {
+          setData((prev) => {
+            let changed = false;
+            const currentSchools = [...prev.schools];
+            resData.schools.forEach((s: any) => {
+              const idx = currentSchools.findIndex((cs) => cs.id === s.id);
+              if (idx === -1) {
+                currentSchools.push(s);
+                changed = true;
+              } else if (s.password && !currentSchools[idx].password) {
+                currentSchools[idx] = { ...currentSchools[idx], password: s.password };
+                changed = true;
+              }
+            });
+
+            const currentStudents = [...prev.students];
+            resData.students.forEach((st: any) => {
+              const idx = currentStudents.findIndex((cst) => cst.id === st.id);
+              if (idx === -1) {
+                currentStudents.push(st);
+                changed = true;
+              } else if (st.password && !currentStudents[idx].password) {
+                currentStudents[idx] = { ...currentStudents[idx], password: st.password };
+                changed = true;
+              }
+            });
+
+            if (changed) {
+              const next = { ...prev, schools: currentSchools, students: currentStudents };
+              saveStoredData(next);
+              return next;
+            }
+            return prev;
+          });
+        }
+      })
+      .catch((err) => console.debug("Initial user sync fetch:", err.message));
+  }, []);
+
   useEffect(() => {
     if (data.schools && data.students) {
       fetch("/api/users/sync", {
@@ -358,8 +420,10 @@ export default function App() {
 
     // Record login log
     handleAddLog(
-      "Connexion Utilisateur",
-      `Session ouverte pour ${params.userName} (${params.userEmail}) avec le rôle ${params.role}.`,
+      locale === "en" ? "User Sign In" : "Connexion Utilisateur",
+      locale === "en"
+        ? `Session started for ${params.userName} (${params.userEmail}) with role ${params.role}.`
+        : `Session ouverte pour ${params.userName} (${params.userEmail}) avec le rôle ${params.role}.`,
       "success"
     );
   };
@@ -367,8 +431,10 @@ export default function App() {
   // Logout handler
   const handleLogout = () => {
     handleAddLog(
-      "Déconnexion Utilisateur",
-      `Fermeture de la session de ${currentUserName}.`,
+      locale === "en" ? "User Sign Out" : "Déconnexion Utilisateur",
+      locale === "en"
+        ? `Session closed for ${currentUserName}.`
+        : `Fermeture de la session de ${currentUserName}.`,
       "success"
     );
     setIsAuthenticated(false);
@@ -401,7 +467,7 @@ export default function App() {
     <AnimatePresence mode="wait">
       {/* 1. Initial Splash Screen with Circular Neon Dots animation */}
       {showSplash ? (
-        <SplashScreen key="splash" onComplete={() => setShowSplash(false)} />
+        <SplashScreen key="splash" locale={locale} onComplete={() => setShowSplash(false)} />
       ) : !isAuthenticated ? (
         /* 2. Authentication Login Page */
         <motion.div

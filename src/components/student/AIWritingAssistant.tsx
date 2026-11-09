@@ -290,7 +290,10 @@ export const AIWritingAssistant: React.FC<AIWritingAssistantProps> = ({
     } catch (err: any) {
       console.error("Evaluation error:", err);
       setErrorMsg(
-        err.message || "Impossible de contacter le service d'évaluation. Veuillez réessayer."
+        err.message ||
+          (locale === "en"
+            ? "Unable to reach the evaluation service. Please try again."
+            : "Impossible de contacter le service d'évaluation. Veuillez réessayer.")
       );
     } finally {
       clearTimeout(stepTimer1);

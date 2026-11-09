@@ -31,10 +31,11 @@ export const SuperAdminAnnouncementsTab: React.FC<SuperAdminAnnouncementsTabProp
   onUpdateAnnouncements,
   onAddLog,
 }) => {
+  const isEn = locale === "en";
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
   const [previewAnnouncement, setPreviewAnnouncement] = useState<Announcement | null>(null);
-  const [previewLanguage, setPreviewLanguage] = useState<"fr" | "en">("fr");
+  const [previewLanguage, setPreviewLanguage] = useState<"fr" | "en">(locale === "en" ? "en" : "fr");
 
   const [form, setForm] = useState({
     title: "",
@@ -96,7 +97,11 @@ export const SuperAdminAnnouncementsTab: React.FC<SuperAdminAnnouncementsTabProp
           : a
       );
       onUpdateAnnouncements(updated);
-      onAddLog("Modification Annonce", `Annonce '${form.title}' mise à jour.`, "success");
+      onAddLog(
+        isEn ? "Announcement Updated" : "Modification Annonce",
+        isEn ? `Announcement '${form.title}' updated.` : `Annonce '${form.title}' mise à jour.`,
+        "success"
+      );
       setEditingAnnouncement(null);
     } else {
       const newAnn: Announcement = {
@@ -113,7 +118,13 @@ export const SuperAdminAnnouncementsTab: React.FC<SuperAdminAnnouncementsTabProp
         isActive: true,
       };
       onUpdateAnnouncements([newAnn, ...announcements]);
-      onAddLog("Création Annonce", `Diffusion de l'annonce '${form.title}' (${form.target}).`, "success");
+      onAddLog(
+        isEn ? "Announcement Created" : "Création Annonce",
+        isEn
+          ? `Broadcast announcement '${form.title}' (${form.target}).`
+          : `Diffusion de l'annonce '${form.title}' (${form.target}).`,
+        "success"
+      );
       setIsCreateOpen(false);
     }
   };
@@ -121,7 +132,11 @@ export const SuperAdminAnnouncementsTab: React.FC<SuperAdminAnnouncementsTabProp
   const handleDelete = (id: string) => {
     const updated = announcements.filter((a) => a.id !== id);
     onUpdateAnnouncements(updated);
-    onAddLog("Suppression Annonce", "Suppression d'une annonce globale.", "warning");
+    onAddLog(
+      isEn ? "Announcement Deleted" : "Suppression Annonce",
+      isEn ? "Global announcement deleted." : "Suppression d'une annonce globale.",
+      "warning"
+    );
   };
 
   const handleToggleActive = (ann: Announcement) => {
@@ -130,8 +145,10 @@ export const SuperAdminAnnouncementsTab: React.FC<SuperAdminAnnouncementsTabProp
     );
     onUpdateAnnouncements(updated);
     onAddLog(
-      "Statut Annonce",
-      `Annonce '${ann.title}' ${!ann.isActive ? "activée" : "désactivée"}.`,
+      isEn ? "Announcement Status" : "Statut Annonce",
+      isEn
+        ? `Announcement '${ann.title}' ${!ann.isActive ? "activated" : "deactivated"}.`
+        : `Annonce '${ann.title}' ${!ann.isActive ? "activée" : "désactivée"}.`,
       "success"
     );
   };
@@ -142,10 +159,12 @@ export const SuperAdminAnnouncementsTab: React.FC<SuperAdminAnnouncementsTabProp
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/90 dark:bg-[#0D1220]/90 backdrop-blur-md p-4 sm:p-5 rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm">
         <div>
           <h3 className="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white">
-            Annonces Globales & Communication
+            {isEn ? "Global Announcements & Broadcasts" : "Annonces Globales & Communication"}
           </h3>
           <p className="text-xs text-slate-500 dark:text-white/50">
-            Diffusions bilingues ciblées pour les écoles partenaires et apprenants
+            {isEn
+              ? "Targeted bilingual broadcasts for partner schools and learners"
+              : "Diffusions bilingues ciblées pour les écoles partenaires et apprenants"}
           </p>
         </div>
 
@@ -155,7 +174,7 @@ export const SuperAdminAnnouncementsTab: React.FC<SuperAdminAnnouncementsTabProp
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#6D5DFC] to-[#00D9FF] text-white text-xs font-bold shadow-md hover:opacity-95 transition min-h-[42px] cursor-pointer"
         >
           <Plus size={16} />
-          <span>Nouvelle Annonce</span>
+          <span>{isEn ? "New Announcement" : "Nouvelle Annonce"}</span>
         </button>
       </div>
 
@@ -163,7 +182,7 @@ export const SuperAdminAnnouncementsTab: React.FC<SuperAdminAnnouncementsTabProp
       <div className="space-y-4">
         {announcements.length === 0 ? (
           <div className="p-12 text-center rounded-3xl bg-white/90 dark:bg-[#0D1220]/90 border border-slate-200 dark:border-white/10 text-slate-400 text-xs">
-            Aucune annonce n'a été créée pour le moment.
+            {isEn ? "No announcements have been created yet." : "Aucune annonce n'a été créée pour le moment."}
           </div>
         ) : (
           announcements.map((ann) => (
@@ -192,17 +211,17 @@ export const SuperAdminAnnouncementsTab: React.FC<SuperAdminAnnouncementsTabProp
                   </span>
 
                   <span className="text-xs text-slate-400 font-mono">
-                    Cible :{" "}
+                    {isEn ? "Target: " : "Cible : "}
                     <strong className="text-slate-700 dark:text-white">
                       {ann.target === "all"
-                        ? "Toutes les écoles & élèves"
+                        ? (isEn ? "All schools & students" : "Toutes les écoles & élèves")
                         : ann.target === "schools"
-                        ? "Écoles uniquement"
+                        ? (isEn ? "Schools & Directors only" : "Écoles uniquement")
                         : ann.target === "students"
-                        ? "Élèves uniquement"
+                        ? (isEn ? "Students only" : "Élèves uniquement")
                         : ann.target === "super_admin"
-                        ? "Super Admin (Alerte Système)"
-                        : "École spécifique"}
+                        ? (isEn ? "Super Admin (System Alert)" : "Super Admin (Alerte Système)")
+                        : (isEn ? "Specific school" : "École spécifique")}
                     </strong>
                   </span>
 
@@ -214,7 +233,7 @@ export const SuperAdminAnnouncementsTab: React.FC<SuperAdminAnnouncementsTabProp
                     type="button"
                     onClick={() => setPreviewAnnouncement(ann)}
                     className="p-2 rounded-xl text-slate-500 hover:text-[#00D9FF] hover:bg-slate-100 dark:hover:bg-white/10 transition cursor-pointer"
-                    title="Aperçu du rendu utilisateur"
+                    title={isEn ? "Preview rendered announcement" : "Aperçu du rendu utilisateur"}
                   >
                     <Eye size={16} />
                   </button>
@@ -223,7 +242,7 @@ export const SuperAdminAnnouncementsTab: React.FC<SuperAdminAnnouncementsTabProp
                     type="button"
                     onClick={() => handleOpenEdit(ann)}
                     className="p-2 rounded-xl text-slate-500 hover:text-white hover:bg-[#6D5DFC] transition cursor-pointer"
-                    title="Modifier l'annonce"
+                    title={isEn ? "Edit announcement" : "Modifier l'annonce"}
                   >
                     <Edit2 size={16} />
                   </button>
@@ -236,7 +255,11 @@ export const SuperAdminAnnouncementsTab: React.FC<SuperAdminAnnouncementsTabProp
                         ? "text-[#20E3A2] hover:bg-[#20E3A2]/10"
                         : "text-slate-400 hover:bg-slate-100"
                     }`}
-                    title={ann.isActive ? "Désactiver la diffusion" : "Activer la diffusion"}
+                    title={
+                      ann.isActive
+                        ? (isEn ? "Deactivate broadcast" : "Désactiver la diffusion")
+                        : (isEn ? "Activate broadcast" : "Activer la diffusion")
+                    }
                   >
                     <CheckCircle2 size={16} />
                   </button>
@@ -245,7 +268,7 @@ export const SuperAdminAnnouncementsTab: React.FC<SuperAdminAnnouncementsTabProp
                     type="button"
                     onClick={() => handleDelete(ann.id)}
                     className="p-2 rounded-xl text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 transition cursor-pointer"
-                    title="Supprimer l'annonce"
+                    title={isEn ? "Delete announcement" : "Supprimer l'annonce"}
                   >
                     <Trash2 size={16} />
                   </button>
@@ -273,34 +296,38 @@ export const SuperAdminAnnouncementsTab: React.FC<SuperAdminAnnouncementsTabProp
           setIsCreateOpen(false);
           setEditingAnnouncement(null);
         }}
-        title={editingAnnouncement ? "Modifier l'Annonce" : "Nouvelle Annonce Globale"}
+        title={
+          editingAnnouncement
+            ? (isEn ? "Edit Announcement" : "Modifier l'Annonce")
+            : (isEn ? "New Global Announcement" : "Nouvelle Annonce Globale")
+        }
         maxWidth="max-w-2xl"
       >
         <form onSubmit={handleSave} className="space-y-4 text-xs">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block font-bold text-slate-700 dark:text-white/80 mb-1">
-                Titre en Français *
+                {isEn ? "Title in French *" : "Titre en Français *"}
               </label>
               <input
                 type="text"
                 required
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
-                placeholder="ex: Maintenance planifiée"
+                placeholder={isEn ? "e.g. Scheduled Maintenance" : "ex: Maintenance planifiée"}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#00D9FF]"
               />
             </div>
 
             <div>
               <label className="block font-bold text-slate-700 dark:text-white/80 mb-1">
-                Titre en Anglais (Optionnel)
+                {isEn ? "Title in English (Optional)" : "Titre en Anglais (Optionnel)"}
               </label>
               <input
                 type="text"
                 value={form.titleEn}
                 onChange={(e) => setForm({ ...form, titleEn: e.target.value })}
-                placeholder="ex: Scheduled maintenance"
+                placeholder="e.g. Scheduled maintenance"
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#00D9FF]"
               />
             </div>
@@ -309,53 +336,53 @@ export const SuperAdminAnnouncementsTab: React.FC<SuperAdminAnnouncementsTabProp
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block font-bold text-slate-700 dark:text-white/80 mb-1">
-                Audience Cible *
+                {isEn ? "Target Audience *" : "Audience Cible *"}
               </label>
               <select
                 value={form.target}
                 onChange={(e) => setForm({ ...form, target: e.target.value as any })}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white font-bold focus:outline-none focus:ring-2 focus:ring-[#00D9FF]"
               >
-                <option value="all">Toutes les écoles & élèves</option>
-                <option value="schools">Écoles & Directeurs uniquement</option>
-                <option value="students">Élèves uniquement</option>
-                <option value="super_admin">Super Admin uniquement (Alerte interne)</option>
+                <option value="all">{isEn ? "All schools & students" : "Toutes les écoles & élèves"}</option>
+                <option value="schools">{isEn ? "Schools & Directors only" : "Écoles & Directeurs uniquement"}</option>
+                <option value="students">{isEn ? "Students only" : "Élèves uniquement"}</option>
+                <option value="super_admin">{isEn ? "Super Admin only (Internal Alert)" : "Super Admin uniquement (Alerte interne)"}</option>
               </select>
             </div>
 
             <div>
               <label className="block font-bold text-slate-700 dark:text-white/80 mb-1">
-                Niveau de Priorité *
+                {isEn ? "Priority Level *" : "Niveau de Priorité *"}
               </label>
               <select
                 value={form.priority}
                 onChange={(e) => setForm({ ...form, priority: e.target.value as any })}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white font-bold focus:outline-none focus:ring-2 focus:ring-[#00D9FF]"
               >
-                <option value="info">Information (Bleu/Violet)</option>
-                <option value="warning">Avertissement (Orange)</option>
-                <option value="urgent">Urgent / Alerte (Rouge)</option>
+                <option value="info">{isEn ? "Information (Blue/Purple)" : "Information (Bleu/Violet)"}</option>
+                <option value="warning">{isEn ? "Warning (Orange)" : "Avertissement (Orange)"}</option>
+                <option value="urgent">{isEn ? "Urgent / Alert (Red)" : "Urgent / Alerte (Rouge)"}</option>
               </select>
             </div>
           </div>
 
           <div>
             <label className="block font-bold text-slate-700 dark:text-white/80 mb-1">
-              Contenu du Message en Français *
+              {isEn ? "Message Content in French *" : "Contenu du Message en Français *"}
             </label>
             <textarea
               required
               rows={3}
               value={form.content}
               onChange={(e) => setForm({ ...form, content: e.target.value })}
-              placeholder="Saisissez votre annonce détaillée..."
+              placeholder={isEn ? "Enter message in French..." : "Saisissez votre annonce détaillée..."}
               className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#00D9FF]"
             />
           </div>
 
           <div>
             <label className="block font-bold text-slate-700 dark:text-white/80 mb-1">
-              Contenu du Message en Anglais (Optionnel)
+              {isEn ? "Message Content in English (Optional)" : "Contenu du Message en Anglais (Optionnel)"}
             </label>
             <textarea
               rows={3}
@@ -375,13 +402,15 @@ export const SuperAdminAnnouncementsTab: React.FC<SuperAdminAnnouncementsTabProp
               }}
               className="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-white font-bold min-h-[42px] cursor-pointer"
             >
-              Annuler
+              {isEn ? "Cancel" : "Annuler"}
             </button>
             <button
               type="submit"
               className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#6D5DFC] to-[#00D9FF] text-white font-bold shadow-md hover:opacity-95 min-h-[42px] cursor-pointer"
             >
-              {editingAnnouncement ? "Sauvegarder" : "Publier l'Annonce"}
+              {editingAnnouncement
+                ? (isEn ? "Save Changes" : "Sauvegarder")
+                : (isEn ? "Publish Announcement" : "Publier l'Annonce")}
             </button>
           </div>
         </form>
@@ -391,13 +420,15 @@ export const SuperAdminAnnouncementsTab: React.FC<SuperAdminAnnouncementsTabProp
       <Modal
         isOpen={!!previewAnnouncement}
         onClose={() => setPreviewAnnouncement(null)}
-        title="Simulateur d'Aperçu Utilisateur"
+        title={isEn ? "User Preview Simulator" : "Simulateur d'Aperçu Utilisateur"}
         maxWidth="max-w-md"
       >
         {previewAnnouncement && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-400 font-bold">Langue du rendu :</span>
+              <span className="text-xs text-slate-400 font-bold">
+                {isEn ? "Render language:" : "Langue du rendu :"}
+              </span>
               <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/5 p-1 rounded-xl">
                 <button
                   type="button"

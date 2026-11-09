@@ -68,8 +68,10 @@ export const SuperAdminDiagnosticModal: React.FC<SuperAdminDiagnosticModalProps>
       setReport(res);
       if (onAddLog) {
         onAddLog(
-          "Diagnostic Système Super Admin",
-          `Exécution complète : ${res.passedCount}/${res.totalTests} assertions validées en ${res.totalDurationMs}ms.`,
+          isEn ? "Super Admin System Diagnostic" : "Diagnostic Système Super Admin",
+          isEn
+            ? `Full execution: ${res.passedCount}/${res.totalTests} assertions passed in ${res.totalDurationMs}ms.`
+            : `Exécution complète : ${res.passedCount}/${res.totalTests} assertions validées en ${res.totalDurationMs}ms.`,
           res.isHealthy ? "success" : "warning"
         );
       }
@@ -186,7 +188,14 @@ export const SuperAdminDiagnosticModal: React.FC<SuperAdminDiagnosticModalProps>
                 <span>{isEn ? "Entities Monitored" : "Entités Actives"}</span>
               </div>
               <p className="text-base font-black text-white">
-                {schools.length} <span className="text-xs text-slate-400 font-normal">écoles</span> • {students.length} <span className="text-xs text-slate-400 font-normal">élèves</span>
+                {schools.length}{" "}
+                <span className="text-xs text-slate-400 font-normal">
+                  {isEn ? "schools" : "écoles"}
+                </span>{" "}
+                • {students.length}{" "}
+                <span className="text-xs text-slate-400 font-normal">
+                  {isEn ? "students" : "élèves"}
+                </span>
               </p>
             </div>
           </div>

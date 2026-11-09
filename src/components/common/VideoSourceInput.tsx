@@ -22,20 +22,30 @@ import {
 import { saveVideoFileToDB } from "../../lib/videoStorage";
 import { parseVideoSource, SAMPLE_VIDEO_PRESETS } from "../../lib/videoHelper";
 import { UniversalVideoPlayer } from "./UniversalVideoPlayer";
+import { UILocale } from "../../types";
 
 interface VideoSourceInputProps {
   value: string;
   onChange: (url: string) => void;
   label?: string;
   className?: string;
+  locale?: UILocale;
 }
 
 export const VideoSourceInput: React.FC<VideoSourceInputProps> = ({
   value,
   onChange,
-  label = "Source Vidéo de la Leçon",
+  label,
   className = "",
+  locale,
 }) => {
+  const activeLocale: UILocale =
+    locale ||
+    (typeof window !== "undefined" &&
+      (localStorage.getItem("linguaflow_locale_preference") as UILocale)) ||
+    "fr";
+  const isEn = activeLocale === "en";
+
   const isLocalSource =
     value.startsWith("idb:") ||
     value.startsWith("data:") ||
@@ -46,7 +56,7 @@ export const VideoSourceInput: React.FC<VideoSourceInputProps> = ({
   );
   const [dragActive, setDragActive] = useState(false);
   const [fileName, setFileName] = useState<string | null>(
-    isLocalSource ? "Vidéo persistante enregistrée" : null
+    isLocalSource ? (isEn ? "Persistent saved video" : "Vidéo persistante enregistrée") : null
   );
   const [fileSize, setFileSize] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -58,9 +68,9 @@ export const VideoSourceInput: React.FC<VideoSourceInputProps> = ({
 
   // Helper to format bytes
   const formatBytes = (bytes: number): string => {
-    if (bytes === 0) return "0 Octet";
+    if (bytes === 0) return isEn ? "0 Bytes" : "0 Octet";
     const k = 1024;
-    const sizes = ["Octets", "Ko", "Mo", "Go"];
+    const sizes = isEn ? ["Bytes", "KB", "MB", "GB"] : ["Octets", "Ko", "Mo", "Go"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
@@ -75,7 +85,11 @@ export const VideoSourceInput: React.FC<VideoSourceInputProps> = ({
   const processVideoFile = async (file: File) => {
     setFileTypeError(null);
     if (!file.type.startsWith("video/")) {
-      setFileTypeError("Veuillez sélectionner un fichier vidéo valide (MP4, WebM, MOV, etc.).");
+      setFileTypeError(
+        isEn
+          ? "Please select a valid video file (MP4, WebM, MOV, etc.)."
+          : "Veuillez sélectionner un fichier vidéo valide (MP4, WebM, MOV, etc.)."
+      );
       return;
     }
 
@@ -102,7 +116,11 @@ export const VideoSourceInput: React.FC<VideoSourceInputProps> = ({
     } catch (err) {
       console.error("Error storing video file:", err);
       setIsUploading(false);
-      setFileTypeError("Impossible d'enregistrer ce fichier vidéo. Veuillez réessayer ou utiliser un lien web.");
+      setFileTypeError(
+        isEn
+          ? "Unable to save this video file. Please try again or use a web link."
+          : "Impossible d'enregistrer ce fichier vidéo. Veuillez réessayer ou utiliser un lien web."
+      );
     }
   };
 
@@ -140,7 +158,7 @@ export const VideoSourceInput: React.FC<VideoSourceInputProps> = ({
       {/* Top Header with Mode Tabs */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <label className="block text-xs font-bold text-slate-700 dark:text-white/80">
-          {label}
+          {label || (isEn ? "Lesson Video Source" : "Source Vidéo de la Leçon")}
         </label>
 
         {/* Triple Mode Switcher (Upload | URL | Presets) */}
@@ -155,7 +173,7 @@ export const VideoSourceInput: React.FC<VideoSourceInputProps> = ({
             }`}
           >
             <LinkIcon size={12} />
-            <span>Lien Web / Embed</span>
+            <span>{isEn ? "Web Link / Embed" : "Lien Web / Embed"}</span>
           </button>
 
           <button
@@ -168,7 +186,7 @@ export const VideoSourceInput: React.FC<VideoSourceInputProps> = ({
             }`}
           >
             <Upload size={12} />
-            <span>Importer Fichier</span>
+            <span>{isEn ? "Upload File" : "Importer Fichier"}</span>
           </button>
 
           <button
@@ -181,7 +199,7 @@ export const VideoSourceInput: React.FC<VideoSourceInputProps> = ({
             }`}
           >
             <Sparkles size={12} />
-            <span>Échantillons HD</span>
+            <span>{isEn ? "HD Samples" : "Échantillons HD"}</span>
           </button>
         </div>
       </div>
@@ -194,7 +212,11 @@ export const VideoSourceInput: React.FC<VideoSourceInputProps> = ({
               type="text"
               value={value}
               onChange={(e) => onChange(e.target.value)}
-              placeholder="Ex: https://youtube.com/watch?v=... ou https://vimeo.com/... ou https://drive.google.com/file/d/... ou MP4 direct"
+              placeholder={
+                isEn
+                  ? "E.g. https://youtube.com/watch?v=... or https://vimeo.com/... or Google Drive or direct MP4"
+                  : "Ex: https://youtube.com/watch?v=... ou https://vimeo.com/... ou https://drive.google.com/file/d/... ou MP4 direct"
+              }
               className="w-full pl-9 pr-24 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white font-mono placeholder:font-sans focus:outline-none focus:border-[#6D5DFC]"
             />
             <LinkIcon
@@ -206,7 +228,7 @@ export const VideoSourceInput: React.FC<VideoSourceInputProps> = ({
                 type="button"
                 onClick={handleClearVideo}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-rose-500 transition p-1"
-                title="Effacer"
+                title={isEn ? "Clear" : "Effacer"}
               >
                 <X size={14} />
               </button>
@@ -215,7 +237,7 @@ export const VideoSourceInput: React.FC<VideoSourceInputProps> = ({
 
           <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500 dark:text-white/50">
             <span>
-              Supports : <b>YouTube</b>, <b>Vimeo</b>, <b>Google Drive</b>, <b>Dailymotion</b>, <b>Direct MP4 / WebM</b>
+              {isEn ? "Supports:" : "Supports :"} <b>YouTube</b>, <b>Vimeo</b>, <b>Google Drive</b>, <b>Dailymotion</b>, <b>Direct MP4 / WebM</b>
             </span>
             {value && (
               <span className="px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-500 font-semibold font-mono text-[10px]">
@@ -253,7 +275,7 @@ export const VideoSourceInput: React.FC<VideoSourceInputProps> = ({
               <div className="flex flex-col items-center justify-center py-2 space-y-2">
                 <div className="w-6 h-6 border-2 border-[#6D5DFC] border-t-transparent rounded-full animate-spin" />
                 <p className="text-xs font-bold text-slate-700 dark:text-white">
-                  Enregistrement persistant de la vidéo...
+                  {isEn ? "Saving video persistently..." : "Enregistrement persistant de la vidéo..."}
                 </p>
               </div>
             ) : value && isLocalSource ? (
@@ -264,10 +286,10 @@ export const VideoSourceInput: React.FC<VideoSourceInputProps> = ({
                   </div>
                   <div>
                     <p className="text-xs font-bold text-slate-900 dark:text-white truncate max-w-xs">
-                      {fileName || "Vidéo persistante enregistrée"}
+                      {fileName || (isEn ? "Persistent saved video" : "Vidéo persistante enregistrée")}
                     </p>
                     <p className="text-[10px] text-slate-400">
-                      {fileSize ? `${fileSize} • ` : ""}Persisté pour rechargements
+                      {fileSize ? `${fileSize} • ` : ""}{isEn ? "Persisted for reload" : "Persisté pour rechargements"}
                     </p>
                   </div>
                 </div>
@@ -278,7 +300,7 @@ export const VideoSourceInput: React.FC<VideoSourceInputProps> = ({
                     onClick={() => fileInputRef.current?.click()}
                     className="px-2.5 py-1 rounded-lg bg-slate-200 dark:bg-white/10 text-[11px] font-bold text-slate-700 dark:text-white hover:bg-slate-300 transition"
                   >
-                    Remplacer
+                    {isEn ? "Replace" : "Remplacer"}
                   </button>
                   <button
                     type="button"
@@ -295,10 +317,11 @@ export const VideoSourceInput: React.FC<VideoSourceInputProps> = ({
                   <Upload size={18} />
                 </div>
                 <p className="text-xs font-bold text-slate-700 dark:text-white">
-                  Glissez-déposez une vidéo ici, ou <span className="text-[#6D5DFC]">parcourez vos fichiers</span>
+                  {isEn ? "Drag & drop a video here, or " : "Glissez-déposez une vidéo ici, ou "}
+                  <span className="text-[#6D5DFC]">{isEn ? "browse your files" : "parcourez vos fichiers"}</span>
                 </p>
                 <p className="text-[10px] text-slate-400">
-                  Formats acceptés : MP4, WebM, MOV (Sauvegardé avec persistance locale)
+                  {isEn ? "Accepted formats: MP4, WebM, MOV (Saved with local persistence)" : "Formats acceptés : MP4, WebM, MOV (Sauvegardé avec persistance locale)"}
                 </p>
               </div>
             )}
@@ -334,7 +357,7 @@ export const VideoSourceInput: React.FC<VideoSourceInputProps> = ({
                 </span>
               </div>
               <span className="text-[10px] text-indigo-500 font-bold uppercase shrink-0">
-                Appliquer
+                {isEn ? "Apply" : "Appliquer"}
               </span>
             </button>
           ))}
@@ -347,7 +370,7 @@ export const VideoSourceInput: React.FC<VideoSourceInputProps> = ({
           <div className="flex items-center justify-between">
             <span className="text-[11px] text-slate-500 dark:text-white/50 flex items-center gap-1">
               <Shield size={12} className="text-emerald-500" />
-              Source prête pour diffusion sécurisée
+              {isEn ? "Source ready for secure streaming" : "Source prête pour diffusion sécurisée"}
             </span>
             <button
               type="button"
@@ -355,7 +378,7 @@ export const VideoSourceInput: React.FC<VideoSourceInputProps> = ({
               className="text-xs font-bold text-[#6D5DFC] hover:underline flex items-center gap-1 cursor-pointer"
             >
               <Play size={12} />
-              <span>{showLivePreview ? "Masquer le test vidéo" : "Tester la lecture vidéo en direct"}</span>
+              <span>{showLivePreview ? (isEn ? "Hide video test" : "Masquer le test vidéo") : (isEn ? "Test live video playback" : "Tester la lecture vidéo en direct")}</span>
             </button>
           </div>
 
@@ -363,8 +386,9 @@ export const VideoSourceInput: React.FC<VideoSourceInputProps> = ({
             <div className="mt-2 rounded-2xl overflow-hidden border border-indigo-500/30">
               <UniversalVideoPlayer
                 videoUrl={value}
-                title="Aperçu du cours"
+                title={isEn ? "Course Preview" : "Aperçu du cours"}
                 showDrmWatermark={false}
+                locale={activeLocale}
               />
             </div>
           )}

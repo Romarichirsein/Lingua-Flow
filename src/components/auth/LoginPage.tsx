@@ -424,11 +424,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
                     <div className="bg-white/60 dark:bg-black/20 p-1.5 rounded-lg border border-slate-200 dark:border-white/5">
-                      <span className="text-slate-400 dark:text-white/40 block text-[10px]">Identifiant / Email</span>
+                      <span className="text-slate-400 dark:text-white/40 block text-[10px]">
+                        {locale === "en" ? "Username / Email" : "Identifiant / Email"}
+                      </span>
                       <code className="font-mono text-[#6D5DFC] dark:text-[#00D9FF]">linguaflowadmin@gmail.com</code>
                     </div>
                     <div className="bg-white/60 dark:bg-black/20 p-1.5 rounded-lg border border-slate-200 dark:border-white/5">
-                      <span className="text-slate-400 dark:text-white/40 block text-[10px]">Mot de passe</span>
+                      <span className="text-slate-400 dark:text-white/40 block text-[10px]">
+                        {locale === "en" ? "Password" : "Mot de passe"}
+                      </span>
                       <code className="font-mono text-[#6D5DFC] dark:text-[#00D9FF]">qlac485!</code>
                     </div>
                   </div>

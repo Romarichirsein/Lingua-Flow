@@ -279,13 +279,15 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
       studentQuota: Number(formData.studentQuota) || 100,
       programsCount: 0,
       createdAt: new Date().toISOString().split("T")[0],
-      lastActiveDate: "À l'instant",
+      lastActiveDate: isEn ? "Just now" : "À l'instant",
     };
 
     onUpdateSchools([newSchool, ...schools]);
     onAddLog(
-      "Création d'école",
-      `Création de l'école partenaire '${newSchool.name}' (${newSchool.language}) avec identifiant '${newSchool.username}' et quota de ${newSchool.studentQuota} élèves.`,
+      isEn ? "School Created" : "Création d'école",
+      isEn
+        ? `Partner school '${newSchool.name}' (${newSchool.language}) created with login '${newSchool.username}' and quota of ${newSchool.studentQuota} students.`
+        : `Création de l'école partenaire '${newSchool.name}' (${newSchool.language}) avec identifiant '${newSchool.username}' et quota de ${newSchool.studentQuota} élèves.`,
       "success"
     );
     setIsCreateModalOpen(false);
@@ -335,8 +337,10 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
 
     onUpdateSchools(updatedSchools);
     onAddLog(
-      "Modification d'école",
-      `Mise à jour des informations et identifiants pour l'école '${formData.name}'.`,
+      isEn ? "School Modified" : "Modification d'école",
+      isEn
+        ? `Information and credentials updated for school '${formData.name}'.`
+        : `Mise à jour des informations et identifiants pour l'école '${formData.name}'.`,
       "success"
     );
     setEditingSchool(null);
@@ -352,8 +356,10 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
 
     onUpdateSchools(updated);
     onAddLog(
-      "Changement de statut",
-      `Statut de l'école '${school.name}' modifié en '${newStatus}'.`,
+      isEn ? "Status Changed" : "Changement de statut",
+      isEn
+        ? `School '${school.name}' status changed to '${newStatus}'.`
+        : `Statut de l'école '${school.name}' modifié en '${newStatus}'.`,
       newStatus === "active" ? "success" : "warning"
     );
     setStatusActionSchool(null);
@@ -374,8 +380,10 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
 
     onUpdateSchools(updated);
     onAddLog(
-      "Prolongation d'accès SaaS",
-      `Extension de ${extensionMonths} mois accordée à l'école '${extendSchool.name}'. Nouvelle échéance : ${newEndDate}.`,
+      isEn ? "SaaS Access Extended" : "Prolongation d'accès SaaS",
+      isEn
+        ? `Extension of ${extensionMonths} months granted to school '${extendSchool.name}'. New expiration: ${newEndDate}.`
+        : `Extension de ${extensionMonths} mois accordée à l'école '${extendSchool.name}'. Nouvelle échéance : ${newEndDate}.`,
       "success"
     );
     setExtendSchool(null);
@@ -387,8 +395,10 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
     const updated = schools.filter((s) => s.id !== deletingSchool.id);
     onUpdateSchools(updated);
     onAddLog(
-      "Suppression définitive",
-      `Suppression irréversible de l'école '${deletingSchool.name}' et purge des accès associés.`,
+      isEn ? "Permanent Deletion" : "Suppression définitive",
+      isEn
+        ? `Permanent deletion of school '${deletingSchool.name}' and associated access.`
+        : `Suppression irréversible de l'école '${deletingSchool.name}' et purge des accès associés.`,
       "error"
     );
     setDeletingSchool(null);
@@ -396,23 +406,41 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
   };
 
   const handleExportCSV = () => {
-    const headers = [
-      "ID",
-      "Nom",
-      "Slug",
-      "Langue",
-      "Statut",
-      "Responsable",
-      "Email Responsable",
-      "Telephone",
-      "Ville",
-      "Pays",
-      "Quota",
-      "Eleves Inscrits",
-      "Date Debut",
-      "Date Fin",
-      "Date Creation",
-    ];
+    const headers = isEn
+      ? [
+          "ID",
+          "Name",
+          "Slug",
+          "Language",
+          "Status",
+          "Manager",
+          "Manager Email",
+          "Phone",
+          "City",
+          "Country",
+          "Quota",
+          "Enrolled Students",
+          "Start Date",
+          "End Date",
+          "Creation Date",
+        ]
+      : [
+          "ID",
+          "Nom",
+          "Slug",
+          "Langue",
+          "Statut",
+          "Responsable",
+          "Email Responsable",
+          "Telephone",
+          "Ville",
+          "Pays",
+          "Quota",
+          "Eleves Inscrits",
+          "Date Debut",
+          "Date Fin",
+          "Date Creation",
+        ];
 
     const rows = filteredSchools.map((s) => {
       const studentCount = students.filter((st) => st.schoolId === s.id).length;
@@ -442,12 +470,23 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `linguaflow_ecoles_${new Date().toISOString().split("T")[0]}.csv`);
+    link.setAttribute(
+      "download",
+      isEn
+        ? `linguaflow_partner_schools_${new Date().toISOString().split("T")[0]}.csv`
+        : `linguaflow_ecoles_${new Date().toISOString().split("T")[0]}.csv`
+    );
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
 
-    onAddLog("Export Données", "Export CSV de la liste des écoles partenaires.", "success");
+    onAddLog(
+      isEn ? "Data Export" : "Export Données",
+      isEn
+        ? "CSV export of partner schools list."
+        : "Export CSV de la liste des écoles partenaires.",
+      "success"
+    );
   };
 
   return (
@@ -919,7 +958,9 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
       {totalPages > 1 && (
         <div className="flex items-center justify-between p-3 rounded-2xl bg-white/80 dark:bg-[#0D1220]/80 border border-slate-200 dark:border-white/10 text-xs">
           <p className="text-slate-500 dark:text-white/50">
-            Page <span className="font-bold text-slate-900 dark:text-white">{currentPage}</span> sur{" "}
+            {isEn ? "Page " : "Page "}
+            <span className="font-bold text-slate-900 dark:text-white">{currentPage}</span>{" "}
+            {isEn ? "of " : "sur "}
             <span className="font-bold text-slate-900 dark:text-white">{totalPages}</span>
           </p>
 
@@ -966,28 +1007,36 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
           setIsCreateModalOpen(false);
           setEditingSchool(null);
         }}
-        title={editingSchool ? `Modifier • ${editingSchool.name}` : "Créer une Nouvelle École"}
+        title={
+          editingSchool
+            ? isEn
+              ? `Edit • ${editingSchool.name}`
+              : `Modifier • ${editingSchool.name}`
+            : isEn
+            ? "Create New School"
+            : "Créer une Nouvelle École"
+        }
         maxWidth="max-w-2xl"
       >
         <form onSubmit={editingSchool ? handleSaveEdit : handleSaveCreate} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-white/80 mb-1">
-                Nom de l'école *
+                {isEn ? "School Name *" : "Nom de l'école *"}
               </label>
               <input
                 type="text"
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="ex: Académie des Langues"
+                placeholder={isEn ? "e.g. Language Academy" : "ex: Académie des Langues"}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#00D9FF]"
               />
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-white/80 mb-1">
-                Langue Enseignée *
+                {isEn ? "Taught Language *" : "Langue Enseignée *"}
               </label>
               <select
                 value={formData.language}
@@ -1000,8 +1049,8 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
                 }
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white font-bold focus:outline-none focus:ring-2 focus:ring-[#00D9FF]"
               >
-                <option value="german">Allemand 🇩🇪</option>
-                <option value="italian">Italien 🇮🇹</option>
+                <option value="german">{isEn ? "German 🇩🇪" : "Allemand 🇩🇪"}</option>
+                <option value="italian">{isEn ? "Italian 🇮🇹" : "Italien 🇮🇹"}</option>
               </select>
             </div>
           </div>
@@ -1009,35 +1058,35 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-white/80 mb-1">
-                Directeur / Responsable *
+                {isEn ? "Director / Manager *" : "Directeur / Responsable *"}
               </label>
               <input
                 type="text"
                 required
                 value={formData.managerName}
                 onChange={(e) => setFormData({ ...formData, managerName: e.target.value })}
-                placeholder={isEn ? "ex: John Smith" : "ex: Jean Dupont"}
+                placeholder={isEn ? "e.g. John Smith" : "ex: Jean Dupont"}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#00D9FF]"
               />
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-white/80 mb-1">
-                E-mail Responsable *
+                {isEn ? "Manager Email *" : "E-mail Responsable *"}
               </label>
               <input
                 type="email"
                 required
                 value={formData.managerEmail}
                 onChange={(e) => setFormData({ ...formData, managerEmail: e.target.value })}
-                placeholder="directeur@exemple.com"
+                placeholder={isEn ? "director@example.com" : "directeur@exemple.com"}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#00D9FF]"
               />
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-white/80 mb-1">
-                Téléphone Responsable
+                {isEn ? "Manager Phone" : "Téléphone Responsable"}
               </label>
               <input
                 type="tel"
@@ -1052,33 +1101,33 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-white/80 mb-1">
-                Ville
+                {isEn ? "City" : "Ville"}
               </label>
               <input
                 type="text"
                 value={formData.city}
                 onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                placeholder="ex: Berlin / Milan"
+                placeholder={isEn ? "e.g. Berlin / Milan" : "ex: Berlin / Milan"}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#00D9FF]"
               />
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-white/80 mb-1">
-                Pays
+                {isEn ? "Country" : "Pays"}
               </label>
               <input
                 type="text"
                 value={formData.country}
                 onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                placeholder="ex: Allemagne"
+                placeholder={isEn ? "e.g. Germany" : "ex: Allemagne"}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#00D9FF]"
               />
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-white/80 mb-1">
-                Quota d'élèves *
+                {isEn ? "Student Quota *" : "Quota d'élèves *"}
               </label>
               <input
                 type="number"
@@ -1095,7 +1144,7 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-white/80 mb-1">
-                Date de début d'accès
+                {isEn ? "Access Start Date" : "Date de début d'accès"}
               </label>
               <input
                 type="date"
@@ -1108,7 +1157,7 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-white/80 mb-1">
-                Date de fin d'accès (Échéance)
+                {isEn ? "Access End Date (Expiration)" : "Date de fin d'accès (Échéance)"}
               </label>
               <input
                 type="date"
@@ -1125,22 +1174,28 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-indigo-950 dark:text-indigo-200 font-bold text-xs">
                 <KeyRound size={16} className="text-[#6D5DFC] dark:text-[#00D9FF]" />
-                <span>Identifiants d'accès de l'école (Login & Mot de passe)</span>
+                <span>
+                  {isEn
+                    ? "School Access Credentials (Login & Password)"
+                    : "Identifiants d'accès de l'école (Login & Mot de passe)"}
+                </span>
               </div>
               <span className="text-[10px] bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 px-2.5 py-0.5 rounded-full font-bold">
-                Défini par le Super Admin
+                {isEn ? "Set by Super Admin" : "Défini par le Super Admin"}
               </span>
             </div>
 
             <p className="text-[11px] text-slate-600 dark:text-white/70 leading-relaxed">
-              Ces identifiants permettront au responsable de l'école de se connecter à son tableau de bord SaaS. Vous pourrez lui transmettre directement par WhatsApp ou E-mail.
+              {isEn
+                ? "These credentials will allow the school manager to log in to their SaaS dashboard. You can send them directly via WhatsApp or Email."
+                : "Ces identifiants permettront au responsable de l'école de se connecter à son tableau de bord SaaS. Vous pourrez lui transmettre directement par WhatsApp ou E-mail."}
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-xs font-bold text-slate-700 dark:text-white/80">
-                    Nom d'utilisateur (Username) *
+                    {isEn ? "Username *" : "Nom d'utilisateur (Username) *"}
                   </label>
                   <button
                     type="button"
@@ -1152,7 +1207,7 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
                     }
                     className="text-[10px] text-[#6D5DFC] dark:text-[#00D9FF] font-semibold hover:underline flex items-center gap-1 cursor-pointer"
                   >
-                    <Sparkles size={11} /> Suggérer
+                    <Sparkles size={11} /> {isEn ? "Suggest" : "Suggérer"}
                   </button>
                 </div>
                 <div className="relative">
@@ -1160,8 +1215,15 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
                     type="text"
                     required
                     value={formData.username}
-                    onChange={(e) => setFormData({ ...formData, username: e.target.value.toLowerCase().replace(/\s+/g, "_") })}
-                    placeholder={isEn ? "e.g. director_academy or school_main" : "ex: direction_ecole ou responsable"}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        username: e.target.value.toLowerCase().replace(/\s+/g, "_"),
+                      })
+                    }
+                    placeholder={
+                      isEn ? "e.g. director_academy or school_main" : "ex: direction_ecole ou responsable"
+                    }
                     className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#6D5DFC]"
                   />
                 </div>
@@ -1170,7 +1232,7 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-xs font-bold text-slate-700 dark:text-white/80">
-                    Mot de passe (Password) *
+                    {isEn ? "Password *" : "Mot de passe (Password) *"}
                   </label>
                   <button
                     type="button"
@@ -1182,7 +1244,7 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
                     }
                     className="text-[10px] text-[#6D5DFC] dark:text-[#00D9FF] font-semibold hover:underline flex items-center gap-1 cursor-pointer"
                   >
-                    <RefreshCw size={11} /> Régénérer
+                    <RefreshCw size={11} /> {isEn ? "Regenerate" : "Régénérer"}
                   </button>
                 </div>
                 <div className="relative">
@@ -1191,14 +1253,14 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
                     required
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    placeholder="Mot de passe sécurisé..."
+                    placeholder={isEn ? "Secure password..." : "Mot de passe sécurisé..."}
                     className="w-full pl-3.5 pr-10 py-2.5 rounded-xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#6D5DFC]"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPasswordInForm(!showPasswordInForm)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
-                    title={showPasswordInForm ? "Masquer" : "Afficher"}
+                    title={showPasswordInForm ? (isEn ? "Hide" : "Masquer") : isEn ? "Show" : "Afficher"}
                   >
                     {showPasswordInForm ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
@@ -1209,7 +1271,9 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
 
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-white/80 mb-1">
-              Lien Groupe WhatsApp Promo (Élèves & Enseignants)
+              {isEn
+                ? "Cohort WhatsApp Group Link (Students & Teachers)"
+                : "Lien Groupe WhatsApp Promo (Élèves & Enseignants)"}
             </label>
             <input
               type="url"
@@ -1229,13 +1293,19 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
               }}
               className="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white text-xs font-bold transition min-h-[42px] cursor-pointer"
             >
-              Annuler
+              {isEn ? "Cancel" : "Annuler"}
             </button>
             <button
               type="submit"
               className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#6D5DFC] to-[#00D9FF] text-white text-xs font-bold shadow-md hover:opacity-95 transition min-h-[42px] cursor-pointer"
             >
-              {editingSchool ? "Sauvegarder les modifications" : "Créer l'école"}
+              {editingSchool
+                ? isEn
+                  ? "Save changes"
+                  : "Sauvegarder les modifications"
+                : isEn
+                ? "Create school"
+                : "Créer l'école"}
             </button>
           </div>
         </form>
@@ -1245,7 +1315,7 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
       <Modal
         isOpen={!!statusActionSchool}
         onClose={() => setStatusActionSchool(null)}
-        title="Changement de Statut de l'École"
+        title={isEn ? "Change School Status" : "Changement de Statut de l'École"}
         maxWidth="max-w-md"
       >
         {statusActionSchool && (
@@ -1262,20 +1332,29 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
                   {statusActionSchool.school.name}
                 </h4>
                 <p className="text-xs text-slate-400">
-                  Statut actuel : <span className="font-bold">{statusActionSchool.school.status}</span>
+                  {isEn ? "Current status:" : "Statut actuel :"}{" "}
+                  <span className="font-bold">{statusActionSchool.school.status}</span>
                 </p>
               </div>
             </div>
 
             <p className="text-xs text-slate-600 dark:text-white/70">
               {statusActionSchool.newStatus === "suspended" &&
-                "La suspension empêche temporairement les élèves et l'équipe pédagogique d'accéder aux cours et aux vidéos filigranées."}
+                (isEn
+                  ? "Suspension temporarily prevents students and teaching staff from accessing courses and watermarked videos."
+                  : "La suspension empêche temporairement les élèves et l'équipe pédagogique d'accéder aux cours et aux vidéos filigranées.")}
               {statusActionSchool.newStatus === "blocked" &&
-                "Le blocage restreint totalement la plateforme pour cette école pour non-respect des règles ou impayé."}
+                (isEn
+                  ? "Blocking completely restricts platform access for this school due to policy violation or unpaid dues."
+                  : "Le blocage restreint totalement la plateforme pour cette école pour non-respect des règles ou impayé.")}
               {statusActionSchool.newStatus === "active" &&
-                "La réactivation restaure immédiatement tous les accès pour les élèves et administrateurs de l'école."}
+                (isEn
+                  ? "Reactivation immediately restores all access for students and administrators of the school."
+                  : "La réactivation restaure immédiatement tous les accès pour les élèves et administrateurs de l'école.")}
               {statusActionSchool.newStatus === "archived" &&
-                "L'archivage conserve l'historique et les notes mais désactive la connexion active."}
+                (isEn
+                  ? "Archiving preserves history and grades but disables active logins."
+                  : "L'archivage conserve l'historique et les notes mais désactive la connexion active.")}
             </p>
 
             <div className="flex items-center justify-end gap-2 pt-2">
@@ -1284,7 +1363,7 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
                 onClick={() => setStatusActionSchool(null)}
                 className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-white/5 text-xs font-bold text-slate-700 dark:text-white min-h-[40px] cursor-pointer"
               >
-                Annuler
+                {isEn ? "Cancel" : "Annuler"}
               </button>
               <button
                 type="button"
@@ -1297,7 +1376,9 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
                     : "bg-rose-500"
                 }`}
               >
-                Confirmer ({statusActionSchool.newStatus})
+                {isEn
+                  ? `Confirm (${statusActionSchool.newStatus})`
+                  : `Confirmer (${statusActionSchool.newStatus})`}
               </button>
             </div>
           </div>
@@ -1308,13 +1389,17 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
       <Modal
         isOpen={!!extendSchool}
         onClose={() => setExtendSchool(null)}
-        title={`Prolonger la Licence • ${extendSchool?.name}`}
+        title={
+          isEn
+            ? `Extend License • ${extendSchool?.name}`
+            : `Prolonger la Licence • ${extendSchool?.name}`
+        }
         maxWidth="max-w-md"
       >
         {extendSchool && (
           <div className="space-y-4">
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 text-xs">
-              <p className="text-slate-400">Échéance actuelle :</p>
+              <p className="text-slate-400">{isEn ? "Current expiration:" : "Échéance actuelle :"}</p>
               <p className="text-sm font-bold text-slate-900 dark:text-white font-mono mt-0.5">
                 {extendSchool.endDate}
               </p>
@@ -1322,7 +1407,7 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-white/80 mb-2">
-                Durée de prolongation à ajouter :
+                {isEn ? "Extension duration to add:" : "Durée de prolongation à ajouter :"}
               </label>
               <div className="grid grid-cols-3 gap-2">
                 {[3, 6, 12].map((months) => (
@@ -1336,7 +1421,7 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
                         : "bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-white"
                     }`}
                   >
-                    +{months} Mois
+                    +{months} {isEn ? "Months" : "Mois"}
                   </button>
                 ))}
               </div>
@@ -1348,14 +1433,16 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
                 onClick={() => setExtendSchool(null)}
                 className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-white/5 text-xs font-bold text-slate-700 dark:text-white min-h-[40px] cursor-pointer"
               >
-                Annuler
+                {isEn ? "Cancel" : "Annuler"}
               </button>
               <button
                 type="button"
                 onClick={handleConfirmExtension}
                 className="px-5 py-2 rounded-xl bg-[#00D9FF] text-slate-950 text-xs font-bold shadow-md hover:opacity-90 min-h-[40px] cursor-pointer"
               >
-                Prolonger de {extensionMonths} mois
+                {isEn
+                  ? `Extend by ${extensionMonths} months`
+                  : `Prolonger de ${extensionMonths} mois`}
               </button>
             </div>
           </div>
@@ -1369,7 +1456,7 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
           setDeletingSchool(null);
           setDeleteConfirmationInput("");
         }}
-        title="Suppression Définitive d'une École"
+        title={isEn ? "Permanent Deletion of a School" : "Suppression Définitive d'une École"}
         maxWidth="max-w-md"
       >
         {deletingSchool && (
@@ -1377,13 +1464,17 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
             <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-500 text-xs flex items-center gap-3">
               <AlertTriangle size={24} className="shrink-0" />
               <p className="font-semibold">
-                Attention : Cette action est irréversible. L'école '{deletingSchool.name}', tous ses élèves et ses cours associés seront définitivement purgés.
+                {isEn
+                  ? `Warning: This action is irreversible. The school '${deletingSchool.name}', all its students and associated courses will be permanently purged.`
+                  : `Attention : Cette action est irréversible. L'école '${deletingSchool.name}', tous ses élèves et ses cours associés seront définitivement purgés.`}
               </p>
             </div>
 
             <div>
               <p className="text-xs text-slate-600 dark:text-white/70 mb-2">
-                Pour confirmer, veuillez saisir le nom exact de l'école :{" "}
+                {isEn
+                  ? "To confirm, please enter the exact name of the school: "
+                  : "Pour confirmer, veuillez saisir le nom exact de l'école : "}
                 <span className="font-bold text-slate-900 dark:text-white select-all">
                   {deletingSchool.name}
                 </span>
@@ -1392,7 +1483,7 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
                 type="text"
                 value={deleteConfirmationInput}
                 onChange={(e) => setDeleteConfirmationInput(e.target.value)}
-                placeholder="Saisissez le nom exact..."
+                placeholder={isEn ? "Enter exact name..." : "Saisissez le nom exact..."}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500"
               />
             </div>
@@ -1406,7 +1497,7 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
                 }}
                 className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-white/5 text-xs font-bold text-slate-700 dark:text-white min-h-[40px] cursor-pointer"
               >
-                Annuler
+                {isEn ? "Cancel" : "Annuler"}
               </button>
               <button
                 type="button"
@@ -1414,12 +1505,13 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
                 onClick={handleConfirmDelete}
                 className="px-5 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold shadow-md disabled:opacity-40 min-h-[40px] cursor-pointer"
               >
-                Supprimer Définitivement
+                {isEn ? "Permanently Delete" : "Supprimer Définitivement"}
               </button>
             </div>
           </div>
         )}
       </Modal>
+
       {/* Credentials Share Modal (Super Admin -> School Director) */}
       <Modal
         isOpen={!!credentialsSchool}
@@ -1427,7 +1519,7 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
           setCredentialsSchool(null);
           setCopiedKey(null);
         }}
-        title="Identifiants de Connexion École"
+        title={isEn ? "School Login Credentials" : "Identifiants de Connexion École"}
         maxWidth="max-w-lg"
       >
         {credentialsSchool && (
@@ -1438,10 +1530,14 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
               </div>
               <div className="space-y-1">
                 <h4 className="text-xs font-bold text-slate-900 dark:text-white">
-                  Identifiants créés par le Super Admin pour {credentialsSchool.name}
+                  {isEn
+                    ? `Credentials created by Super Admin for ${credentialsSchool.name}`
+                    : `Identifiants créés par le Super Admin pour ${credentialsSchool.name}`}
                 </h4>
                 <p className="text-[11px] text-slate-600 dark:text-white/70 leading-relaxed">
-                  Ces informations d'authentification permettent au responsable ({credentialsSchool.managerName}) d'accéder à son espace administration école en toute sécurité.
+                  {isEn
+                    ? `These authentication details allow the manager (${credentialsSchool.managerName}) to securely access their school admin space.`
+                    : `Ces informations d'authentification permettent au responsable (${credentialsSchool.managerName}) d'accéder à son espace administration école en toute sécurité.`}
                 </p>
               </div>
             </div>
@@ -1450,7 +1546,7 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
               <div className="flex items-center justify-between">
                 <div>
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    Nom d'utilisateur / Login
+                    {isEn ? "Username / Login" : "Nom d'utilisateur / Login"}
                   </span>
                   <div className="font-mono text-sm font-bold text-slate-900 dark:text-white">
                     {credentialsSchool.username || credentialsSchool.managerEmail.split("@")[0]}
@@ -1467,7 +1563,7 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
                   className="px-3 py-1.5 rounded-xl bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-white hover:bg-slate-100 flex items-center gap-1.5 transition cursor-pointer"
                 >
                   {copiedKey === "user" ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
-                  <span>{copiedKey === "user" ? "Copié" : "Copier"}</span>
+                  <span>{copiedKey === "user" ? (isEn ? "Copied" : "Copié") : isEn ? "Copy" : "Copier"}</span>
                 </button>
               </div>
 
@@ -1476,7 +1572,7 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
               <div className="flex items-center justify-between">
                 <div>
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    Mot de passe
+                    {isEn ? "Password" : "Mot de passe"}
                   </span>
                   <div className="font-mono text-sm font-bold text-[#6D5DFC] dark:text-[#00D9FF]">
                     {credentialsSchool.password || "school123"}
@@ -1493,16 +1589,33 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
                   className="px-3 py-1.5 rounded-xl bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-white hover:bg-slate-100 flex items-center gap-1.5 transition cursor-pointer"
                 >
                   {copiedKey === "pwd" ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
-                  <span>{copiedKey === "pwd" ? "Copié" : "Copier"}</span>
+                  <span>{copiedKey === "pwd" ? (isEn ? "Copied" : "Copié") : isEn ? "Copy" : "Copier"}</span>
                 </button>
               </div>
 
               <div className="h-px bg-slate-200 dark:bg-white/10" />
 
               <div className="text-xs text-slate-600 dark:text-white/70 space-y-1">
-                <div><strong className="text-slate-900 dark:text-white">URL de connexion :</strong> {window.location.origin}</div>
-                <div><strong className="text-slate-900 dark:text-white">Responsable :</strong> {credentialsSchool.managerName} ({credentialsSchool.managerEmail})</div>
-                <div><strong className="text-slate-900 dark:text-white">Validité :</strong> Jusqu'au {new Date(credentialsSchool.endDate).toLocaleDateString()}</div>
+                <div>
+                  <strong className="text-slate-900 dark:text-white">
+                    {isEn ? "Login URL:" : "URL de connexion :"}
+                  </strong>{" "}
+                  {window.location.origin}
+                </div>
+                <div>
+                  <strong className="text-slate-900 dark:text-white">
+                    {isEn ? "Manager:" : "Responsable :"}
+                  </strong>{" "}
+                  {credentialsSchool.managerName} ({credentialsSchool.managerEmail})
+                </div>
+                <div>
+                  <strong className="text-slate-900 dark:text-white">
+                    {isEn ? "Validity:" : "Validité :"}
+                  </strong>{" "}
+                  {isEn
+                    ? `Until ${new Date(credentialsSchool.endDate).toLocaleDateString()}`
+                    : `Jusqu'au ${new Date(credentialsSchool.endDate).toLocaleDateString()}`}
+                </div>
               </div>
             </div>
 
@@ -1510,26 +1623,32 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
               <a
                 href={`https://wa.me/${(credentialsSchool.managerPhone || credentialsSchool.phone || "").replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
-                  `Bonjour ${credentialsSchool.managerName},\n\nVotre accès Super Admin pour l'école *${credentialsSchool.name}* sur la plateforme Lingua-Flow a été configuré avec succès.\n\n🔗 *Lien de connexion* : ${window.location.origin}\n👤 *Identifiant* : ${credentialsSchool.username || credentialsSchool.managerEmail.split("@")[0]}\n🔑 *Mot de passe* : ${credentialsSchool.password || "school123"}\n\nVous pouvez dès à présent gérer vos cours, inscrire vos élèves et suivre les progrès pédagogiques.\n\nCordialement,\nL'administration Lingua-Flow`
+                  isEn
+                    ? `Hello ${credentialsSchool.managerName},\n\nYour administrator access for the school *${credentialsSchool.name}* on the Lingua-Flow platform has been successfully configured.\n\n🔗 *Login Link*: ${window.location.origin}\n👤 *Username*: ${credentialsSchool.username || credentialsSchool.managerEmail.split("@")[0]}\n🔑 *Password*: ${credentialsSchool.password || "school123"}\n\nYou can now manage your courses, enroll students, and track pedagogical progress.\n\nBest regards,\nLingua-Flow Administration`
+                    : `Bonjour ${credentialsSchool.managerName},\n\nVotre accès Super Admin pour l'école *${credentialsSchool.name}* sur la plateforme Lingua-Flow a été configuré avec succès.\n\n🔗 *Lien de connexion* : ${window.location.origin}\n👤 *Identifiant* : ${credentialsSchool.username || credentialsSchool.managerEmail.split("@")[0]}\n🔑 *Mot de passe* : ${credentialsSchool.password || "school123"}\n\nVous pouvez dès à présent gérer vos cours, inscrire vos élèves et suivre les progrès pédagogiques.\n\nCordialement,\nL'administration Lingua-Flow`
                 )}`}
                 target="_blank"
                 rel="noreferrer"
                 className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold shadow-md transition cursor-pointer"
               >
                 <Share2 size={16} />
-                <span>Envoyer par WhatsApp</span>
+                <span>{isEn ? "Send via WhatsApp" : "Envoyer par WhatsApp"}</span>
               </a>
 
               <a
                 href={`mailto:${credentialsSchool.managerEmail}?subject=${encodeURIComponent(
-                  `Vos identifiants d'accès Lingua-Flow - École ${credentialsSchool.name}`
+                  isEn
+                    ? `Your Lingua-Flow Access Credentials - School ${credentialsSchool.name}`
+                    : `Vos identifiants d'accès Lingua-Flow - École ${credentialsSchool.name}`
                 )}&body=${encodeURIComponent(
-                  `Bonjour ${credentialsSchool.managerName},\n\nVotre compte administrateur pour l'école "${credentialsSchool.name}" est désormais actif.\n\nURL de connexion : ${window.location.origin}\nNom d'utilisateur : ${credentialsSchool.username || credentialsSchool.managerEmail.split("@")[0]}\nMot de passe : ${credentialsSchool.password || "school123"}\n\nValidité de la licence : jusqu'au ${credentialsSchool.endDate}\n\nBienvenue sur Lingua-Flow !\nL'équipe administrative.`
+                  isEn
+                    ? `Hello ${credentialsSchool.managerName},\n\nYour administrator account for the school "${credentialsSchool.name}" is now active.\n\nLogin URL: ${window.location.origin}\nUsername: ${credentialsSchool.username || credentialsSchool.managerEmail.split("@")[0]}\nPassword: ${credentialsSchool.password || "school123"}\n\nLicense validity: until ${credentialsSchool.endDate}\n\nWelcome to Lingua-Flow!\nThe administrative team.`
+                    : `Bonjour ${credentialsSchool.managerName},\n\nVotre compte administrateur pour l'école "${credentialsSchool.name}" est désormais actif.\n\nURL de connexion : ${window.location.origin}\nNom d'utilisateur : ${credentialsSchool.username || credentialsSchool.managerEmail.split("@")[0]}\nMot de passe : ${credentialsSchool.password || "school123"}\n\nValidité de la licence : jusqu'au ${credentialsSchool.endDate}\n\nBienvenue sur Lingua-Flow !\nL'équipe administrative.`
                 )}`}
                 className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-950 text-xs font-bold shadow-md hover:opacity-90 transition cursor-pointer"
               >
                 <Send size={16} />
-                <span>Envoyer par E-mail</span>
+                <span>{isEn ? "Send via Email" : "Envoyer par E-mail"}</span>
               </a>
             </div>
 
@@ -1539,7 +1658,7 @@ export const SuperAdminSchoolsTab: React.FC<SuperAdminSchoolsTabProps> = ({
                 onClick={() => setCredentialsSchool(null)}
                 className="px-5 py-2 rounded-xl bg-slate-100 dark:bg-white/10 text-xs font-bold text-slate-700 dark:text-white hover:bg-slate-200 min-h-[40px] cursor-pointer"
               >
-                Fermer
+                {isEn ? "Close" : "Fermer"}
               </button>
             </div>
           </div>

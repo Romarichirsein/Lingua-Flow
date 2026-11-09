@@ -17,7 +17,8 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
         id="language-switcher-select"
         value={locale}
         onChange={(e) => onLocaleChange(e.target.value as UILocale)}
-        aria-label="Choisir la langue de l'interface"
+        aria-label={locale === "en" ? "Select interface language" : "Choisir la langue de l'interface"}
+        title={locale === "en" ? "Switch language (EN / FR)" : "Changer la langue (FR / EN)"}
         className="h-9 sm:h-10 rounded-xl border border-slate-200 bg-white pl-2.5 pr-7 sm:px-3 sm:pr-8 text-xs font-bold text-slate-700 outline-none transition hover:border-[#6D5DFC] dark:border-white/10 dark:bg-white/5 dark:text-white cursor-pointer appearance-none"
       >
         <option value="fr" className="dark:bg-[#0D1220] dark:text-white">FR</option>

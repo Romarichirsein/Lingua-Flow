@@ -20,6 +20,21 @@ import {
   ExamSprechenSimulationTask,
 } from "../../data/prufungData";
 import {
+  TelcOfficialCertificateModal,
+  TelcExamScoreBreakdown,
+} from "./TelcOfficialCertificateModal";
+import { InteractiveVoiceSprechenModal } from "./InteractiveVoiceSprechenModal";
+import {
+  GENERATED_LESEN_VARIANTS,
+  GENERATED_SPRACHBAUSTEINE_TEIL1_VARIANTS,
+  GENERATED_SPRACHBAUSTEINE_TEIL2_VARIANTS,
+  GENERATED_HOREN_VARIANTS,
+  GENERATED_SCHREIBEN_VARIANTS,
+  GENERATED_SPRECHEN_VARIANTS,
+  getNextUnseenVariantIndex,
+  resetSeenVariants,
+} from "../../data/prufungVariantBank";
+import {
   Award,
   BookOpen,
   Headphones,
@@ -61,6 +76,7 @@ interface StudentPrufungTabProps {
 
 type PrufungSubTab =
   | "overview"
+  | "fullexam"
   | "lesen"
   | "sprachbausteine"
   | "horen"
@@ -119,6 +135,22 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
 
   // Track progress and scores per skill (stored in local state & persisted)
   const storageKey = `linguaflow_prufung_v2_${student.id}_${selectedLevel}`;
+  // Modals & Variant state
+  const [isCertificateModalOpen, setIsCertificateModalOpen] = useState(false);
+  const [isVoiceSprechenModalOpen, setIsVoiceSprechenModalOpen] = useState(false);
+  const [submittedSections, setSubmittedSections] = useState<Record<string, boolean>>({});
+
+  // Dynamic Unseen Variants Rotation (pool of 50 variants per skill)
+  const [variantIndices, setVariantIndices] = useState(() => ({
+    lesen: getNextUnseenVariantIndex({ studentId: student.id, level: selectedLevel, skill: "lesen" }).index,
+    sb1: getNextUnseenVariantIndex({ studentId: student.id, level: selectedLevel, skill: "sprachbausteine1" }).index,
+    sb2: getNextUnseenVariantIndex({ studentId: student.id, level: selectedLevel, skill: "sprachbausteine2" }).index,
+    horen: getNextUnseenVariantIndex({ studentId: student.id, level: selectedLevel, skill: "horen" }).index,
+    schreiben: getNextUnseenVariantIndex({ studentId: student.id, level: selectedLevel, skill: "schreiben" }).index,
+    sprechen: getNextUnseenVariantIndex({ studentId: student.id, level: selectedLevel, skill: "sprechen" }).index,
+  }));
+
+  // Track progress and scores per skill (NEVER PRE-FILLED ON LOAD)
   const [skillScores, setSkillScores] = useState<{
     lesenAnswers: Record<string, number>;
     matchingAnswers: Record<string, string>;
@@ -130,26 +162,22 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
     schreibenCompleted: boolean;
     sprechenCompleted: boolean;
     schreibenDraft: string;
-  }>(() => {
-    try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) return JSON.parse(saved);
-    } catch {
-      // fallback
-    }
-    return {
-      lesenAnswers: {},
-      matchingAnswers: {},
-      sprachbausteineAnswers: {},
-      horenAnswers: {},
-      trueFalseAnswers: {},
-      wortschatzQuizAnswers: {},
-      masteredVocabIds: [],
-      schreibenCompleted: false,
-      sprechenCompleted: false,
-      schreibenDraft: "",
-    };
-  });
+    schreibenScore: number;
+    sprechenScore: number;
+  }>(() => ({
+    lesenAnswers: {},
+    matchingAnswers: {},
+    sprachbausteineAnswers: {},
+    horenAnswers: {},
+    trueFalseAnswers: {},
+    wortschatzQuizAnswers: {},
+    masteredVocabIds: [],
+    schreibenCompleted: false,
+    sprechenCompleted: false,
+    schreibenDraft: "",
+    schreibenScore: 0,
+    sprechenScore: 0,
+  }));
 
   // Persist skill state
   useEffect(() => {
@@ -311,6 +339,105 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
     (wortschatzQuizScore * 0.6) + (vocabMasteryPercent * 0.4)
   );
 
+  // =========================================================================
+  // OFFICIAL TELC EXAM SCORING ARCHITECTURE (300 POINTS TOTAL)
+  // =========================================================================
+  // Schriftliche Prüfung (225 Pkt):
+  // - Leseverstehen: 75 Pkt
+  // - Sprachbausteine: Teil 1 (15 Pkt) & Teil 2 (15 Pkt) = 30 Pkt
+  // - Hörverstehen: 75 Pkt
+  // - Schriftlicher Ausdruck: 45 Pkt
+  // Mündliche Prüfung (75 Pkt):
+  // - Mündlicher Ausdruck (Sprechen): 75 Pkt
+  // Gesamtergebnis: 300 Pkt (Bestehensgrenze: 60% in beiden Teilen = 180 Pkt)
+
+  const telcLesenPoints = Math.round((lesenScore / 100) * 75);
+
+  const activeSb1 = GENERATED_SPRACHBAUSTEINE_TEIL1_VARIANTS[variantIndices.sb1] || (sbTasks && sbTasks[0]);
+  const activeSb2 = GENERATED_SPRACHBAUSTEINE_TEIL2_VARIANTS[variantIndices.sb2] || (sbTasks && (sbTasks[1] || sbTasks[0]));
+
+  let sb1Gaps = 0, sb1Correct = 0;
+  activeSb1?.parts?.forEach((part) => {
+    if (typeof part !== "string") {
+      sb1Gaps++;
+      const userChoice = skillScores.sprachbausteineAnswers[`${activeSb1.id}_gap_${part.n}`];
+      if (userChoice !== undefined && userChoice === part.correct) {
+        sb1Correct++;
+      }
+    }
+  });
+  const telcSb1Points = sb1Gaps > 0 ? Math.round((sb1Correct / sb1Gaps) * 15) : Math.round((sprachbausteineScore / 100) * 15);
+
+  let sb2Gaps = 0, sb2Correct = 0;
+  activeSb2?.parts?.forEach((part) => {
+    if (typeof part !== "string") {
+      sb2Gaps++;
+      const userChoice = skillScores.sprachbausteineAnswers[`${activeSb2.id}_gap_${part.n}`];
+      if (userChoice !== undefined && userChoice === part.correct) {
+        sb2Correct++;
+      }
+    }
+  });
+  const telcSb2Points = sb2Gaps > 0 ? Math.round((sb2Correct / sb2Gaps) * 15) : Math.round((sprachbausteineScore / 100) * 15);
+  const telcSbTotalPoints = telcSb1Points + telcSb2Points; // /30
+
+  // Writing Evaluation with Official 4x25 Rubric
+  const [isEvaluatingWriting, setIsEvaluatingWriting] = useState(false);
+  const [writingEvaluation, setWritingEvaluation] = useState<WritingEvaluationResult | null>(null);
+
+  const telcHorenPoints = Math.round((horenScore / 100) * 75);
+  const telcSchreibenPoints = skillScores.schreibenScore > 0
+    ? skillScores.schreibenScore
+    : writingEvaluation
+    ? Math.round((writingEvaluation.note_totale / 100) * 45)
+    : skillScores.schreibenCompleted
+    ? 38
+    : 0;
+
+  const telcSchriftlichTotal = telcLesenPoints + telcSbTotalPoints + telcHorenPoints + telcSchreibenPoints; // /225
+  const isSchriftlichPassed = telcSchriftlichTotal >= 135; // 60% of 225
+
+  const telcSprechenPoints = skillScores.sprechenScore > 0
+    ? skillScores.sprechenScore
+    : skillScores.sprechenCompleted
+    ? 58
+    : 0;
+  const isMundlichPassed = telcSprechenPoints >= 45; // 60% of 75
+
+  const telcGesamtergebnis = telcSchriftlichTotal + telcSprechenPoints; // /300
+  const isTelcExamPassed = isSchriftlichPassed && isMundlichPassed && telcGesamtergebnis >= 180;
+
+  let telcMention = "Nicht bestanden";
+  if (isTelcExamPassed) {
+    if (telcGesamtergebnis >= 270) telcMention = "Sehr Gut";
+    else if (telcGesamtergebnis >= 240) telcMention = "Gut";
+    else if (telcGesamtergebnis >= 210) telcMention = "Befriedigend";
+    else telcMention = "Ausreichend";
+  }
+
+  // Helper to switch to an unseen variant dynamically
+  const handleRotateVariant = (skill: "lesen" | "sb1" | "sb2" | "horen" | "schreiben" | "sprechen") => {
+    const skillMap: Record<string, "lesen" | "sprachbausteine1" | "sprachbausteine2" | "horen" | "schreiben" | "sprechen"> = {
+      lesen: "lesen",
+      sb1: "sprachbausteine1",
+      sb2: "sprachbausteine2",
+      horen: "horen",
+      schreiben: "schreiben",
+      sprechen: "sprechen",
+    };
+    const nextVar = getNextUnseenVariantIndex({
+      studentId: student.id,
+      level: selectedLevel,
+      skill: skillMap[skill],
+    });
+    setVariantIndices((prev) => ({ ...prev, [skill]: nextVar.index }));
+    setSubmittedSections((prev) => ({ ...prev, [skill]: false }));
+  };
+
+  const handleResetSection = (section: string) => {
+    setSubmittedSections((prev) => ({ ...prev, [section]: false }));
+  };
+
   // Overall Readiness Index (0 to 100%)
   const readinessComponents = [
     { name: "Lesen", score: lesenScore, weight: 0.20 },
@@ -351,10 +478,6 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
-
-  // Writing Evaluation with Official 4x25 Rubric
-  const [isEvaluatingWriting, setIsEvaluatingWriting] = useState(false);
-  const [writingEvaluation, setWritingEvaluation] = useState<WritingEvaluationResult | null>(null);
 
   const handleEvaluateWriting = async (task: any) => {
     const draft = skillScores.schreibenDraft.trim();
@@ -629,6 +752,14 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
             icon: <Gauge size={16} />,
           },
           {
+            id: "fullexam",
+            label: isEn ? "Full telc Exam (300 Pts)" : "Épreuve Complète telc (300 Pts)",
+            sublabel: `${telcGesamtergebnis}/300 Pkt`,
+            icon: <Award size={16} />,
+            badge: `${telcGesamtergebnis}/300`,
+            badgeColor: isTelcExamPassed ? "emerald" : "amber",
+          },
+          {
             id: "lesen",
             label: "Lesen",
             sublabel: isEn ? "Reading" : "Compréhension écrite",
@@ -657,7 +788,7 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
             label: "Schreiben",
             sublabel: isEn ? "Writing" : "Production écrite",
             icon: <PenTool size={16} />,
-            badge: skillScores.schreibenCompleted ? "Validé" : "À faire",
+            badge: skillScores.schreibenCompleted ? (isEn ? "Passed" : "Validé") : (isEn ? "To do" : "À faire"),
             badgeColor: skillScores.schreibenCompleted ? "emerald" : "amber",
           },
           {
@@ -665,7 +796,7 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
             label: "Sprechen",
             sublabel: isEn ? "Speaking" : "Production orale",
             icon: <Mic size={16} />,
-            badge: skillScores.sprechenCompleted ? "Prêt" : "Pratique",
+            badge: skillScores.sprechenCompleted ? (isEn ? "Ready" : "Prêt") : (isEn ? "Practice" : "Pratique"),
             badgeColor: skillScores.sprechenCompleted ? "emerald" : "slate",
           },
           {
@@ -769,6 +900,79 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
                 <span>{isEn ? "Train Sprachbausteine" : "S'entraîner aux Sprachbausteine"}</span>
                 <ChevronRight size={14} />
               </button>
+            </div>
+          </div>
+
+          {/* OFFICIAL TELC SCORECARD BANNER */}
+          <div className="rounded-3xl p-6 bg-gradient-to-r from-[#1E3A8A] via-indigo-950 to-slate-900 border-2 border-indigo-400/30 text-white shadow-xl space-y-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-xs font-bold text-cyan-300">
+                  <Shield size={14} />
+                  <span>Modèle Officiel telc Deutsch {selectedLevel} (Barème 300 Points)</span>
+                </div>
+                <h3 className="text-xl font-black tracking-tight">
+                  Tableau Récapitulatif Officiel des Notes
+                </h3>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsCertificateModalOpen(true)}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-black text-xs hover:opacity-95 transition shadow-lg flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Award size={15} />
+                  <span>{isEn ? "View telc Certificate" : "Voir mon Certificat telc"}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveSubTab("fullexam")}
+                  className="px-4 py-2 rounded-xl bg-[#6D5DFC] text-white font-bold text-xs hover:bg-indigo-600 transition shadow-lg flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Play size={14} />
+                  <span>{isEn ? "Take Full Exam" : "Passer l'Épreuve Complète"}</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+              <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-1">
+                <span className="text-[10px] uppercase font-bold text-slate-400">
+                  I. Schriftliche Prüfung (Seuil: 135 Pkt)
+                </span>
+                <div className="text-2xl font-black font-mono text-cyan-300">
+                  {telcSchriftlichTotal} / 225 Pkt
+                </div>
+                <div className="text-[11px] text-slate-300 flex items-center gap-1">
+                  <span>Lesen: {telcLesenPoints}/75 • SB: {telcSbTotalPoints}/30 • Hören: {telcHorenPoints}/75 • Schreiben: {telcSchreibenPoints}/45</span>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-1">
+                <span className="text-[10px] uppercase font-bold text-slate-400">
+                  II. Mündliche Prüfung (Seuil: 45 Pkt)
+                </span>
+                <div className="text-2xl font-black font-mono text-indigo-300">
+                  {telcSprechenPoints} / 75 Pkt
+                </div>
+                <div className="text-[11px] text-slate-300">
+                  <span>Sprechen: {telcSprechenPoints}/75 Pkt (Simulateur vocal IA)</span>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-white/10 border-2 border-amber-400/40 space-y-1">
+                <span className="text-[10px] uppercase font-bold text-amber-300">
+                  GESAMTERGEBNIS (Seuil: 180 Pkt)
+                </span>
+                <div className="text-2xl font-black font-mono text-white">
+                  {telcGesamtergebnis} / 300 Pkt
+                </div>
+                <div className="text-[11px] font-bold text-amber-300">
+                  Prädikat / Mention : {telcMention}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1160,19 +1364,42 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
-                Score Sprachbausteine :
-              </span>
-              <span
-                className={`text-lg font-black px-3 py-1 rounded-xl ${
-                  isSbPassed
-                    ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                    : "bg-amber-500/15 text-amber-600 dark:text-amber-400"
-                }`}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  handleRotateVariant("sb1");
+                  handleRotateVariant("sb2");
+                }}
+                className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 font-bold text-xs hover:bg-slate-200 dark:hover:bg-white/15 transition cursor-pointer flex items-center gap-1"
+                title="Charger un nouveau texte à trous"
               >
-                {sprachbausteineScore}%
-              </span>
+                <RotateCcw size={13} />
+                <span>Variante T1:{variantIndices.sb1 + 1}/50 • T2:{variantIndices.sb2 + 1}/50</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSubmittedSections((prev) => ({ ...prev, sprachbausteine: true }));
+                  if (onAddLog) {
+                    onAddLog(
+                      "Épreuve Sprachbausteine Corrigée",
+                      `L'élève ${student.name} a validé les Sprachbausteine (${telcSbTotalPoints}/30 Pts - ${telcSbTotalPoints >= 18 ? "Bestanden" : "Nicht bestanden"}).`,
+                      telcSbTotalPoints >= 18 ? "success" : "warning",
+                      { entityType: "evaluation", score: telcSbTotalPoints }
+                    );
+                  }
+                }}
+                className="px-4 py-2 rounded-xl bg-[#6D5DFC] text-white font-bold text-xs hover:bg-indigo-600 transition cursor-pointer shadow-md shadow-indigo-500/20 flex items-center gap-1.5"
+              >
+                <Check size={14} />
+                <span>{submittedSections.sprachbausteine ? "Re-valider la correction" : "Valider & Corriger (30 Pts)"}</span>
+              </button>
+
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-[#6D5DFC] font-mono font-bold text-xs">
+                <span>Note telc : {telcSbTotalPoints} / 30 Pkt (T1: {telcSb1Points}/15 • T2: {telcSb2Points}/15)</span>
+              </div>
             </div>
           </div>
 
@@ -1329,19 +1556,39 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
-                Score Hören :
-              </span>
-              <span
-                className={`text-lg font-black px-3 py-1 rounded-xl ${
-                  isHorenPassed
-                    ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                    : "bg-amber-500/15 text-amber-600 dark:text-amber-400"
-                }`}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleRotateVariant("horen")}
+                className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 font-bold text-xs hover:bg-slate-200 dark:hover:bg-white/15 transition cursor-pointer flex items-center gap-1"
+                title="Exercice d'écoute suivant"
               >
-                {horenScore}%
-              </span>
+                <RotateCcw size={13} />
+                <span>Variante {variantIndices.horen + 1}/50</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSubmittedSections((prev) => ({ ...prev, horen: true }));
+                  if (onAddLog) {
+                    onAddLog(
+                      "Épreuve Hören Corrigée",
+                      `L'élève ${student.name} a validé le module Hören (${telcHorenPoints}/75 Pts - ${telcHorenPoints >= 45 ? "Bestanden" : "Nicht bestanden"}).`,
+                      telcHorenPoints >= 45 ? "success" : "warning",
+                      { entityType: "evaluation", score: telcHorenPoints }
+                    );
+                  }
+                }}
+                className="px-4 py-2 rounded-xl bg-[#6D5DFC] text-white font-bold text-xs hover:bg-indigo-600 transition cursor-pointer shadow-md shadow-indigo-500/20 flex items-center gap-1.5"
+              >
+                <Check size={14} />
+                <span>{submittedSections.horen ? "Re-valider la correction" : "Valider & Corriger (75 Pts)"}</span>
+              </button>
+
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-[#6D5DFC] font-mono font-bold text-xs">
+                <span>Note telc : {telcHorenPoints} / 75 Pkt</span>
+              </div>
             </div>
           </div>
 
@@ -2084,11 +2331,11 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
                   <div className="flex items-center gap-2">
                     <Mic size={16} className={isRecordingAudio ? "text-rose-500 animate-pulse" : "text-[#00D9FF]"} />
                     <span className="text-xs font-bold uppercase tracking-wider">
-                      Simulateur d'Enregistrement Oral
+                      {isEn ? "Oral Recording Simulator" : "Simulateur d'Enregistrement Oral"}
                     </span>
                   </div>
                   <p className="text-xs text-slate-400">
-                    Entraînez-vous à voix haute sur les 4 points de la consigne.
+                    {isEn ? "Practice speaking out loud covering the 4 prompt points." : "Entraînez-vous à voix haute sur les 4 points de la consigne."}
                   </p>
                 </div>
 
@@ -2118,7 +2365,7 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
                     }`}
                   >
                     {isRecordingAudio ? <Square size={14} /> : <Mic size={14} />}
-                    <span>{isRecordingAudio ? "Terminer la simulation" : "S'enregistrer à voix haute"}</span>
+                    <span>{isRecordingAudio ? (isEn ? "Finish simulation" : "Terminer la simulation") : (isEn ? "Record speaking" : "S'enregistrer à voix haute")}</span>
                   </button>
                 </div>
               </div>
@@ -2126,7 +2373,7 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
               {/* Evaluation Criteria */}
               <div className="space-y-2">
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
-                  Grille d'évaluation du jury officiel :
+                  {isEn ? "Official jury evaluation rubric:" : "Grille d'évaluation du jury officiel :"}
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-600 dark:text-slate-400">
                   {activeSprechenSim.evaluationCriteria.map((crit, cIdx) => (
@@ -2149,7 +2396,7 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
             <div>
               <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
                 <Bookmark size={20} className="text-[#6D5DFC]" />
-                <span>Lexique Officiel CECRL — Niveau {selectedLevel}</span>
+                <span>{isEn ? `Official CEFR Lexicon — Level ${selectedLevel}` : `Lexique Officiel CECRL — Niveau ${selectedLevel}`}</span>
               </h3>
               <p className="text-xs text-slate-500 mt-1">
                 {isEn
@@ -2160,7 +2407,7 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
 
             <div className="flex items-center gap-3">
               <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
-                Maîtrise :
+                {isEn ? "Mastery:" : "Maîtrise :"}
               </span>
               <span
                 className={`text-lg font-black px-3 py-1 rounded-xl ${
@@ -2178,10 +2425,10 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                Fiches de Vocabulaire Clés
+                {isEn ? "Key Vocabulary Flashcards" : "Fiches de Vocabulaire Clés"}
               </h4>
               <span className="text-xs text-slate-500">
-                {skillScores.masteredVocabIds.length} / {currentExamConfig.tasks.wortschatz?.length || 0} acquis
+                {skillScores.masteredVocabIds.length} / {currentExamConfig.tasks.wortschatz?.length || 0} {isEn ? "mastered" : "acquis"}
               </span>
             </div>
 
@@ -2207,7 +2454,7 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
                           type="button"
                           onClick={() => playSpeech(vocab.term)}
                           className="p-1 rounded-lg text-slate-400 hover:text-[#6D5DFC] transition cursor-pointer"
-                          title="Écouter la prononciation"
+                          title={isEn ? "Listen to pronunciation" : "Écouter la prononciation"}
                         >
                           <Volume2 size={16} />
                         </button>
@@ -2249,7 +2496,7 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
                       }`}
                     >
                       <Check size={14} />
-                      <span>{isMastered ? "Maîtrisé" : "Marquer comme acquis"}</span>
+                      <span>{isMastered ? (isEn ? "Mastered" : "Maîtrisé") : (isEn ? "Mark as mastered" : "Marquer comme acquis")}</span>
                     </button>
                   </div>
                 );
@@ -2263,10 +2510,10 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
               <div>
                 <h4 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
                   <Flame size={18} className="text-amber-500" />
-                  <span>Wortschatz-Drill : Test de Validation du Lexique</span>
+                  <span>{isEn ? "Wortschatz-Drill: Vocabulary Validation Test" : "Wortschatz-Drill : Test de Validation du Lexique"}</span>
                 </h4>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Vérifiez si vous maîtrisez le lexique requis pour le niveau.
+                  {isEn ? "Check if you master the vocabulary required for this level." : "Vérifiez si vous maîtrisez le lexique requis pour le niveau."}
                 </p>
               </div>
 
@@ -2344,10 +2591,12 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
             <div>
               <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
                 <HelpCircle size={20} className="text-[#6D5DFC]" />
-                <span>Quiz des Leçons du Cursus</span>
+                <span>{isEn ? "Course Lesson Quizzes" : "Quiz des Leçons du Cursus"}</span>
               </h3>
               <p className="text-xs text-slate-500 mt-1">
-                Quiz réguliers du cursus pour valider chaque leçon vidéo de votre parcours.
+                {isEn
+                  ? "Regular syllabus quizzes to validate each video lesson in your track."
+                  : "Quiz réguliers du cursus pour valider chaque leçon vidéo de votre parcours."}
               </p>
             </div>
           </div>
@@ -2375,11 +2624,11 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
 
                       {isPassed ? (
                         <span className="flex items-center gap-1 text-xs font-bold text-emerald-500 bg-emerald-500/10 px-2.5 py-0.5 rounded-full">
-                          <CheckCircle2 size={13} /> Validé
+                          <CheckCircle2 size={13} /> {isEn ? "Passed" : "Validé"}
                         </span>
                       ) : (
                         <span className="text-xs font-semibold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-full">
-                          À faire
+                          {isEn ? "To do" : "À faire"}
                         </span>
                       )}
                     </div>
@@ -2400,7 +2649,7 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
                       onClick={() => onOpenLesson(les.id)}
                       className="text-xs text-[#6D5DFC] font-bold flex items-center gap-1 cursor-pointer"
                     >
-                      <span>Ouvrir la leçon & le quiz</span>
+                      <span>{isEn ? "Open lesson & quiz" : "Ouvrir la leçon & le quiz"}</span>
                       <ChevronRight size={14} />
                     </button>
                   </div>
@@ -2409,6 +2658,321 @@ export const StudentPrufungTab: React.FC<StudentPrufungTabProps> = ({
             })}
           </div>
         </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* SUBTAB: FULL TELC EXAM SESSION (300 POINTS SYNCHRONOUS FLOW)             */}
+      {/* ========================================================================= */}
+      {activeSubTab === "fullexam" && (
+        <div className="space-y-6">
+          {/* Header Banner */}
+          <div className="bg-gradient-to-r from-[#1E3A8A] via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-8 text-white border-2 border-indigo-400/40 shadow-2xl space-y-4">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 border-b border-white/10">
+              <div className="space-y-1.5">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-xs font-bold text-cyan-300">
+                  <Award size={14} />
+                  <span>Session d'Examen Blanc Officiel telc Deutsch {selectedLevel} (300 Points)</span>
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
+                  Épreuve Complète telc & Délivrance du Certificat
+                </h2>
+                <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
+                  Passez l'épreuve officielle en conditions réelles. Évaluation stricte selon les grilles telc / ALTE (60% requis pour chaque épreuve). À l'issue de la correction, visualisez les solutions détaillées et éditez votre certificat nominatif.
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setIsCertificateModalOpen(true)}
+                  className="px-5 py-3 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-black text-xs hover:opacity-95 transition shadow-lg flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Award size={16} />
+                  <span>{isEn ? "Official telc Certificate" : "Certificat Officiel telc"}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Score Summary Metrics */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+              <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                  I. Schriftliche Prüfung (/225)
+                </span>
+                <div className="text-2xl font-black font-mono text-cyan-300 mt-1">
+                  {telcSchriftlichTotal} <span className="text-sm text-slate-400">/ 225 Pkt</span>
+                </div>
+                <span className="text-[11px] font-semibold text-slate-300">
+                  {isSchriftlichPassed ? "✅ Bestanden (≥135)" : "⚠️ Seuil non atteint (<135)"}
+                </span>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                  II. Mündliche Prüfung (/75)
+                </span>
+                <div className="text-2xl font-black font-mono text-indigo-300 mt-1">
+                  {telcSprechenPoints} <span className="text-sm text-slate-400">/ 75 Pkt</span>
+                </div>
+                <span className="text-[11px] font-semibold text-slate-300">
+                  {isMundlichPassed ? "✅ Bestanden (≥45)" : "⚠️ Seuil non atteint (<45)"}
+                </span>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-white/10 border-2 border-amber-400/40">
+                <span className="text-[10px] uppercase font-bold text-amber-300 block">
+                  GESAMTERGEBNIS (/300)
+                </span>
+                <div className="text-2xl font-black font-mono text-white mt-1">
+                  {telcGesamtergebnis} <span className="text-sm text-slate-300">/ 300 Pkt</span>
+                </div>
+                <span className="text-[11px] font-bold text-amber-300">
+                  Prädikat : {telcMention}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* 5 Synchronous Module Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Card 1: Hören */}
+            <div className="bg-white dark:bg-[#0D1220] rounded-3xl p-6 border border-slate-200 dark:border-white/10 space-y-4 shadow-xs">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/5">
+                <div className="flex items-center gap-2.5">
+                  <Headphones size={20} className="text-[#6D5DFC]" />
+                  <div>
+                    <h4 className="font-bold text-sm text-slate-900 dark:text-white">
+                      1. Hörverstehen
+                    </h4>
+                    <span className="text-[11px] text-slate-500">Barème officiel : 75 Points</span>
+                  </div>
+                </div>
+                <span className="font-mono font-bold text-sm text-[#6D5DFC]">
+                  {telcHorenPoints} / 75 Pkt
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                Scénarios d'écoute authentiques avec documents radiophoniques et annonces en gare/aéroport.
+              </p>
+              <div className="flex items-center justify-between pt-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveSubTab("horen")}
+                  className="px-4 py-2 rounded-xl bg-[#6D5DFC] text-white text-xs font-bold hover:bg-indigo-600 transition cursor-pointer"
+                >
+                  Accéder à l'épreuve d'écoute
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleRotateVariant("horen")}
+                  className="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-white flex items-center gap-1 cursor-pointer"
+                >
+                  <RotateCcw size={12} />
+                  <span>Changer de variante ({variantIndices.horen + 1}/50)</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Card 2: Lesen */}
+            <div className="bg-white dark:bg-[#0D1220] rounded-3xl p-6 border border-slate-200 dark:border-white/10 space-y-4 shadow-xs">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/5">
+                <div className="flex items-center gap-2.5">
+                  <BookOpen size={20} className="text-[#6D5DFC]" />
+                  <div>
+                    <h4 className="font-bold text-sm text-slate-900 dark:text-white">
+                      2. Leseverstehen
+                    </h4>
+                    <span className="text-[11px] text-slate-500">Barème officiel : 75 Points</span>
+                  </div>
+                </div>
+                <span className="font-mono font-bold text-sm text-[#6D5DFC]">
+                  {telcLesenPoints} / 75 Pkt
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                Appariement textes/titres et analyse de textes longs tirés de la presse germanophone.
+              </p>
+              <div className="flex items-center justify-between pt-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveSubTab("lesen")}
+                  className="px-4 py-2 rounded-xl bg-[#6D5DFC] text-white text-xs font-bold hover:bg-indigo-600 transition cursor-pointer"
+                >
+                  Accéder à la compréhension écrite
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleRotateVariant("lesen")}
+                  className="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-white flex items-center gap-1 cursor-pointer"
+                >
+                  <RotateCcw size={12} />
+                  <span>Changer de variante ({variantIndices.lesen + 1}/50)</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Card 3: Sprachbausteine */}
+            <div className="bg-white dark:bg-[#0D1220] rounded-3xl p-6 border border-slate-200 dark:border-white/10 space-y-4 shadow-xs">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/5">
+                <div className="flex items-center gap-2.5">
+                  <FileCheck size={20} className="text-[#6D5DFC]" />
+                  <div>
+                    <h4 className="font-bold text-sm text-slate-900 dark:text-white">
+                      3. Sprachbausteine Teil 1 & 2
+                    </h4>
+                    <span className="text-[11px] text-slate-500">Barème : 15 Pkt + 15 Pkt = 30 Points</span>
+                  </div>
+                </div>
+                <span className="font-mono font-bold text-sm text-[#6D5DFC]">
+                  {telcSbTotalPoints} / 30 Pkt
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                Textes longs authentiques (20 trous au total) : grammaire, prépositions, déclinaisons et connecteurs.
+              </p>
+              <div className="flex items-center justify-between pt-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveSubTab("sprachbausteine")}
+                  className="px-4 py-2 rounded-xl bg-[#6D5DFC] text-white text-xs font-bold hover:bg-indigo-600 transition cursor-pointer"
+                >
+                  Accéder aux Sprachbausteine
+                </button>
+                <div className="flex items-center gap-2 text-xs text-slate-500">
+                  <span>T1: {variantIndices.sb1 + 1}/50</span>
+                  <span>•</span>
+                  <span>T2: {variantIndices.sb2 + 1}/50</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 4: Schreiben */}
+            <div className="bg-white dark:bg-[#0D1220] rounded-3xl p-6 border border-slate-200 dark:border-white/10 space-y-4 shadow-xs">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/5">
+                <div className="flex items-center gap-2.5">
+                  <PenTool size={20} className="text-[#6D5DFC]" />
+                  <div>
+                    <h4 className="font-bold text-sm text-slate-900 dark:text-white">
+                      4. Schriftlicher Ausdruck
+                    </h4>
+                    <span className="text-[11px] text-slate-500">Barème officiel : 45 Points</span>
+                  </div>
+                </div>
+                <span className="font-mono font-bold text-sm text-[#6D5DFC]">
+                  {telcSchreibenPoints} / 45 Pkt
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                Rédaction chronométrée évaluée selon la grille officielle (Tâche, Cohérence, Vocabulaire, Grammaire).
+              </p>
+              <div className="flex items-center justify-between pt-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveSubTab("schreiben")}
+                  className="px-4 py-2 rounded-xl bg-[#6D5DFC] text-white text-xs font-bold hover:bg-indigo-600 transition cursor-pointer"
+                >
+                  Accéder à la rédaction
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleRotateVariant("schreiben")}
+                  className="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-white flex items-center gap-1 cursor-pointer"
+                >
+                  <RotateCcw size={12} />
+                  <span>Sujet ({variantIndices.schreiben + 1}/50)</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Card 5: Sprechen */}
+            <div className="bg-white dark:bg-[#0D1220] rounded-3xl p-6 border border-slate-200 dark:border-white/10 space-y-4 shadow-xs md:col-span-2">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/5">
+                <div className="flex items-center gap-2.5">
+                  <Mic size={20} className="text-[#6D5DFC]" />
+                  <div>
+                    <h4 className="font-bold text-sm text-slate-900 dark:text-white">
+                      5. Mündlicher Ausdruck (Simulation Vocale IA)
+                    </h4>
+                    <span className="text-[11px] text-slate-500">Barème officiel : 75 Points • Jusqu'à 10 questions vocales</span>
+                  </div>
+                </div>
+                <span className="font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400">
+                  {telcSprechenPoints} / 75 Pkt
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                Entretien oral interactif : vous présentez votre sujet au micro, l'examinateur IA écoute, analyse votre élocution et vous pose des questions orales de relance en allemand (jusqu'à 10 questions maximum).
+              </p>
+              <div className="flex items-center justify-between pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsVoiceSprechenModalOpen(true)}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#6D5DFC] to-[#00D9FF] text-white text-xs font-black hover:opacity-95 transition flex items-center gap-2 cursor-pointer shadow-md shadow-indigo-500/20"
+                >
+                  <Mic size={15} className="animate-pulse" />
+                  <span>Démarrer l'Oral avec l'Examinateur Vocal IA</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleRotateVariant("sprechen")}
+                  className="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-white flex items-center gap-1 cursor-pointer"
+                >
+                  <RotateCcw size={12} />
+                  <span>Sujet oral ({variantIndices.sprechen + 1}/50)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* ATTACHED MODALS: TELC CERTIFICATE & VOICE SPRECHEN EXAMINER                */}
+      {/* ========================================================================= */}
+      {isCertificateModalOpen && (
+        <TelcOfficialCertificateModal
+          isOpen={isCertificateModalOpen}
+          onClose={() => setIsCertificateModalOpen(false)}
+          student={student}
+          school={school}
+          level={selectedLevel}
+          scores={{
+            lesenScore: telcLesenPoints,
+            sprachbausteine1Score: telcSb1Points,
+            sprachbausteine2Score: telcSb2Points,
+            horenScore: telcHorenPoints,
+            schreibenScore: telcSchreibenPoints,
+            sprechenScore: telcSprechenPoints,
+          }}
+          locale={locale}
+        />
+      )}
+
+      {isVoiceSprechenModalOpen && (
+        <InteractiveVoiceSprechenModal
+          isOpen={isVoiceSprechenModalOpen}
+          onClose={() => setIsVoiceSprechenModalOpen(false)}
+          student={student}
+          school={school}
+          level={selectedLevel}
+          task={GENERATED_SPRECHEN_VARIANTS[variantIndices.sprechen] || (activeSprechenSim as any)}
+          locale={locale}
+          onSaveScore={(score75, details) => {
+            setSkillScores((prev) => ({
+              ...prev,
+              sprechenCompleted: score75 >= 45,
+              sprechenScore: score75,
+            }));
+            if (onAddLog) {
+              onAddLog(
+                "Épreuve Orale telc Validée",
+                `L'élève ${student.name} a passé l'épreuve orale interactive (${score75}/75 Pts - ${score75 >= 45 ? "Bestanden" : "Nicht bestanden"}).`,
+                score75 >= 45 ? "success" : "warning",
+                { entityType: "evaluation", score: score75 }
+              );
+            }
+          }}
+        />
       )}
     </div>
   );

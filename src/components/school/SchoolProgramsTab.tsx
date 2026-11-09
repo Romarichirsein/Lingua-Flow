@@ -232,8 +232,10 @@ export const SchoolProgramsTab: React.FC<SchoolProgramsTabProps> = ({
     );
     onUpdatePrograms(updated);
     onAddLog(
-      "Statut de publication",
-      `Programme ${p.title} passé en ${nextPublished ? "PUBLIÉ" : "BROUILLON"}.`,
+      isEn ? "Publication Status Updated" : "Statut de publication",
+      isEn
+        ? `Program ${p.title} set to ${nextPublished ? "PUBLISHED" : "DRAFT"}.`
+        : `Programme ${p.title} passé en ${nextPublished ? "PUBLIÉ" : "BROUILLON"}.`,
       "success"
     );
   };
@@ -244,8 +246,10 @@ export const SchoolProgramsTab: React.FC<SchoolProgramsTabProps> = ({
     const updated = programs.filter((p) => p.id !== deletingProgram.id);
     onUpdatePrograms(updated);
     onAddLog(
-      "Suppression de programme",
-      `Programme ${deletingProgram.title} supprimé.`,
+      isEn ? "Program Deleted" : "Suppression de programme",
+      isEn
+        ? `Program ${deletingProgram.title} deleted.`
+        : `Programme ${deletingProgram.title} supprimé.`,
       "warning"
     );
     setDeletingProgram(null);
@@ -317,11 +321,11 @@ export const SchoolProgramsTab: React.FC<SchoolProgramsTabProps> = ({
             className="px-3 py-2 rounded-xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 text-xs text-slate-800 dark:text-white font-medium"
           >
             <option value="all">{isEn ? "All Levels" : "Tous les Niveaux"}</option>
-            <option value="A1">Niveau A1</option>
-            <option value="A2">Niveau A2</option>
-            <option value="B1">Niveau B1</option>
-            <option value="B2">Niveau B2</option>
-            <option value="C1">Niveau C1</option>
+            <option value="A1">{isEn ? "Level A1" : "Niveau A1"}</option>
+            <option value="A2">{isEn ? "Level A2" : "Niveau A2"}</option>
+            <option value="B1">{isEn ? "Level B1" : "Niveau B1"}</option>
+            <option value="B2">{isEn ? "Level B2" : "Niveau B2"}</option>
+            <option value="C1">{isEn ? "Level C1" : "Niveau C1"}</option>
           </select>
 
           <select
@@ -455,7 +459,7 @@ export const SchoolProgramsTab: React.FC<SchoolProgramsTabProps> = ({
                         setEditingProgram(program);
                       }}
                       className="p-2 rounded-xl text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition"
-                      title="Modifier les détails"
+                      title={isEn ? "Edit program details" : "Modifier les détails"}
                     >
                       <Edit2 size={14} />
                     </button>
@@ -464,7 +468,7 @@ export const SchoolProgramsTab: React.FC<SchoolProgramsTabProps> = ({
                       type="button"
                       onClick={() => handleDuplicateProgram(program)}
                       className="p-2 rounded-xl text-slate-400 hover:text-[#00D9FF] hover:bg-[#00D9FF]/10 transition"
-                      title="Dupliquer le programme"
+                      title={isEn ? "Duplicate program" : "Dupliquer le programme"}
                     >
                       <Copy size={14} />
                     </button>
@@ -473,7 +477,7 @@ export const SchoolProgramsTab: React.FC<SchoolProgramsTabProps> = ({
                       type="button"
                       onClick={() => setDeletingProgram(program)}
                       className="p-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition"
-                      title="Supprimer le programme"
+                      title={isEn ? "Delete program" : "Supprimer le programme"}
                     >
                       <Trash2 size={14} />
                     </button>
@@ -503,9 +507,9 @@ export const SchoolProgramsTab: React.FC<SchoolProgramsTabProps> = ({
       >
         <form onSubmit={handleCreateProgram} className="space-y-4">
           <div className="p-3 rounded-2xl bg-[#6D5DFC]/10 border border-[#6D5DFC]/20 text-xs text-slate-700 dark:text-white/80 flex items-center justify-between">
-            <span>Langue d'enseignement :</span>
+            <span>{isEn ? "Instruction Language:" : "Langue d'enseignement :"}</span>
             <span className="font-bold text-[#6D5DFC] dark:text-[#a399ff]">
-              {school.language === "german" ? "Allemand 🇩🇪" : "Italien 🇮🇹"} (Héritée de l'école)
+              {school.language === "german" ? (isEn ? "German 🇩🇪" : "Allemand 🇩🇪") : (isEn ? "Italian 🇮🇹" : "Italien 🇮🇹")} ({isEn ? "Inherited from school" : "Héritée de l'école"})
             </span>
           </div>
 
@@ -518,7 +522,15 @@ export const SchoolProgramsTab: React.FC<SchoolProgramsTabProps> = ({
               required
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder={school.language === "german" ? "Ex: Allemand Professionnel - Niveau B1" : "Ex: Corso di Italiano Generale - Livello A2"}
+              placeholder={
+                school.language === "german"
+                  ? isEn
+                    ? "E.g. Professional German - Level B1"
+                    : "Ex: Allemand Professionnel - Niveau B1"
+                  : isEn
+                  ? "E.g. General Italian Course - Level A2"
+                  : "Ex: Corso di Italiano Generale - Livello A2"
+              }
               className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-[#00D9FF]"
             />
           </div>
@@ -533,11 +545,11 @@ export const SchoolProgramsTab: React.FC<SchoolProgramsTabProps> = ({
                 onChange={(e) => setFormData({ ...formData, level: e.target.value as CEFRLevel })}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white font-bold"
               >
-                <option value="A1">A1 - Débutant</option>
-                <option value="A2">A2 - Élémentaire</option>
-                <option value="B1">B1 - Intermédiaire</option>
-                <option value="B2">B2 - Intermédiaire Avancé</option>
-                <option value="C1">C1 - Autonome</option>
+                <option value="A1">A1 - {isEn ? "Beginner" : "Débutant"}</option>
+                <option value="A2">A2 - {isEn ? "Elementary" : "Élémentaire"}</option>
+                <option value="B1">B1 - {isEn ? "Intermediate" : "Intermédiaire"}</option>
+                <option value="B2">B2 - {isEn ? "Upper Intermediate" : "Intermédiaire Avancé"}</option>
+                <option value="C1">C1 - {isEn ? "Advanced" : "Autonome"}</option>
               </select>
             </div>
 
@@ -562,7 +574,11 @@ export const SchoolProgramsTab: React.FC<SchoolProgramsTabProps> = ({
               rows={3}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Décrivez les compétences acquises par l'apprenant au terme de ce programme..."
+              placeholder={
+                isEn
+                  ? "Describe competencies acquired by the learner upon completing this curriculum..."
+                  : "Décrivez les compétences acquises par l'apprenant au terme de ce programme..."
+              }
               className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-[#00D9FF]"
             />
           </div>

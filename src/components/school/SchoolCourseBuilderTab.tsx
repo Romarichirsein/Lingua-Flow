@@ -441,7 +441,7 @@ export const SchoolCourseBuilderTab: React.FC<SchoolCourseBuilderTabProps> = ({
                       disabled={mIdx === 0}
                       onClick={() => handleMoveModule(mIdx, "up")}
                       className="p-2 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/10 disabled:opacity-20 transition"
-                      title="Monter le module"
+                      title={isEn ? "Move module up" : "Monter le module"}
                     >
                       <MoveUp size={14} />
                     </button>
@@ -450,7 +450,7 @@ export const SchoolCourseBuilderTab: React.FC<SchoolCourseBuilderTabProps> = ({
                       disabled={mIdx === (currentProgram.modules || []).length - 1}
                       onClick={() => handleMoveModule(mIdx, "down")}
                       className="p-2 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/10 disabled:opacity-20 transition"
-                      title="Descendre le module"
+                      title={isEn ? "Move module down" : "Descendre le module"}
                     >
                       <MoveDown size={14} />
                     </button>
@@ -463,7 +463,7 @@ export const SchoolCourseBuilderTab: React.FC<SchoolCourseBuilderTabProps> = ({
                         setEditingModule(module);
                       }}
                       className="p-2 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/10 transition"
-                      title="Modifier le module"
+                      title={isEn ? "Edit module" : "Modifier le module"}
                     >
                       <Edit2 size={14} />
                     </button>
@@ -473,7 +473,7 @@ export const SchoolCourseBuilderTab: React.FC<SchoolCourseBuilderTabProps> = ({
                       type="button"
                       onClick={() => setDeletingModule(module)}
                       className="p-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition"
-                      title="Supprimer le module"
+                      title={isEn ? "Delete module" : "Supprimer le module"}
                     >
                       <Trash2 size={14} />
                     </button>
@@ -541,7 +541,7 @@ export const SchoolCourseBuilderTab: React.FC<SchoolCourseBuilderTabProps> = ({
                               disabled={lIdx === 0}
                               onClick={() => handleMoveLesson(module.id, lIdx, "up")}
                               className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/10 disabled:opacity-20 transition"
-                              title="Monter la leçon"
+                              title={isEn ? "Move lesson up" : "Monter la leçon"}
                             >
                               <MoveUp size={13} />
                             </button>
@@ -550,7 +550,7 @@ export const SchoolCourseBuilderTab: React.FC<SchoolCourseBuilderTabProps> = ({
                               disabled={lIdx === lessons.length - 1}
                               onClick={() => handleMoveLesson(module.id, lIdx, "down")}
                               className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/10 disabled:opacity-20 transition"
-                              title="Descendre la leçon"
+                              title={isEn ? "Move lesson down" : "Descendre la leçon"}
                             >
                               <MoveDown size={13} />
                             </button>
@@ -560,7 +560,7 @@ export const SchoolCourseBuilderTab: React.FC<SchoolCourseBuilderTabProps> = ({
                               type="button"
                               onClick={() => setPreviewingLesson(lesson)}
                               className="p-1.5 rounded-lg text-slate-400 hover:text-[#00D9FF] hover:bg-[#00D9FF]/10 transition"
-                              title="Prévisualiser la leçon élève"
+                              title={isEn ? "Preview student lesson" : "Prévisualiser la leçon élève"}
                             >
                               <Eye size={14} />
                             </button>
@@ -581,7 +581,7 @@ export const SchoolCourseBuilderTab: React.FC<SchoolCourseBuilderTabProps> = ({
                                 setEditingLesson({ lesson, moduleId: module.id });
                               }}
                               className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/10 transition"
-                              title="Modifier la leçon"
+                              title={isEn ? "Edit lesson" : "Modifier la leçon"}
                             >
                               <Edit2 size={14} />
                             </button>
@@ -591,7 +591,7 @@ export const SchoolCourseBuilderTab: React.FC<SchoolCourseBuilderTabProps> = ({
                               type="button"
                               onClick={() => setDeletingLesson({ lesson, moduleId: module.id })}
                               className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition"
-                              title="Supprimer la leçon"
+                              title={isEn ? "Delete lesson" : "Supprimer la leçon"}
                             >
                               <Trash2 size={14} />
                             </button>
@@ -813,14 +813,22 @@ export const SchoolCourseBuilderTab: React.FC<SchoolCourseBuilderTabProps> = ({
                 type="text"
                 value={newVocabTerm}
                 onChange={(e) => setNewVocabTerm(e.target.value)}
-                placeholder={school.language === "german" ? "Terme (ex: die Katze)" : "Terme (ex: il gatto)"}
+                placeholder={
+                  school.language === "german"
+                    ? isEn
+                      ? "Term (e.g. die Katze)"
+                      : "Terme (ex: die Katze)"
+                    : isEn
+                    ? "Term (e.g. il gatto)"
+                    : "Terme (ex: il gatto)"
+                }
                 className="px-3 py-2 rounded-xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white"
               />
               <input
                 type="text"
                 value={newVocabTrans}
                 onChange={(e) => setNewVocabTrans(e.target.value)}
-                placeholder="Traduction (ex: le chat)"
+                placeholder={isEn ? "Translation (e.g. the cat)" : "Traduction (ex: le chat)"}
                 className="px-3 py-2 rounded-xl bg-white dark:bg-[#0D1220] border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white"
               />
               <button
@@ -829,7 +837,7 @@ export const SchoolCourseBuilderTab: React.FC<SchoolCourseBuilderTabProps> = ({
                 className="px-3 py-2 rounded-xl bg-[#6D5DFC]/10 hover:bg-[#6D5DFC]/20 text-[#6D5DFC] dark:text-[#a399ff] border border-[#6D5DFC]/30 text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer"
               >
                 <Plus size={13} />
-                <span>+ Ajouter mot</span>
+                <span>{isEn ? "+ Add word" : "+ Ajouter mot"}</span>
               </button>
             </div>
           </div>
@@ -895,7 +903,9 @@ export const SchoolCourseBuilderTab: React.FC<SchoolCourseBuilderTabProps> = ({
               />
               {/* Dynamic Watermark Overlay Simulator */}
               <div className="absolute top-4 right-4 pointer-events-none opacity-40 bg-black/60 px-3 py-1 rounded-lg text-[11px] font-mono text-white select-none border border-white/10">
-                <span>Directeur • {school.name} • {school.language.toUpperCase()}</span>
+                <span>
+                  {isEn ? "Director" : "Directeur"} • {school.name} • {school.language.toUpperCase()}
+                </span>
               </div>
             </div>
 

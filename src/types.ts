@@ -392,3 +392,28 @@ export interface SuperAdminProfile {
   securityAlerts: boolean;
 }
 
+export interface BookChapter {
+  id: string;
+  title: string;
+  subtitle?: string;
+  content: string;
+  audioText?: string;
+  vocabulary?: Array<{ word: string; translation: string; definition?: string }>;
+}
+
+export interface Book {
+  id: string;
+  title: string;
+  subtitle?: string;
+  originalTitle?: string;
+  author: string;
+  language: SupportedLanguage;
+  level: CEFRLevel;
+  coverImage: string;
+  description: string;
+  summary: string;
+  estimatedMinutes: number;
+  tags: string[];
+  chapters: BookChapter[];
+  totalWords: number;
+}

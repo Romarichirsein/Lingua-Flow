@@ -58,6 +58,7 @@ export const SchoolDashboard: React.FC<SchoolDashboardProps> = ({
   onSelectStudentTab,
 }) => {
   const effectiveStatus = getEffectiveStatus(school);
+  const isEn = locale === "en";
   const isSchoolRestricted = effectiveStatus !== "active";
 
   // Dedicated School Logger guaranteeing schoolId and schoolName
@@ -257,8 +258,10 @@ export const SchoolDashboard: React.FC<SchoolDashboardProps> = ({
             onUpdateStudents(updatedList);
             setSelectedDetailStudent(updated);
             handleSchoolAddLog(
-              "Mise à jour élève",
-              `Profil et identifiants de l'élève ${updated.name} mis à jour.`,
+              isEn ? "Student Profile Updated" : "Mise à jour élève",
+              isEn
+                ? `Profile and credentials of student ${updated.name} updated.`
+                : `Profil et identifiants de l'élève ${updated.name} mis à jour.`,
               "success"
             );
           }}
@@ -269,8 +272,10 @@ export const SchoolDashboard: React.FC<SchoolDashboardProps> = ({
               setSelectedDetailStudent({ ...selectedDetailStudent, status: newStatus });
             }
             handleSchoolAddLog(
-              "Statut élève mis à jour",
-              `Statut de ${student.name} modifié : ${newStatus.toUpperCase()}`,
+              isEn ? "Student Status Updated" : "Statut élève mis à jour",
+              isEn
+                ? `Status of ${student.name} changed to ${newStatus.toUpperCase()}`
+                : `Statut de ${student.name} modifié : ${newStatus.toUpperCase()}`,
               "success"
             );
           }}
@@ -287,8 +292,10 @@ export const SchoolDashboard: React.FC<SchoolDashboardProps> = ({
               setSelectedDetailStudent({ ...selectedDetailStudent, endDate: formatted, status: "active" });
             }
             handleSchoolAddLog(
-              "Prolongation accès",
-              `Accès de ${student.name} prolongé jusqu'au ${formatted}.`,
+              isEn ? "Student Access Extended" : "Prolongation accès",
+              isEn
+                ? `Access for ${student.name} extended until ${formatted}.`
+                : `Accès de ${student.name} prolongé jusqu'au ${formatted}.`,
               "success"
             );
           }}
@@ -301,8 +308,10 @@ export const SchoolDashboard: React.FC<SchoolDashboardProps> = ({
               setSelectedDetailStudent({ ...selectedDetailStudent, progressPercent: 0, completedLessons: [] });
             }
             handleSchoolAddLog(
-              "Réinitialisation progression",
-              `Progression de l'élève ${student.name} remise à zéro.`,
+              isEn ? "Student Progress Reset" : "Réinitialisation progression",
+              isEn
+                ? `Progress of student ${student.name} reset to zero.`
+                : `Progression de l'élève ${student.name} remise à zéro.`,
               "warning"
             );
           }}

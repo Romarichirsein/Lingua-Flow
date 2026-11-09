@@ -141,17 +141,29 @@ export const SchoolAuditTab: React.FC<SchoolAuditTabProps> = ({
 
   // Export CSV Handler
   const handleExportCSV = () => {
-    const headers = [
-      "ID",
-      "Date_Heure",
-      "Action",
-      "Details",
-      "Acteur_Nom",
-      "Acteur_Role",
-      "Ecole",
-      "Statut",
-      "Adresse_IP",
-    ];
+    const headers = isEn
+      ? [
+          "ID",
+          "Timestamp",
+          "Action",
+          "Details",
+          "Actor_Name",
+          "Actor_Role",
+          "School",
+          "Status",
+          "IP_Address",
+        ]
+      : [
+          "ID",
+          "Date_Heure",
+          "Action",
+          "Details",
+          "Acteur_Nom",
+          "Acteur_Role",
+          "Ecole",
+          "Statut",
+          "Adresse_IP",
+        ];
 
     const rows = filteredLogs.map((l) => [
       l.id,
@@ -181,8 +193,10 @@ export const SchoolAuditTab: React.FC<SchoolAuditTabProps> = ({
     document.body.removeChild(link);
 
     onAddLog(
-      "Export du journal d'audit",
-      `Exportation CSV de ${filteredLogs.length} événements d'audit pour l'école ${school.name}.`,
+      isEn ? "Audit Log Export" : "Export du journal d'audit",
+      isEn
+        ? `CSV export of ${filteredLogs.length} audit events for school ${school.name}.`
+        : `Exportation CSV de ${filteredLogs.length} événements d'audit pour l'école ${school.name}.`,
       "success"
     );
   };
@@ -325,6 +339,8 @@ export const SchoolAuditTab: React.FC<SchoolAuditTabProps> = ({
                   hour: "2-digit",
                   minute: "2-digit",
                 })
+              : isEn
+              ? "None"
               : "Aucune"}
           </div>
           <span className="text-[11px] text-slate-400 dark:text-white/40">

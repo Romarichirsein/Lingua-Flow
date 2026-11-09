@@ -144,10 +144,10 @@ export const InteractiveLessonPlayer: React.FC<InteractiveLessonPlayerProps> = (
   const [activeVocabIndex, setActiveVocabIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
 
-  // Quiz state
+  // Quiz state - Never pre-filled: students must always select answers cleanly
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
-  const [quizSubmitted, setQuizSubmitted] = useState(isAlreadyCompleted);
-  const [quizScore, setQuizScore] = useState<number | null>(isAlreadyCompleted ? 100 : null);
+  const [quizSubmitted, setQuizSubmitted] = useState<boolean>(false);
+  const [quizScore, setQuizScore] = useState<number | null>(null);
 
   // Celebration state
   const [showCelebration, setShowCelebration] = useState(false);
@@ -158,9 +158,10 @@ export const InteractiveLessonPlayer: React.FC<InteractiveLessonPlayerProps> = (
     const isCompleted = isAlreadyCompleted;
     setVideoWatched(isCompleted || !hasVideo);
     setQuizPassed(isCompleted || !hasQuiz);
+    // Never pre-fill quiz answers or mark quiz pre-submitted on load
     setSelectedAnswers({});
-    setQuizSubmitted(isCompleted);
-    setQuizScore(isCompleted ? 100 : null);
+    setQuizSubmitted(false);
+    setQuizScore(null);
     setActiveVocabIndex(0);
     setIsFlipped(false);
     setActiveTab("video");
@@ -198,11 +199,11 @@ export const InteractiveLessonPlayer: React.FC<InteractiveLessonPlayerProps> = (
 
   // Handle Quiz Submission
   const handleAnswerSelect = (questionIndex: number, optionIndex: number) => {
-    if (quizSubmitted && isAlreadyCompleted) return;
-    setSelectedAnswers({
-      ...selectedAnswers,
+    if (quizSubmitted) return;
+    setSelectedAnswers((prev) => ({
+      ...prev,
       [questionIndex]: optionIndex,
-    });
+    }));
   };
 
   const handleSubmitQuiz = () => {

@@ -61,12 +61,13 @@ export const AIChatTutor: React.FC<AIChatTutorProps> = ({
       .then((data) => {
         if (data?.aiEngine) {
           const isConfigured =
+            !!data.aiEngine.iteracompute?.configured ||
             !!data.aiEngine.gemini?.configured ||
             !!data.aiEngine.orcarouter?.configured ||
             !!data.aiEngine.seekAI?.configured ||
             !!data.aiEngine.deepseek?.configured;
 
-          const activeModelName = isEn ? "Connected Coach" : "Coach Connecté";
+          const activeModelName = data?.aiEngine?.iteracompute?.configured ? (isEn ? "Qwen 3.8 (27B) • <3s" : "Qwen 3.8 (27B) • <3s") : (isEn ? "Connected Coach" : "Coach Connecté");
 
           setAiStatus({
             configured: isConfigured,
@@ -118,18 +119,57 @@ export const AIChatTutor: React.FC<AIChatTutorProps> = ({
     }
   };
 
-  // Messages state
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "msg-welcome-init",
-      role: "model",
-      content: getOpenInitialWelcome(activeLevel, language, student.name, school.name),
-      timestamp: new Date().toISOString(),
-    },
-  ]);
+  const chatStorageKey = `linguaflow_ai_chat_history_${student.id}_${school.id}_${language}_${activeLevel}`;
 
-  // Keep synced if student changes or level changes automatically
+  // Messages state with persistent conversation memory
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    try {
+      const saved = localStorage.getItem(`linguaflow_ai_chat_history_${student.id}_${school.id}_${language}_${activeLevel}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return [
+      {
+        id: "msg-welcome-init",
+        role: "model",
+        content: getOpenInitialWelcome(activeLevel, language, student.name, school.name),
+        timestamp: new Date().toISOString(),
+      },
+    ];
+  });
+
+  // Persist messages to maintain memory across reloads and tab navigation
   useEffect(() => {
+    try {
+      if (messages.length > 0) {
+        localStorage.setItem(chatStorageKey, JSON.stringify(messages));
+      }
+    } catch {
+      // ignore
+    }
+  }, [messages, chatStorageKey]);
+
+  // Keep synced if student changes or level changes automatically, preserving prior conversation if exists
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(chatStorageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed);
+          return;
+        }
+      }
+    } catch {
+      // ignore
+    }
+
     setMessages([
       {
         id: `msg-welcome-lvl-${activeLevel}-${Date.now()}`,
@@ -138,7 +178,7 @@ export const AIChatTutor: React.FC<AIChatTutorProps> = ({
         timestamp: new Date().toISOString(),
       },
     ]);
-  }, [activeLevel, student.id, student.name, language, school.name]);
+  }, [activeLevel, student.id, student.name, language, school.name, chatStorageKey]);
 
   useEffect(() => {
     scrollToBottom();
@@ -256,9 +296,9 @@ export const AIChatTutor: React.FC<AIChatTutorProps> = ({
           parts: [{ text: m.content }],
         }));
 
-      // Strict 4.8s client-side abort to guarantee <= 5s response time
+      // Strict 4.8s client-side abort to guarantee < 3s response time
       const controller = new AbortController();
-      const abortTimer = setTimeout(() => controller.abort(), 4800);
+      const abortTimer = setTimeout(() => controller.abort(), 12000);
 
       const res = await fetch("/api/ai/chat", {
         method: "POST",
@@ -274,8 +314,8 @@ export const AIChatTutor: React.FC<AIChatTutorProps> = ({
           thinkingMode: useThinkingMode,
           topic: "Offenes Thema / Freier Diskurs",
           practiceMode: "conversation",
-          provider: "gemini",
-          model: useThinkingMode ? "gemini-3.6-flash" : "gemini-3.1-flash-lite",
+          provider: "iteracompute",
+          model: "qwen/qwen3.8-27b",
         }),
       });
       clearTimeout(abortTimer);
@@ -337,6 +377,9 @@ export const AIChatTutor: React.FC<AIChatTutorProps> = ({
   };
 
   const handleResetChat = () => {
+    try {
+      localStorage.removeItem(chatStorageKey);
+    } catch {}
     setMessages([
       {
         id: `msg-welcome-reset-${Date.now()}`,
@@ -441,14 +484,14 @@ export const AIChatTutor: React.FC<AIChatTutorProps> = ({
             }`}
             title={
               locale === "en"
-                ? "In-depth grammatical and linguistic analysis (max 5s)"
-                : "Analyse grammaticale et syntaxique approfondie (max 5s)"
+                ? "In-depth grammatical and linguistic analysis (max 3s)"
+                : "Analyse grammaticale et syntaxique approfondie (max 3s)"
             }
           >
             <Sparkles size={14} className={useThinkingMode ? "text-violet-500 animate-pulse" : ""} />
             <span className="text-[11px]">
               {useThinkingMode
-                ? (locale === "en" ? "Deep Analysis (≤ 5s)" : "Analyse Approfondie (≤ 5s)")
+                ? (locale === "en" ? "Deep Analysis (≤ 3s)" : "Analyse Approfondie (≤ 3s)")
                 : (locale === "en" ? "Deep Analysis" : "Analyse Approfondie")}
             </span>
           </button>
@@ -529,11 +572,11 @@ export const AIChatTutor: React.FC<AIChatTutorProps> = ({
             <span>
               {useThinkingMode
                 ? (locale === "en"
-                    ? `LinguaFlow AI: Deep analysis (max 5s)...`
-                    : `LinguaFlow AI : Analyse linguistique approfondie (max 5s)...`)
+                    ? `LinguaFlow AI: Deep analysis (max 3s)...`
+                    : `LinguaFlow AI : Analyse linguistique approfondie (max 3s)...`)
                 : (locale === "en"
-                    ? `LinguaFlow AI: Direct response (< 5s)...`
-                    : `LinguaFlow AI : Réponse directe (< 5s)...`)}
+                    ? `LinguaFlow AI: Direct response (< 3s)...`
+                    : `LinguaFlow AI : Réponse directe (< 3s)...`)}
             </span>
           </div>
         )}

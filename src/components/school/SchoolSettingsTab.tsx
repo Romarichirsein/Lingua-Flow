@@ -94,7 +94,9 @@ export const SchoolSettingsTab: React.FC<SchoolSettingsTabProps> = ({
     whatsappNumber: school.whatsappNumber || "",
     whatsappWelcomeTemplate:
       school.whatsappWelcomeTemplate ||
-      `Bonjour {student_name} ! Bienvenue sur l'espace d'apprentissage de ${school.name}. Vos identifiants de connexion ont été activés.`,
+      (isEn
+        ? `Hello {student_name}! Welcome to the ${school.name} learning space. Your access credentials have been activated.`
+        : `Bonjour {student_name} ! Bienvenue sur l'espace d'apprentissage de ${school.name}. Vos identifiants de connexion ont été activés.`),
   });
 
   // Handle Logo File Upload (FileReader Base64)
@@ -123,7 +125,7 @@ export const SchoolSettingsTab: React.FC<SchoolSettingsTabProps> = ({
   >([
     {
       id: "mem_1",
-      name: school.contactPerson || "Directeur Pédagogique",
+      name: school.contactPerson || (isEn ? "Pedagogical Director" : "Directeur Pédagogique"),
       email: school.contactEmail || "admin@ecole.com",
       role: "admin",
     },
@@ -162,8 +164,10 @@ export const SchoolSettingsTab: React.FC<SchoolSettingsTabProps> = ({
 
     onUpdateSchool(updated);
     onAddLog(
-      "Mise à jour des paramètres",
-      `Paramètres, logo et configuration WhatsApp de l'école '${updated.name}' enregistrés et synchronisés.`,
+      isEn ? "Settings Update" : "Mise à jour des paramètres",
+      isEn
+        ? `Settings, logo, and WhatsApp configuration for school '${updated.name}' saved and synchronized.`
+        : `Paramètres, logo et configuration WhatsApp de l'école '${updated.name}' enregistrés et synchronisés.`,
       "success"
     );
 
@@ -748,30 +752,36 @@ export const SchoolSettingsTab: React.FC<SchoolSettingsTabProps> = ({
                   <div className="p-3 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 space-y-1">
                     <p className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                       <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px]">1</span>
-                      <span>Bouton Flottant Élève</span>
+                      <span>{isEn ? "Student Floating Button" : "Bouton Flottant Élève"}</span>
                     </p>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      Un bouton WhatsApp flottant en bas à droite de leur écran ouvre instantanément l'invitation à votre groupe de promo.
+                      {isEn
+                        ? "A floating WhatsApp button at the bottom right of their screen opens the invite to your cohort group."
+                        : "Un bouton WhatsApp flottant en bas à droite de leur écran ouvre instantanément l'invitation à votre groupe de promo."}
                     </p>
                   </div>
 
                   <div className="p-3 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 space-y-1">
                     <p className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                       <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px]">2</span>
-                      <span>En-tête & Tableau de Bord</span>
+                      <span>{isEn ? "Header & Dashboard" : "En-tête & Tableau de Bord"}</span>
                     </p>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      Le bouton vert "Groupe WhatsApp Promo" dans l'en-tête de leur portail redirige également vers ce lien.
+                      {isEn
+                        ? 'The green "Cohort WhatsApp Group" button in their portal header also redirects to this link.'
+                        : 'Le bouton vert "Groupe WhatsApp Promo" dans l\'en-tête de leur portail redirige également vers ce lien.'}
                     </p>
                   </div>
 
                   <div className="p-3 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 space-y-1">
                     <p className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                       <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px]">3</span>
-                      <span>Synchronisation Immédiate</span>
+                      <span>{isEn ? "Instant Synchronization" : "Synchronisation Immédiate"}</span>
                     </p>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      Chaque modification enregistrée s'applique instantanément à tous les comptes élèves de votre école sans rechargement nécessaire.
+                      {isEn
+                        ? "Every saved change is instantly applied to all student accounts of your school without needing a reload."
+                        : "Chaque modification enregistrée s'applique instantanément à tous les comptes élèves de votre école sans rechargement nécessaire."}
                     </p>
                   </div>
                 </div>

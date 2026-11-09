@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Menu, X, ChevronRight } from "lucide-react";
+import { UILocale } from "../../types";
 
 export interface TabDefinition<T extends string = string> {
   id: T;
@@ -20,6 +21,7 @@ interface SidebarTabsProps<T extends string = string> {
   mobileTitle?: string;
   className?: string;
   storageKey?: string;
+  locale?: UILocale;
 }
 
 export function SidebarTabs<T extends string = string>({
@@ -30,7 +32,12 @@ export function SidebarTabs<T extends string = string>({
   mobileTitle = "Navigation",
   className = "",
   storageKey,
+  locale,
 }: SidebarTabsProps<T>) {
+  const isEn =
+    locale === "en" ||
+    (typeof window !== "undefined" &&
+      localStorage.getItem("linguaflow_locale_preference") === "en");
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const activeTabRef = useRef<HTMLButtonElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -103,10 +110,12 @@ export function SidebarTabs<T extends string = string>({
             onClick={() => setMobileDrawerOpen(!mobileDrawerOpen)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-800 dark:text-white text-xs font-bold transition min-h-[44px] cursor-pointer shrink-0 ml-2"
             aria-expanded={mobileDrawerOpen}
-            aria-label="Basculer le menu de navigation"
+            aria-label={isEn ? "Toggle navigation menu" : "Basculer le menu de navigation"}
           >
             {mobileDrawerOpen ? <X size={16} /> : <Menu size={16} />}
-            <span className="hidden sm:inline">{mobileDrawerOpen ? "Fermer" : "Tous les onglets"}</span>
+            <span className="hidden sm:inline">
+              {mobileDrawerOpen ? (isEn ? "Close" : "Fermer") : (isEn ? "All tabs" : "Tous les onglets")}
+            </span>
           </button>
         </div>
 

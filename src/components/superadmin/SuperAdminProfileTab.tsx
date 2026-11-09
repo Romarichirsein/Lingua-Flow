@@ -33,7 +33,8 @@ export const SuperAdminProfileTab: React.FC<SuperAdminProfileTabProps> = ({
   onUpdateTheme,
   onAddLog,
 }) => {
-  const [name, setName] = useState(profile?.name || "Directeur Général Super Admin");
+  const isEn = locale === "en";
+  const [name, setName] = useState(profile?.name || (isEn ? "Super Admin Director General" : "Directeur Général Super Admin"));
   const [email, setEmail] = useState(profile?.email || "linguaflowadmin@gmail.com");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -52,7 +53,11 @@ export const SuperAdminProfileTab: React.FC<SuperAdminProfileTabProps> = ({
         email,
       });
     }
-    onAddLog("Profil Super Admin", "Mise à jour des coordonnées administratives.", "success");
+    onAddLog(
+      isEn ? "Super Admin Profile" : "Profil Super Admin",
+      isEn ? "Updated administrative contact details." : "Mise à jour des coordonnées administratives.",
+      "success"
+    );
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 2500);
   };
@@ -61,15 +66,27 @@ export const SuperAdminProfileTab: React.FC<SuperAdminProfileTabProps> = ({
     e.preventDefault();
     const currentStoredPass = localStorage.getItem("linguaflow_superadmin_password") || "qlac485!";
     if (currentPassword !== currentStoredPass && currentPassword !== "qlac485!") {
-      setPasswordError("Le mot de passe actuel saisi est incorrect.");
+      setPasswordError(
+        isEn
+          ? "The current password entered is incorrect."
+          : "Le mot de passe actuel saisi est incorrect."
+      );
       return;
     }
     if (newPassword.length < 6) {
-      setPasswordError("Le mot de passe doit contenir au moins 6 caractères.");
+      setPasswordError(
+        isEn
+          ? "Password must contain at least 6 characters."
+          : "Le mot de passe doit contenir au moins 6 caractères."
+      );
       return;
     }
     if (newPassword !== confirmPassword) {
-      setPasswordError("Les nouveaux mots de passe ne correspondent pas.");
+      setPasswordError(
+        isEn
+          ? "New passwords do not match."
+          : "Les nouveaux mots de passe ne correspondent pas."
+      );
       return;
     }
 
@@ -79,7 +96,11 @@ export const SuperAdminProfileTab: React.FC<SuperAdminProfileTabProps> = ({
     setCurrentPassword("");
     setNewPassword("");
     setConfirmPassword("");
-    onAddLog("Sécurité Profil", "Modification du mot de passe Super Admin enregistrée avec succès.", "success");
+    onAddLog(
+      isEn ? "Profile Security" : "Sécurité Profil",
+      isEn ? "Super Admin password successfully updated." : "Modification du mot de passe Super Admin enregistrée avec succès.",
+      "success"
+    );
     setTimeout(() => setPasswordSuccess(false), 3000);
   };
 
@@ -97,7 +118,7 @@ export const SuperAdminProfileTab: React.FC<SuperAdminProfileTabProps> = ({
                 {name}
               </h3>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#6D5DFC]/15 text-[#6D5DFC] dark:text-[#a399ff]">
-                Super Administrateur
+                {isEn ? "Super Administrator" : "Super Administrateur"}
               </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-white/50 font-mono">{email}</p>
@@ -112,12 +133,12 @@ export const SuperAdminProfileTab: React.FC<SuperAdminProfileTabProps> = ({
           className="p-5 sm:p-6 rounded-3xl bg-white/90 dark:bg-[#0D1220]/90 backdrop-blur-md border border-slate-200 dark:border-white/10 shadow-sm space-y-4"
         >
           <h4 className="font-bold text-sm text-slate-900 dark:text-white">
-            Informations Administratives
+            {isEn ? "Administrative Information" : "Informations Administratives"}
           </h4>
 
           <div>
             <label className="block font-bold text-slate-700 dark:text-white/80 mb-1">
-              Nom Complet
+              {isEn ? "Full Name" : "Nom Complet"}
             </label>
             <input
               type="text"
@@ -130,7 +151,7 @@ export const SuperAdminProfileTab: React.FC<SuperAdminProfileTabProps> = ({
 
           <div>
             <label className="block font-bold text-slate-700 dark:text-white/80 mb-1">
-              E-mail Super Admin
+              {isEn ? "Super Admin Email" : "E-mail Super Admin"}
             </label>
             <input
               type="email"
@@ -147,7 +168,7 @@ export const SuperAdminProfileTab: React.FC<SuperAdminProfileTabProps> = ({
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#6D5DFC] hover:bg-[#5b4be0] text-white font-bold transition min-h-[40px] cursor-pointer"
             >
               {isSaved ? <Check size={16} /> : <Save size={16} />}
-              <span>{isSaved ? "Enregistré !" : "Mettre à jour"}</span>
+              <span>{isEn ? (isSaved ? "Saved!" : "Update") : (isSaved ? "Enregistré !" : "Mettre à jour")}</span>
             </button>
           </div>
         </form>
@@ -159,7 +180,7 @@ export const SuperAdminProfileTab: React.FC<SuperAdminProfileTabProps> = ({
         >
           <h4 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
             <Key size={16} className="text-[#00D9FF]" />
-            <span>Sécurité & Mot de Passe</span>
+            <span>{isEn ? "Security & Password" : "Sécurité & Mot de Passe"}</span>
           </h4>
 
           {passwordError && (
@@ -170,13 +191,13 @@ export const SuperAdminProfileTab: React.FC<SuperAdminProfileTabProps> = ({
 
           {passwordSuccess && (
             <p className="p-2.5 rounded-xl bg-[#20E3A2]/10 text-[#20E3A2] font-semibold">
-              Mot de passe mis à jour avec succès.
+              {isEn ? "Password updated successfully." : "Mot de passe mis à jour avec succès."}
             </p>
           )}
 
           <div>
             <label className="block font-bold text-slate-700 dark:text-white/80 mb-1">
-              Mot de passe actuel
+              {isEn ? "Current Password" : "Mot de passe actuel"}
             </label>
             <input
               type="password"
@@ -190,26 +211,26 @@ export const SuperAdminProfileTab: React.FC<SuperAdminProfileTabProps> = ({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block font-bold text-slate-700 dark:text-white/80 mb-1">
-                Nouveau mot de passe
+                {isEn ? "New Password" : "Nouveau mot de passe"}
               </label>
               <input
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="8 car. min"
+                placeholder={isEn ? "Min 6 chars" : "8 car. min"}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#00D9FF]"
               />
             </div>
 
             <div>
               <label className="block font-bold text-slate-700 dark:text-white/80 mb-1">
-                Confirmer
+                {isEn ? "Confirm" : "Confirmer"}
               </label>
               <input
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirmation"
+                placeholder={isEn ? "Confirmation" : "Confirmation"}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#00D9FF]"
               />
             </div>
@@ -220,7 +241,7 @@ export const SuperAdminProfileTab: React.FC<SuperAdminProfileTabProps> = ({
               type="submit"
               className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 dark:bg-white/10 dark:hover:bg-white/20 text-white font-bold transition min-h-[40px] cursor-pointer"
             >
-              Changer le mot de passe
+              {isEn ? "Change Password" : "Changer le mot de passe"}
             </button>
           </div>
         </form>
@@ -231,19 +252,25 @@ export const SuperAdminProfileTab: React.FC<SuperAdminProfileTabProps> = ({
         <div className="flex items-center justify-between">
           <div>
             <h4 className="font-bold text-sm text-slate-900 dark:text-white">
-              Sessions Actives & Appareils Connectés
+              {isEn ? "Active Sessions & Connected Devices" : "Sessions Actives & Appareils Connectés"}
             </h4>
             <p className="text-slate-400">
-              Historique des connexions authentifiées pour ce compte
+              {isEn ? "History of authenticated connections for this account" : "Historique des connexions authentifiées pour ce compte"}
             </p>
           </div>
 
           <button
             type="button"
-            onClick={() => onAddLog("Sécurité Sessions", "Déconnexion forcée des autres sessions.", "warning")}
+            onClick={() =>
+              onAddLog(
+                isEn ? "Sessions Security" : "Sécurité Sessions",
+                isEn ? "Force disconnected other sessions." : "Déconnexion forcée des autres sessions.",
+                "warning"
+              )
+            }
             className="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 font-bold transition cursor-pointer"
           >
-            Déconnecter les autres appareils
+            {isEn ? "Disconnect other devices" : "Déconnecter les autres appareils"}
           </button>
         </div>
 
@@ -253,15 +280,15 @@ export const SuperAdminProfileTab: React.FC<SuperAdminProfileTabProps> = ({
               <Laptop size={18} className="text-[#20E3A2]" />
               <div>
                 <p className="font-bold text-slate-900 dark:text-white">
-                  Navigateur Web (Session Actuelle)
+                  {isEn ? "Web Browser (Current Session)" : "Navigateur Web (Session Actuelle)"}
                 </p>
                 <p className="text-[11px] text-slate-400 font-mono">
-                  IP : 192.168.1.10 • Actif en ce moment
+                  {isEn ? "IP: 192.168.1.10 • Active right now" : "IP : 192.168.1.10 • Actif en ce moment"}
                 </p>
               </div>
             </div>
             <span className="px-2.5 py-0.5 rounded-full font-bold text-[10px] bg-[#20E3A2]/15 text-[#20E3A2]">
-              Cet appareil
+              {isEn ? "This device" : "Cet appareil"}
             </span>
           </div>
         </div>

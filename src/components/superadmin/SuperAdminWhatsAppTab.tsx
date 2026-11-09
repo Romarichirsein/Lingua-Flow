@@ -26,6 +26,7 @@ export const SuperAdminWhatsAppTab: React.FC<SuperAdminWhatsAppTabProps> = ({
   onUpdateConfig,
   onAddLog,
 }) => {
+  const isEn = locale === "en";
   const [phoneNumber, setPhoneNumber] = useState(
     config.superAdminWhatsapp?.replace(/[^0-9]/g, "") || "33612345678"
   );
@@ -36,13 +37,16 @@ export const SuperAdminWhatsAppTab: React.FC<SuperAdminWhatsAppTabProps> = ({
     "Hello LinguaFlow Support, I am a school director and I have a question regarding our quotas."
   );
   const [enableFloatingButton, setEnableFloatingButton] = useState(true);
-  const [floatingButtonText, setFloatingButtonText] = useState("Support Super Admin");
+  const [floatingButtonText, setFloatingButtonText] = useState(
+    isEn ? "Super Admin Support" : "Support Super Admin"
+  );
 
   const [copied, setCopied] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
 
   const cleanPhone = phoneNumber.replace(/[^0-9]/g, "");
-  const generatedUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(defaultMessageFr)}`;
+  const activeDefaultMessage = isEn ? defaultMessageEn : defaultMessageFr;
+  const generatedUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(activeDefaultMessage)}`;
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(generatedUrl);
@@ -58,8 +62,10 @@ export const SuperAdminWhatsAppTab: React.FC<SuperAdminWhatsAppTabProps> = ({
     };
     onUpdateConfig(updated);
     onAddLog(
-      "Configuration WhatsApp",
-      `Mise à jour du support WhatsApp officiel (+${cleanPhone}).`,
+      isEn ? "WhatsApp Configuration" : "Configuration WhatsApp",
+      isEn
+        ? `Updated official WhatsApp support (+${cleanPhone}).`
+        : `Mise à jour du support WhatsApp officiel (+${cleanPhone}).`,
       "success"
     );
     setIsSaved(true);
@@ -76,10 +82,14 @@ export const SuperAdminWhatsAppTab: React.FC<SuperAdminWhatsAppTabProps> = ({
           </div>
           <div>
             <h3 className="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white">
-              Support WhatsApp Super Admin & Centres
+              {isEn
+                ? "Super Admin & Language Centers WhatsApp Support"
+                : "Support WhatsApp Super Admin & Centres"}
             </h3>
             <p className="text-xs text-slate-500 dark:text-white/50">
-              Canal de communication direct entre les directeurs d'écoles et le Super Admin
+              {isEn
+                ? "Direct communication channel between school directors and Super Admin"
+                : "Canal de communication direct entre les directeurs d'écoles et le Super Admin"}
             </p>
           </div>
         </div>
@@ -87,7 +97,7 @@ export const SuperAdminWhatsAppTab: React.FC<SuperAdminWhatsAppTabProps> = ({
         {isSaved && (
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 text-xs font-bold font-mono">
             <Check size={14} />
-            <span>Paramètres enregistrés</span>
+            <span>{isEn ? "Settings saved" : "Paramètres enregistrés"}</span>
           </div>
         )}
       </div>
@@ -100,12 +110,14 @@ export const SuperAdminWhatsAppTab: React.FC<SuperAdminWhatsAppTabProps> = ({
         >
           <div className="space-y-4">
             <h4 className="font-bold text-sm text-slate-900 dark:text-white">
-              Numéro Officiel & Messages Types
+              {isEn ? "Official Number & Template Messages" : "Numéro Officiel & Messages Types"}
             </h4>
 
             <div>
               <label className="block font-bold text-slate-700 dark:text-white/80 mb-1">
-                Numéro International WhatsApp (sans +, ni espaces) *
+                {isEn
+                  ? "International WhatsApp Number (no +, no spaces) *"
+                  : "Numéro International WhatsApp (sans +, ni espaces) *"}
               </label>
               <div className="relative">
                 <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono font-bold text-slate-400">
@@ -116,18 +128,22 @@ export const SuperAdminWhatsAppTab: React.FC<SuperAdminWhatsAppTabProps> = ({
                   required
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
-                  placeholder="33612345678 ou 491512345678"
+                  placeholder={isEn ? "33612345678 or 491512345678" : "33612345678 ou 491512345678"}
                   className="w-full pl-8 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white font-mono font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
               <p className="text-[11px] text-slate-400 mt-1">
-                Exemple pour l'Allemagne : 491512345678 • France : 33612345678
+                {isEn
+                  ? "Example for Germany: 491512345678 • France: 33612345678"
+                  : "Exemple pour l'Allemagne : 491512345678 • France : 33612345678"}
               </p>
             </div>
 
             <div>
               <label className="block font-bold text-slate-700 dark:text-white/80 mb-1">
-                Message Pré-rempli par défaut (Français)
+                {isEn
+                  ? "Default Pre-filled Message (French)"
+                  : "Message Pré-rempli par défaut (Français)"}
               </label>
               <textarea
                 rows={2}
@@ -139,7 +155,9 @@ export const SuperAdminWhatsAppTab: React.FC<SuperAdminWhatsAppTabProps> = ({
 
             <div>
               <label className="block font-bold text-slate-700 dark:text-white/80 mb-1">
-                Message Pré-rempli par défaut (Anglais)
+                {isEn
+                  ? "Default Pre-filled Message (English)"
+                  : "Message Pré-rempli par défaut (Anglais)"}
               </label>
               <textarea
                 rows={2}
@@ -153,7 +171,7 @@ export const SuperAdminWhatsAppTab: React.FC<SuperAdminWhatsAppTabProps> = ({
           {/* Generated Direct URL Card */}
           <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 space-y-2">
             <span className="font-bold text-emerald-600 dark:text-emerald-400">
-              Lien Direct WhatsApp Généré :
+              {isEn ? "Generated Direct WhatsApp Link:" : "Lien Direct WhatsApp Généré :"}
             </span>
             <div className="flex items-center gap-2 bg-white dark:bg-black/30 p-2.5 rounded-xl border border-emerald-500/20 font-mono text-[11px] break-all">
               <span className="flex-1 text-slate-700 dark:text-white/80">{generatedUrl}</span>
@@ -161,7 +179,7 @@ export const SuperAdminWhatsAppTab: React.FC<SuperAdminWhatsAppTabProps> = ({
                 type="button"
                 onClick={handleCopyLink}
                 className="p-2 rounded-lg bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition cursor-pointer shrink-0"
-                title="Copier le lien"
+                title={isEn ? "Copy link" : "Copier le lien"}
               >
                 {copied ? <Check size={14} /> : <Copy size={14} />}
               </button>
@@ -174,7 +192,9 @@ export const SuperAdminWhatsAppTab: React.FC<SuperAdminWhatsAppTabProps> = ({
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold shadow-md transition min-h-[42px] cursor-pointer"
             >
               <Save size={16} />
-              <span>Sauvegarder les Paramètres WhatsApp</span>
+              <span>
+                {isEn ? "Save WhatsApp Settings" : "Sauvegarder les Paramètres WhatsApp"}
+              </span>
             </button>
           </div>
         </form>
@@ -183,15 +203,19 @@ export const SuperAdminWhatsAppTab: React.FC<SuperAdminWhatsAppTabProps> = ({
         <div className="space-y-6">
           <div className="bg-white/90 dark:bg-[#0D1220]/90 backdrop-blur-md p-5 sm:p-6 rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm space-y-4">
             <h4 className="font-bold text-sm text-slate-900 dark:text-white">
-              Simulateur Bouton Flottant
+              {isEn ? "Floating Button Simulator" : "Simulateur Bouton Flottant"}
             </h4>
             <p className="text-xs text-slate-500 dark:text-white/50">
-              Aperçu du déclencheur d'assistance affiché dans les consoles des écoles
+              {isEn
+                ? "Preview of the assistance trigger displayed in school consoles"
+                : "Aperçu du déclencheur d'assistance affiché dans les consoles des écoles"}
             </p>
 
             <div className="relative h-48 rounded-2xl bg-slate-100 dark:bg-[#080B14] border border-slate-200 dark:border-white/10 flex flex-col justify-end p-4 overflow-hidden">
               <div className="text-[10px] text-slate-400 text-center mb-auto pt-2">
-                Interface console de l'école (simulation)
+                {isEn
+                  ? "School console interface (simulation)"
+                  : "Interface console de l'école (simulation)"}
               </div>
 
               {/* Floating WhatsApp Bubble */}
@@ -202,7 +226,7 @@ export const SuperAdminWhatsAppTab: React.FC<SuperAdminWhatsAppTabProps> = ({
                 className="self-end flex items-center gap-2 px-3.5 py-2.5 rounded-full bg-emerald-500 text-slate-950 font-extrabold text-xs shadow-lg hover:scale-105 transition cursor-pointer"
               >
                 <MessageCircle size={16} />
-                <span>{floatingButtonText}</span>
+                <span>{isEn ? "Super Admin Support" : floatingButtonText}</span>
               </a>
             </div>
 
@@ -214,7 +238,7 @@ export const SuperAdminWhatsAppTab: React.FC<SuperAdminWhatsAppTabProps> = ({
                 className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 text-xs font-bold hover:bg-emerald-500/20 transition min-h-[40px]"
               >
                 <ExternalLink size={14} />
-                <span>Tester le lien WhatsApp en réel</span>
+                <span>{isEn ? "Test live WhatsApp link" : "Tester le lien WhatsApp en réel"}</span>
               </a>
             </div>
           </div>

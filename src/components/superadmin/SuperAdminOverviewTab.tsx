@@ -124,12 +124,12 @@ export const SuperAdminOverviewTab: React.FC<SuperAdminOverviewTabProps> = ({
                       {sch.name}
                     </p>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                      {sch.managerName || "Directeur"} • {sch.managerEmail || sch.professionalEmail || "Email non renseigné"}
+                      {sch.managerName || (isEn ? "Director" : "Directeur")} • {sch.managerEmail || sch.professionalEmail || (isEn ? "No email provided" : "Email non renseigné")}
                     </p>
                   </div>
                   <div className="text-right shrink-0">
                     <span className="font-black text-rose-500 text-xs font-mono block">
-                      {days === 0 ? "Aujourd'hui" : `J-${days}`}
+                      {days === 0 ? (isEn ? "Today" : "Aujourd'hui") : (isEn ? `${days}d left` : `J-${days}`)}
                     </span>
                     <span className="text-[10px] text-slate-400 font-mono">
                       {sch.endDate}

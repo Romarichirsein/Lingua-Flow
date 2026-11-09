@@ -73,28 +73,37 @@ export const SchoolAnalyticsTab: React.FC<SchoolAnalyticsTabProps> = ({
 
   // Export Analytics CSV
   const handleExportAnalyticsCSV = () => {
-    const headers = ["ID", "Nom", "Email", "Progression (%)", "Statut", "Dernière Connexion"];
+    const headers = isEn
+      ? ["ID", "Name", "Email", "Progress (%)", "Status", "Last Login"]
+      : ["ID", "Nom", "Email", "Progression (%)", "Statut", "Dernière Connexion"];
     const rows = filteredStudents.map((s) => [
       s.id,
       `"${s.name}"`,
       s.email,
       s.progressPercent || 0,
       s.status,
-      s.lastLoginAt || s.lastLoginDate || "Jamais",
+      s.lastLoginAt || s.lastLoginDate || (isEn ? "Never" : "Jamais"),
     ]);
 
     const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `suivi_pedagogique_${school.slug}_${Date.now()}.csv`);
+    link.setAttribute(
+      "download",
+      isEn
+        ? `pedagogical_analytics_${school.slug}_${Date.now()}.csv`
+        : `suivi_pedagogique_${school.slug}_${Date.now()}.csv`
+    );
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
 
     onAddLog(
-      "Export du rapport pédagogique",
-      `Rapport de performance de ${schoolStudents.length} élèves exporté en CSV.`,
+      isEn ? "Pedagogical Report Export" : "Export du rapport pédagogique",
+      isEn
+        ? `Performance report for ${schoolStudents.length} students exported to CSV.`
+        : `Rapport de performance de ${schoolStudents.length} élèves exporté en CSV.`,
       "success"
     );
   };
@@ -109,7 +118,7 @@ export const SchoolAnalyticsTab: React.FC<SchoolAnalyticsTabProps> = ({
               {isEn ? "Pedagogical Analytics & Tracking" : "Suivi Pédagogique & Analytique"}
             </h2>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#6D5DFC]/10 text-[#6D5DFC] dark:text-[#a399ff]">
-              {school.language === "german" ? "Allemand 🇩🇪" : "Italien 🇮🇹"}
+              {school.language === "german" ? (isEn ? "German 🇩🇪" : "Allemand 🇩🇪") : (isEn ? "Italian 🇮🇹" : "Italien 🇮🇹")}
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-white/60 mt-0.5">
@@ -254,13 +263,17 @@ export const SchoolAnalyticsTab: React.FC<SchoolAnalyticsTabProps> = ({
                   <div className="flex items-center gap-2">
                     {(student.whatsappNumber || student.phone) && (
                       <a
-                        href={`https://wa.me/${(student.whatsappNumber || student.phone || "").replace(/[^0-9]/g, "")}?text=Bonjour%20${encodeURIComponent(student.name)},%20votre%20école%20${encodeURIComponent(school.name)}%20vous%20invite%20à%20poursuivre%20votre%20programme.`}
+                        href={`https://wa.me/${(student.whatsappNumber || student.phone || "").replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
+                          isEn
+                            ? `Hello ${student.name}, your school ${school.name} invites you to continue your learning program.`
+                            : `Bonjour ${student.name}, votre école ${school.name} vous invite à poursuivre votre programme.`
+                        )}`}
                         target="_blank"
                         rel="noreferrer"
                         className="px-2.5 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 text-[11px] font-bold transition flex items-center gap-1"
                       >
                         <Send size={12} />
-                        <span>Relance WA</span>
+                        <span>{isEn ? "WA Reminder" : "Relance WA"}</span>
                       </a>
                     )}
                     {onOpenStudentDetail && (
@@ -269,7 +282,7 @@ export const SchoolAnalyticsTab: React.FC<SchoolAnalyticsTabProps> = ({
                         onClick={() => onOpenStudentDetail(student)}
                         className="px-2.5 py-1.5 rounded-xl bg-[#6D5DFC]/10 hover:bg-[#6D5DFC]/20 text-[#6D5DFC] dark:text-[#a399ff] text-[11px] font-bold transition cursor-pointer"
                       >
-                        Dossier
+                        {isEn ? "Dossier" : "Dossier"}
                       </button>
                     )}
                   </div>
@@ -312,7 +325,7 @@ export const SchoolAnalyticsTab: React.FC<SchoolAnalyticsTabProps> = ({
                       </span>
                     </div>
                     <span className="font-mono text-slate-500 dark:text-white/60">
-                      {count} élèves ({pAvg}% moy.)
+                      {count} {isEn ? "students" : "élèves"} ({pAvg}% {isEn ? "avg." : "moy."})
                     </span>
                   </div>
                   <ProgressBar progress={pAvg} color="violet" height="sm" />

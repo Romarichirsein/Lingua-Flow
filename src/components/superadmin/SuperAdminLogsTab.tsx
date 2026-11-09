@@ -24,6 +24,7 @@ export const SuperAdminLogsTab: React.FC<SuperAdminLogsTabProps> = ({
   locale,
   onAddLog,
 }) => {
+  const isEn = locale === "en";
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [roleFilter, setRoleFilter] = useState<string>("all");
@@ -43,7 +44,9 @@ export const SuperAdminLogsTab: React.FC<SuperAdminLogsTabProps> = ({
   });
 
   const handleExportCSV = () => {
-    const headers = ["ID", "Timestamp", "Action", "Details", "Acteur", "Role", "Ecole", "Statut", "IP"];
+    const headers = isEn
+      ? ["ID", "Timestamp", "Action", "Details", "Actor", "Role", "School", "Status", "IP"]
+      : ["ID", "Timestamp", "Action", "Details", "Acteur", "Role", "Ecole", "Statut", "IP"];
     const rows = filteredLogs.map((l) => [
       l.id,
       l.timestamp,
@@ -68,7 +71,11 @@ export const SuperAdminLogsTab: React.FC<SuperAdminLogsTabProps> = ({
     link.click();
     document.body.removeChild(link);
 
-    onAddLog("Export Audit", "Export CSV du journal des activités de sécurité.", "success");
+    onAddLog(
+      isEn ? "Audit Export" : "Export Audit",
+      isEn ? "CSV export of security activity logs." : "Export CSV du journal des activités de sécurité.",
+      "success"
+    );
   };
 
   return (
@@ -81,7 +88,11 @@ export const SuperAdminLogsTab: React.FC<SuperAdminLogsTabProps> = ({
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Rechercher par action, mot-clé, acteur, école..."
+            placeholder={
+              isEn
+                ? "Search by action, keyword, actor, school..."
+                : "Rechercher par action, mot-clé, acteur, école..."
+            }
             className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#00D9FF]"
           />
         </div>
@@ -92,10 +103,10 @@ export const SuperAdminLogsTab: React.FC<SuperAdminLogsTabProps> = ({
             onChange={(e) => setStatusFilter(e.target.value)}
             className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-800 dark:text-white focus:outline-none cursor-pointer min-h-[40px]"
           >
-            <option value="all">Tous statuts</option>
-            <option value="success">Succès</option>
-            <option value="warning">Avertissement</option>
-            <option value="error">Erreur</option>
+            <option value="all">{isEn ? "All statuses" : "Tous statuts"}</option>
+            <option value="success">{isEn ? "Success" : "Succès"}</option>
+            <option value="warning">{isEn ? "Warning" : "Avertissement"}</option>
+            <option value="error">{isEn ? "Error" : "Erreur"}</option>
           </select>
 
           <select
@@ -103,10 +114,10 @@ export const SuperAdminLogsTab: React.FC<SuperAdminLogsTabProps> = ({
             onChange={(e) => setRoleFilter(e.target.value)}
             className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-800 dark:text-white focus:outline-none cursor-pointer min-h-[40px]"
           >
-            <option value="all">Tous les rôles</option>
+            <option value="all">{isEn ? "All roles" : "Tous les rôles"}</option>
             <option value="super_admin">Super Admin</option>
-            <option value="school_admin">Directeur École</option>
-            <option value="student">Élève</option>
+            <option value="school_admin">{isEn ? "School Director" : "Directeur École"}</option>
+            <option value="student">{isEn ? "Student" : "Élève"}</option>
           </select>
 
           <button
@@ -115,7 +126,7 @@ export const SuperAdminLogsTab: React.FC<SuperAdminLogsTabProps> = ({
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-800 dark:text-white text-xs font-bold transition min-h-[40px] cursor-pointer"
           >
             <Download size={14} />
-            <span>Export CSV</span>
+            <span>{isEn ? "Export CSV" : "Export CSV"}</span>
           </button>
         </div>
       </div>
@@ -126,18 +137,18 @@ export const SuperAdminLogsTab: React.FC<SuperAdminLogsTabProps> = ({
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="border-b border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.02] text-slate-400 font-bold uppercase text-[10px]">
-                <th className="py-3.5 px-4">Date & Heure</th>
-                <th className="py-3.5 px-4">Action</th>
-                <th className="py-3.5 px-4">Détails de l'Opération</th>
-                <th className="py-3.5 px-4">Acteur & Rôle</th>
-                <th className="py-3.5 px-4">Statut</th>
+                <th className="py-3.5 px-4">{isEn ? "Date & Time" : "Date & Heure"}</th>
+                <th className="py-3.5 px-4">{isEn ? "Action" : "Action"}</th>
+                <th className="py-3.5 px-4">{isEn ? "Operation Details" : "Détails de l'Opération"}</th>
+                <th className="py-3.5 px-4">{isEn ? "Actor & Role" : "Acteur & Rôle"}</th>
+                <th className="py-3.5 px-4">{isEn ? "Status" : "Statut"}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-white/5 font-medium">
               {filteredLogs.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-12 text-center text-slate-400 text-xs">
-                    Aucun log de sécurité correspondant.
+                    {isEn ? "No matching security logs." : "Aucun log de sécurité correspondant."}
                   </td>
                 </tr>
               ) : (

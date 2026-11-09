@@ -9,7 +9,6 @@ import {
   X,
   Sparkles,
   Loader2,
-  BookOpen,
   RotateCcw,
   Lightbulb,
 } from "lucide-react";
@@ -22,66 +21,144 @@ interface TranslatorWidgetProps {
   locale?: UILocale;
 }
 
+export type TranslationPair = "fr-de" | "en-de";
+export type TranslationLang = "fr" | "en" | "de";
+
 // Built-in offline pedagogical dictionary fallback for high availability
 const FALLBACK_PHRASES: Record<string, string> = {
-  "bonjour": "Hello",
-  "bonjour, comment allez-vous ?": "Hello, how are you?",
-  "bonjour comment allez-vous": "Hello, how are you?",
-  "salut": "Hi",
-  "merci": "Thank you",
-  "merci beaucoup": "Thank you very much",
-  "au revoir": "Goodbye",
-  "s'il vous plaît": "Please",
-  "oui": "Yes",
-  "non": "No",
-  "comment vous appelez-vous ?": "What is your name?",
-  "je m'appelle": "My name is",
-  "je voudrais apprendre": "I would like to learn",
-  "pouvez-vous m'aider ?": "Can you help me?",
-  "je ne comprends pas": "I don't understand",
-  "parlez-vous anglais ?": "Do you speak English?",
-  "parlez-vous français ?": "Do you speak French?",
-  "où est la gare ?": "Where is the train station?",
-  "enchanté": "Nice to meet you",
-  // English to French
-  "hello": "Bonjour",
-  "hello, how are you?": "Bonjour, comment allez-vous ?",
-  "thank you": "Merci",
-  "thank you very much": "Merci beaucoup",
-  "goodbye": "Au revoir",
-  "please": "S'il vous plaît",
-  "yes": "Oui",
-  "no": "Non",
-  "what is your name?": "Comment vous appelez-vous ?",
-  "my name is": "Je m'appelle",
-  "i don't understand": "Je ne comprends pas",
-  "can you help me?": "Pouvez-vous m'aider ?",
-  "nice to meet you": "Enchanté",
-  "do you speak french?": "Parlez-vous français ?",
+  // FR -> DE
+  "bonjour": "Guten Tag",
+  "bonjour, comment allez-vous ?": "Guten Tag, wie geht es Ihnen?",
+  "bonjour comment allez-vous": "Guten Tag, wie geht es Ihnen?",
+  "salut": "Hallo",
+  "merci": "Danke",
+  "merci beaucoup": "Vielen Dank",
+  "au revoir": "Auf Wiedersehen",
+  "s'il vous plaît": "Bitte",
+  "s'il vous plait": "Bitte",
+  "oui": "Ja",
+  "non": "Nein",
+  "comment vous appelez-vous ?": "Wie heißen Sie?",
+  "comment vous appelez-vous": "Wie heißen Sie?",
+  "je m'appelle": "Ich heiße",
+  "je m'appelle lucas": "Ich heiße Lucas",
+  "je voudrais apprendre l'allemand": "Ich möchte Deutsch lernen",
+  "je veux apprendre l'allemand": "Ich möchte Deutsch lernen",
+  "pouvez-vous m'aider ?": "Können Sie mir helfen?",
+  "pouvez-vous m'aider": "Können Sie mir helfen?",
+  "je ne comprends pas": "Ich verstehe nicht",
+  "parlez-vous allemand ?": "Sprechen Sie Deutsch?",
+  "parlez-vous français ?": "Sprechen Sie Französisch?",
+  "où est la gare ?": "Wo ist der Bahnhof?",
+  "où se trouve la gare ?": "Wo befindet sich der Bahnhof?",
+  "enchanté": "Freut mich sehr",
+  "bonne nuit": "Gute Nacht",
+  "bon appétit": "Guten Appetit",
+  "à bientôt": "Bis bald",
+  "bienvenue": "Herzlich willkommen",
+  "combien ça coûte ?": "Wie viel kostet das?",
+  "je suis étudiant": "Ich bin Student",
+  "je suis étudiante": "Ich bin Studentin",
+
+  // DE -> FR
+  "guten tag": "Bonjour",
+  "guten tag, wie geht es ihnen?": "Bonjour, comment allez-vous ?",
+  "hallo": "Salut",
+  "danke": "Merci",
+  "vielen dank": "Merci beaucoup",
+  "auf wiedersehen": "Au revoir",
+  "bitte": "S'il vous plaît",
+  "ja": "Oui",
+  "nein": "Non",
+  "wie heißen sie?": "Comment vous appelez-vous ?",
+  "ich heiße": "Je m'appelle",
+  "ich möchte deutsch lernen": "Je voudrais apprendre l'allemand",
+  "können sie mir helfen?": "Pouvez-vous m'aider ?",
+  "ich verstehe nicht": "Je ne comprends pas",
+  "sprechen sie deutsch?": "Parlez-vous allemand ?",
+  "wo ist der bahnhof?": "Où est la gare ?",
+  "freut mich sehr": "Enchanté",
+  "gute nacht": "Bonne nuit",
+  "guten appetit": "Bon appétit",
+  "bis bald": "À bientôt",
+  "herzlich willkommen": "Bienvenue",
+
+  // EN -> DE
+  "hello": "Guten Tag",
+  "hello, how are you?": "Guten Tag, wie geht es Ihnen?",
+  "hello how are you": "Guten Tag, wie geht es Ihnen?",
+  "hi": "Hallo",
+  "thank you": "Danke",
+  "thank you very much": "Vielen Dank",
+  "goodbye": "Auf Wiedersehen",
+  "please": "Bitte",
+  "yes": "Ja",
+  "no": "Nein",
+  "what is your name?": "Wie heißen Sie?",
+  "what is your name": "Wie heißen Sie?",
+  "my name is": "Ich heiße",
+  "i would like to learn german": "Ich möchte Deutsch lernen",
+  "i want to learn german": "Ich möchte Deutsch lernen",
+  "can you help me?": "Können Sie mir helfen?",
+  "can you help me": "Können Sie mir helfen?",
+  "i don't understand": "Ich verstehe nicht",
+  "do you speak german?": "Sprechen Sie Deutsch?",
+  "where is the train station?": "Wo ist der Bahnhof?",
+  "nice to meet you": "Freut mich sehr",
+  "good night": "Gute Nacht",
+  "enjoy your meal": "Guten Appetit",
+  "see you soon": "Bis bald",
+  "welcome": "Herzlich willkommen",
+  "how much does it cost?": "Wie viel kostet das?",
+  "i am a student": "Ich bin Student",
+
+  // DE -> EN
+  "wie heißen sie": "What is your name?",
+  "guten morgen": "Good morning",
+  "guten abend": "Good evening",
 };
 
-const SUGGESTED_PHRASES_FR = [
-  "Bonjour, comment allez-vous aujourd'hui ?",
-  "Je voudrais perfectionner ma prononciation.",
-  "Pouvez-vous m'expliquer cette règle de grammaire ?",
-  "Je prépare un examen de certification linguistique.",
-  "Pourriez-vous répéter plus lentement s'il vous plaît ?",
-];
-
-const SUGGESTED_PHRASES_EN = [
-  "Hello, how are you doing today?",
-  "I would like to practice conversational skills.",
-  "Could you explain this grammatical rule to me?",
-  "I am preparing for an international language exam.",
-  "Could you please speak a little more slowly?",
-];
+const SUGGESTED_PHRASES = {
+  "fr-to-de": [
+    "Bonjour, comment allez-vous aujourd'hui ?",
+    "Je voudrais commander un café s'il vous plaît.",
+    "Où se trouve la gare centrale la plus proche ?",
+    "Pouvez-vous m'expliquer cette règle de déclinaison ?",
+    "Je prépare l'examen de certification Goethe B1.",
+  ],
+  "de-to-fr": [
+    "Guten Tag, wie geht es Ihnen heute?",
+    "Ich möchte bitte einen Kaffee bestellen.",
+    "Wo befindet sich der nächste Hauptbahnhof?",
+    "Könnten Sie mir diese Grammatikregel erklären?",
+    "Ich bereite mich auf die Goethe-Zertifikatsprüfung vor.",
+  ],
+  "en-to-de": [
+    "Hello, how are you doing today?",
+    "I would like to order a coffee, please.",
+    "Where is the nearest central train station?",
+    "Could you please explain this German case rule to me?",
+    "I am studying for the official Goethe B1 exam.",
+  ],
+  "de-to-en": [
+    "Guten Tag, wie geht es Ihnen heute?",
+    "Ich möchte bitte einen Kaffee bestellen.",
+    "Wo befindet sich der nächste Hauptbahnhof?",
+    "Könnten Sie mir diese Grammatikregel erklären?",
+    "Ich lerne Deutsch an der Sprachakademie.",
+  ],
+};
 
 export const TranslatorWidget: React.FC<TranslatorWidgetProps> = ({
   isOpen,
   onClose,
   locale = "fr",
 }) => {
-  const [direction, setDirection] = useState<"fr-en" | "en-fr">("fr-en");
+  // Selected pair: 'fr-de' (Français - Allemand) or 'en-de' (Anglais - Allemand)
+  const [selectedPair, setSelectedPair] = useState<TranslationPair>("fr-de");
+  // Direction within pair: false = Base -> DE, true = DE -> Base
+  const [isInverted, setIsInverted] = useState(false);
+
   const [sourceText, setSourceText] = useState("");
   const [translatedText, setTranslatedText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -89,6 +166,19 @@ export const TranslatorWidget: React.FC<TranslatorWidgetProps> = ({
   const [errorMsg, setErrorMsg] = useState("");
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Compute active source and target
+  const sourceLang: TranslationLang = isInverted
+    ? "de"
+    : selectedPair === "fr-de"
+    ? "fr"
+    : "en";
+
+  const targetLang: TranslationLang = isInverted
+    ? selectedPair === "fr-de"
+      ? "fr"
+      : "en"
+    : "de";
 
   // Focus textarea when modal opens
   useEffect(() => {
@@ -99,8 +189,15 @@ export const TranslatorWidget: React.FC<TranslatorWidgetProps> = ({
     }
   }, [isOpen]);
 
+  const handlePairChange = (pair: TranslationPair) => {
+    setSelectedPair(pair);
+    setSourceText("");
+    setTranslatedText("");
+    setErrorMsg("");
+  };
+
   const handleSwapDirection = () => {
-    setDirection((prev) => (prev === "fr-en" ? "en-fr" : "fr-en"));
+    setIsInverted((prev) => !prev);
     setSourceText(translatedText);
     setTranslatedText(sourceText);
     setErrorMsg("");
@@ -116,16 +213,40 @@ export const TranslatorWidget: React.FC<TranslatorWidgetProps> = ({
     setIsLoading(true);
     setErrorMsg("");
 
-    const isFrToEn = direction === "fr-en";
-    const sourceLang = isFrToEn ? "French" : "English";
-    const targetLang = isFrToEn ? "English" : "French";
+    const langFullNames: Record<TranslationLang, string> = {
+      fr: "French (Français)",
+      en: "English",
+      de: "German (Deutsch)",
+    };
+
+    const srcName = langFullNames[sourceLang];
+    const tgtName = langFullNames[targetLang];
 
     try {
-      // 1. Try Gemini AI Translation
-      const prompt = `You are an elite educational language translator for bilingual students (English <-> French).
-Translate the following ${sourceLang} text into natural, idiomatic, grammatically flawless ${targetLang}.
+      // 1. Try Backend API first (/api/ai/translate)
+      const res = await fetch("/api/ai/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text,
+          sourceLang,
+          targetLang,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.translatedText && data.translatedText.trim()) {
+          setTranslatedText(data.translatedText.trim());
+          return;
+        }
+      }
+
+      // 2. Client-side Gemini fallback
+      const prompt = `You are an elite educational language translator for bilingual students (${srcName} <-> ${tgtName}).
+Translate the following ${srcName} text into natural, idiomatic, grammatically flawless ${tgtName}.
 Strict rules:
-1. Return ONLY the translated text in ${targetLang}.
+1. Return ONLY the translated text in ${tgtName}.
 2. Do NOT wrap in quotes, do not add introductory greetings or notes.
 3. Preserve punctuation and formatting.
 
@@ -136,21 +257,20 @@ ${text}
 
       const result = await generateGeminiContent(prompt, {
         model: "gemini-3.1-flash-lite",
-        timeoutMs: 9000,
-        maxRetries: 2,
+        timeoutMs: 6000,
+        maxRetries: 1,
       });
 
       const cleanText = result.text.trim().replace(/^["']|["']$/g, "");
       setTranslatedText(cleanText);
     } catch (err: any) {
-      console.warn("[Translator] Gemini translation fallback:", err?.message);
+      console.warn("[Translator] AI translation fallback:", err?.message);
 
-      // 2. Offline dictionary / heuristic fallback
-      const lower = text.toLowerCase();
+      // 3. Offline dictionary heuristic fallback
+      const lower = text.toLowerCase().trim();
       if (FALLBACK_PHRASES[lower]) {
         setTranslatedText(FALLBACK_PHRASES[lower]);
       } else {
-        // Simple direct word-by-word fallback if simple sentence
         const words = lower.split(/\s+/);
         const translatedWords = words.map((w) => FALLBACK_PHRASES[w] || w);
         if (translatedWords.join(" ") !== lower) {
@@ -158,7 +278,7 @@ ${text}
         } else {
           setErrorMsg(
             locale === "en"
-              ? "Unable to reach translation service. Please check your network connection."
+              ? "Unable to reach online translation service. Please check your connection."
               : "Service de traduction temporairement indisponible. Vérifiez votre connexion."
           );
         }
@@ -175,11 +295,17 @@ ${text}
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleSpeak = (text: string, lang: "fr" | "en") => {
+  const handleSpeak = (text: string, lang: TranslationLang) => {
     if ("speechSynthesis" in window && text) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = lang === "fr" ? "fr-FR" : "en-US";
+      if (lang === "de") {
+        utterance.lang = "de-DE";
+      } else if (lang === "fr") {
+        utterance.lang = "fr-FR";
+      } else {
+        utterance.lang = "en-US";
+      }
       utterance.rate = 0.92;
       window.speechSynthesis.speak(utterance);
     }
@@ -190,8 +316,31 @@ ${text}
     handleTranslate(phrase);
   };
 
-  const isFrToEn = direction === "fr-en";
-  const currentQuickPhrases = isFrToEn ? SUGGESTED_PHRASES_FR : SUGGESTED_PHRASES_EN;
+  // Determine key for quick phrases
+  const quickPhraseKey =
+    selectedPair === "fr-de"
+      ? isInverted
+        ? "de-to-fr"
+        : "fr-to-de"
+      : isInverted
+      ? "de-to-en"
+      : "en-to-de";
+
+  const currentQuickPhrases = SUGGESTED_PHRASES[quickPhraseKey];
+
+  const getLangBadge = (lang: TranslationLang) => {
+    switch (lang) {
+      case "fr":
+        return { flag: "🇫🇷", name: "Français", code: "FR" };
+      case "en":
+        return { flag: "🇬🇧", name: "English", code: "EN" };
+      case "de":
+        return { flag: "🇩🇪", name: "Deutsch (Allemand)", code: "DE" };
+    }
+  };
+
+  const sourceBadge = getLangBadge(sourceLang);
+  const targetBadge = getLangBadge(targetLang);
 
   return (
     <AnimatePresence>
@@ -213,15 +362,15 @@ ${text}
                 </div>
                 <div>
                   <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
-                    <span>Traducteur Bilingue</span>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-500 dark:text-indigo-400">
-                      FR ⇄ EN
+                    <span>{locale === "en" ? "Bilingual Translator" : "Traducteur Bilingue"}</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-600 dark:text-indigo-400">
+                      {selectedPair === "fr-de" ? "FR ⇄ DE" : "EN ⇄ DE"}
                     </span>
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
                     {locale === "en"
-                      ? "Bidirectional English ⇄ French linguistic translation with voice audio"
-                      : "Traduction linguistique bidirectionnelle Français ⇄ Anglais avec synthèse vocale"}
+                      ? "Specialized pedagogical translation: French ⇄ German & English ⇄ German"
+                      : "Traduction pédagogique spécialisée : Français ⇄ Allemand & Anglais ⇄ Allemand"}
                   </p>
                 </div>
               </div>
@@ -236,12 +385,43 @@ ${text}
               </button>
             </div>
 
-            {/* Language Switcher Bar */}
-            <div className="flex items-center justify-between px-6 py-3 bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10">
+            {/* Pair Selector Tabs (FR-DE vs EN-DE) */}
+            <div className="flex items-center gap-2 px-6 pt-3 pb-2 bg-slate-100/70 dark:bg-white/[0.03] border-b border-slate-200 dark:border-white/10">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mr-2">
+                {locale === "en" ? "Pair:" : "Mode :"}
+              </span>
+
+              <button
+                type="button"
+                onClick={() => handlePairChange("fr-de")}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  selectedPair === "fr-de"
+                    ? "bg-indigo-600 text-white shadow-sm shadow-indigo-500/30"
+                    : "bg-white dark:bg-white/5 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10"
+                }`}
+              >
+                <span>🇫🇷 Français ⇄ 🇩🇪 Allemand</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handlePairChange("en-de")}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  selectedPair === "en-de"
+                    ? "bg-indigo-600 text-white shadow-sm shadow-indigo-500/30"
+                    : "bg-white dark:bg-white/5 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10"
+                }`}
+              >
+                <span>🇬🇧 English ⇄ 🇩🇪 Deutsch</span>
+              </button>
+            </div>
+
+            {/* Direction Bar with Invert Button */}
+            <div className="flex items-center justify-between px-6 py-2.5 bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10">
               {/* Source Lang Tag */}
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-200">
-                <span className="text-base">{isFrToEn ? "🇫🇷" : "🇬🇧"}</span>
-                <span>{isFrToEn ? "Français" : "English"}</span>
+              <div className="flex items-center gap-2 text-xs font-extrabold text-slate-800 dark:text-slate-100">
+                <span className="text-lg">{sourceBadge.flag}</span>
+                <span>{sourceBadge.name}</span>
               </div>
 
               {/* Swap Direction Button */}
@@ -249,16 +429,16 @@ ${text}
                 type="button"
                 onClick={handleSwapDirection}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-500 dark:hover:text-white text-xs font-bold transition shadow-xs cursor-pointer"
-                title={locale === "en" ? "Swap direction" : "Inverser la langue"}
+                title={locale === "en" ? "Swap translation direction" : "Inverser le sens de traduction"}
               >
                 <ArrowRightLeft size={13} />
-                <span>{isFrToEn ? "FR ➔ EN" : "EN ➔ FR"}</span>
+                <span>{sourceBadge.code} ➔ {targetBadge.code}</span>
               </button>
 
               {/* Target Lang Tag */}
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-200">
-                <span>{isFrToEn ? "English" : "Français"}</span>
-                <span className="text-base">{isFrToEn ? "🇬🇧" : "🇫🇷"}</span>
+              <div className="flex items-center gap-2 text-xs font-extrabold text-slate-800 dark:text-slate-100">
+                <span>{targetBadge.name}</span>
+                <span className="text-lg">{targetBadge.flag}</span>
               </div>
             </div>
 
@@ -277,9 +457,11 @@ ${text}
                     }
                   }}
                   placeholder={
-                    isFrToEn
-                      ? "Saisissez votre texte en français à traduire en anglais (ex: 'Bonjour, comment allez-vous ?')..."
-                      : "Enter English text to translate to French (e.g., 'Good morning, how are you?')..."
+                    sourceLang === "fr"
+                      ? "Saisissez votre texte en français à traduire en allemand (ex: 'Bonjour, comment allez-vous ?')..."
+                      : sourceLang === "en"
+                      ? "Enter English text to translate to German (e.g. 'Good morning, how are you?')..."
+                      : "Geben Sie deutschen Text ein, um ihn zu übersetzen (z.B. 'Guten Tag, wie geht es Ihnen?')..."
                   }
                   rows={4}
                   className="w-full resize-none p-4 pb-10 bg-transparent text-sm text-slate-900 dark:text-white placeholder:text-slate-400 outline-none leading-relaxed"
@@ -292,9 +474,9 @@ ${text}
                       <>
                         <button
                           type="button"
-                          onClick={() => handleSpeak(sourceText, isFrToEn ? "fr" : "en")}
+                          onClick={() => handleSpeak(sourceText, sourceLang)}
                           className="flex items-center gap-1 p-1 hover:text-indigo-500 transition cursor-pointer"
-                          title="Écouter le texte source"
+                          title={locale === "en" ? "Listen to source text" : "Écouter le texte source"}
                         >
                           <Volume2 size={14} />
                         </button>
@@ -305,14 +487,16 @@ ${text}
                             setTranslatedText("");
                           }}
                           className="flex items-center gap-1 p-1 hover:text-rose-500 transition cursor-pointer"
-                          title="Effacer"
+                          title={locale === "en" ? "Clear" : "Effacer"}
                         >
                           <RotateCcw size={13} />
                         </button>
                       </>
                     )}
                   </div>
-                  <span>{sourceText.length} caractères</span>
+                  <span>
+                    {sourceText.length} {locale === "en" ? "characters" : "caractères"}
+                  </span>
                 </div>
               </div>
 
@@ -355,35 +539,43 @@ ${text}
                   <div className="flex items-center justify-between border-b border-indigo-500/20 pb-2">
                     <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
                       <Check size={14} className="text-emerald-500" />
-                      <span>{isFrToEn ? "Traduction en Anglais" : "Traduction en Français"}</span>
+                      <span>
+                        {targetLang === "de"
+                          ? (locale === "en" ? "Translation in German (Deutsch)" : "Traduction en Allemand (Deutsch)")
+                          : targetLang === "fr"
+                          ? (locale === "en" ? "Translation in French" : "Traduction en Français")
+                          : (locale === "en" ? "Translation in English" : "Traduction en Anglais")}
+                      </span>
                     </span>
 
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => handleSpeak(translatedText, isFrToEn ? "en" : "fr")}
+                        onClick={() => handleSpeak(translatedText, targetLang)}
                         className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/70 dark:bg-white/10 hover:bg-white text-slate-700 dark:text-slate-200 text-xs font-medium transition cursor-pointer"
-                        title={locale === "en" ? "Listen pronunciation" : "Écouter la prononciation"}
+                        title={locale === "en" ? "Listen to pronunciation" : "Écouter la prononciation"}
                       >
                         <Volume2 size={13} />
-                        <span className="hidden sm:inline">Écouter</span>
+                        <span className="hidden sm:inline">{locale === "en" ? "Listen" : "Écouter"}</span>
                       </button>
 
                       <button
                         type="button"
                         onClick={handleCopy}
                         className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/70 dark:bg-white/10 hover:bg-white text-slate-700 dark:text-slate-200 text-xs font-medium transition cursor-pointer"
-                        title="Copier la traduction"
+                        title={locale === "en" ? "Copy translation" : "Copier la traduction"}
                       >
                         {copied ? (
                           <>
                             <Check size={13} className="text-emerald-500" />
-                            <span className="text-emerald-600 dark:text-emerald-400 font-bold">Copié !</span>
+                            <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                              {locale === "en" ? "Copied!" : "Copié !"}
+                            </span>
                           </>
                         ) : (
                           <>
                             <Copy size={13} />
-                            <span className="hidden sm:inline">Copier</span>
+                            <span className="hidden sm:inline">{locale === "en" ? "Copy" : "Copier"}</span>
                           </>
                         )}
                       </button>
@@ -394,7 +586,9 @@ ${text}
                     {isLoading ? (
                       <span className="text-slate-400 italic flex items-center gap-2">
                         <Loader2 size={14} className="animate-spin text-indigo-500" />
-                        Génération de la traduction linguistique...
+                        {locale === "en"
+                          ? "Generating linguistic translation..."
+                          : "Génération de la traduction linguistique..."}
                       </span>
                     ) : (
                       translatedText
