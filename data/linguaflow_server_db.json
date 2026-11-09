@@ -1,0 +1,410 @@
+{
+  "version": "3.0",
+  "updatedAt": "2026-11-09T19:35:18.316Z",
+  "schools": [
+    {
+      "id": "school-berlin",
+      "name": "Berlin Sprachzentrum",
+      "slug": "berlin-sprachzentrum",
+      "language": "german",
+      "logo": "🇩🇪",
+      "primaryColor": "#6366f1",
+      "secondaryColor": "#06b6d4",
+      "professionalEmail": "contact@berlin-sprachzentrum.de",
+      "phone": "+49 30 12345678",
+      "address": "Friedrichstraße 120",
+      "city": "Berlin",
+      "country": "Allemagne",
+      "managerName": "Klaus Weber",
+      "managerEmail": "klaus@berlin-sprachzentrum.de",
+      "managerPhone": "+49 151 23456789",
+      "username": "klaus.weber",
+      "password": "berlin2026",
+      "startDate": "2026-01-01",
+      "endDate": "2026-12-31",
+      "status": "active",
+      "whatsappSupportUrl": "https://wa.me/491512345678",
+      "studentQuota": 250,
+      "programsCount": 3,
+      "createdAt": "2026-01-10"
+    },
+    {
+      "id": "school-milano",
+      "name": "Milano Lingua Studio",
+      "slug": "milano-lingua-studio",
+      "language": "italian",
+      "logo": "🇮🇹",
+      "primaryColor": "#10b981",
+      "secondaryColor": "#f59e0b",
+      "professionalEmail": "info@milanolingua.it",
+      "phone": "+39 02 98765432",
+      "address": "Via Montenapoleone 18",
+      "city": "Milan",
+      "country": "Italie",
+      "managerName": "Giulia Rossi",
+      "managerEmail": "giulia@milanolingua.it",
+      "managerPhone": "+39 333 1234567",
+      "username": "giulia.rossi",
+      "password": "milano2026",
+      "startDate": "2026-02-01",
+      "endDate": "2026-11-30",
+      "status": "active",
+      "whatsappSupportUrl": "https://wa.me/393331234567",
+      "studentQuota": 180,
+      "programsCount": 2,
+      "createdAt": "2026-02-01"
+    },
+    {
+      "id": "school-munchen",
+      "name": "München Elite Kolleg",
+      "slug": "munchen-elite-kolleg",
+      "language": "german",
+      "logo": "🏰",
+      "primaryColor": "#3b82f6",
+      "secondaryColor": "#8b5cf6",
+      "managerName": "Hans Müller",
+      "managerEmail": "hans@muenchen-kolleg.de",
+      "startDate": "2026-01-15",
+      "endDate": "2026-11-11",
+      "status": "active",
+      "studentQuota": 100,
+      "programsCount": 2,
+      "createdAt": "2026-01-15"
+    },
+    {
+      "id": "school-firenze",
+      "name": "Firenze Accademia Dante",
+      "slug": "firenze-accademia-dante",
+      "language": "italian",
+      "logo": "⚜️",
+      "primaryColor": "#ec4899",
+      "secondaryColor": "#f43f5e",
+      "managerName": "Matteo Bianchi",
+      "managerEmail": "matteo@firenze-dante.it",
+      "startDate": "2025-09-01",
+      "endDate": "2026-08-30",
+      "status": "suspended",
+      "studentQuota": 75,
+      "programsCount": 1,
+      "createdAt": "2025-09-01"
+    },
+    {
+      "id": "school-hamburg",
+      "name": "Hanseatische Sprachakademie Hamburg",
+      "slug": "hanseatische-sprachakademie-hamburg",
+      "language": "german",
+      "logo": "⚓",
+      "primaryColor": "#0ea5e9",
+      "secondaryColor": "#06b6d4",
+      "managerName": "Greta Becker",
+      "managerEmail": "greta@hamburg-sprache.de",
+      "startDate": "2025-11-01",
+      "endDate": "2026-10-31",
+      "status": "active",
+      "studentQuota": 150,
+      "programsCount": 2,
+      "createdAt": "2025-11-01"
+    },
+    {
+      "id": "school-roma",
+      "name": "Roma Centro Linguistico Capitale",
+      "slug": "roma-centro-linguistico-capitale",
+      "language": "italian",
+      "logo": "🏛️",
+      "primaryColor": "#eab308",
+      "secondaryColor": "#f97316",
+      "managerName": "Alessandro Conti",
+      "managerEmail": "alessandro@roma-lingua.it",
+      "startDate": "2025-03-01",
+      "endDate": "2026-03-01",
+      "status": "expired",
+      "studentQuota": 50,
+      "programsCount": 1,
+      "createdAt": "2025-03-01"
+    }
+  ],
+  "students": [
+    {
+      "id": "stu-romaric",
+      "schoolId": "school-berlin",
+      "schoolName": "Berlin Sprachzentrum",
+      "name": "Romaric Hirsein",
+      "email": "romarichirsein@gmail.com",
+      "username": "romaric.hirsein",
+      "password": "romaric123",
+      "phone": "+237 690 11 22 33",
+      "whatsappNumber": "+237 690 11 22 33",
+      "enrolledProgramId": "prog-de-a1",
+      "level": "B1",
+      "startDate": "2026-08-01",
+      "endDate": "2026-12-31",
+      "status": "active",
+      "progressPercent": 67,
+      "lastActiveLessonId": "les-de-2",
+      "completedLessons": [
+        "les-de-1",
+        "les-de-2"
+      ]
+    },
+    {
+      "id": "stu-sophie",
+      "schoolId": "school-berlin",
+      "schoolName": "Berlin Sprachzentrum",
+      "name": "Sophie Laurent",
+      "email": "sophie.laurent@example.com",
+      "username": "sophie.laurent",
+      "password": "sophie123",
+      "phone": "+33 6 45 78 90 12",
+      "whatsappNumber": "+33 6 45 78 90 12",
+      "enrolledProgramId": "prog-de-a1",
+      "level": "A1",
+      "startDate": "2026-07-15",
+      "endDate": "2026-11-10",
+      "status": "active",
+      "progressPercent": 67,
+      "lastActiveLessonId": "les-de-2",
+      "completedLessons": [
+        "les-de-1",
+        "les-de-2"
+      ]
+    },
+    {
+      "id": "stu-gianni",
+      "schoolId": "school-milano",
+      "schoolName": "Milano Lingua Studio",
+      "name": "Gianni Berti",
+      "email": "gianni.berti@example.it",
+      "username": "gianni.berti",
+      "password": "gianni123",
+      "phone": "+39 347 88 99 001",
+      "whatsappNumber": "+39 347 88 99 001",
+      "enrolledProgramId": "prog-it-a1",
+      "level": "A1",
+      "startDate": "2026-08-01",
+      "endDate": "2026-11-30",
+      "status": "active",
+      "progressPercent": 50,
+      "lastActiveLessonId": "les-it-1",
+      "completedLessons": [
+        "les-it-1"
+      ]
+    },
+    {
+      "id": "stu-clara",
+      "schoolId": "school-milano",
+      "schoolName": "Milano Lingua Studio",
+      "name": "Clara Dubois",
+      "email": "clara.dubois@example.fr",
+      "username": "clara.dubois",
+      "password": "clara123",
+      "phone": "+33 7 12 34 56 78",
+      "whatsappNumber": "+33 7 12 34 56 78",
+      "enrolledProgramId": "prog-it-a1",
+      "level": "A1",
+      "startDate": "2026-05-01",
+      "endDate": "2026-07-31",
+      "status": "expired",
+      "progressPercent": 100,
+      "lastActiveLessonId": "les-it-2",
+      "completedLessons": [
+        "les-it-1",
+        "les-it-2"
+      ]
+    },
+    {
+      "id": "stu-marco",
+      "schoolId": "school-milano",
+      "schoolName": "Milano Lingua Studio",
+      "name": "Marco Ferrari",
+      "email": "marco.ferrari@example.it",
+      "username": "marco.ferrari",
+      "password": "marco123",
+      "phone": "+39 348 98 76 543",
+      "whatsappNumber": "+39 348 98 76 543",
+      "enrolledProgramId": "prog-it-a1",
+      "level": "A2",
+      "startDate": "2026-06-01",
+      "endDate": "2026-09-01",
+      "status": "expired",
+      "progressPercent": 100,
+      "lastActiveLessonId": "les-it-2",
+      "completedLessons": [
+        "les-it-1",
+        "les-it-2"
+      ]
+    }
+  ],
+  "programs": [
+    {
+      "id": "prog-de-a1",
+      "schoolId": "school-berlin",
+      "language": "german",
+      "title": "Allemand A1 — Débutant & Fondations",
+      "level": "A1",
+      "description": "Apprenez les bases de la communication quotidienne en allemand : se présenter, commander au restaurant, poser des questions et maîtriser la conjugaison de base.",
+      "startDate": "2026-08-01",
+      "endDate": "2026-10-31",
+      "isPublished": true,
+      "modules": [
+        {
+          "id": "mod-de-a1-1",
+          "programId": "prog-de-a1",
+          "title": "Module 1 : Se présenter et saluer",
+          "order": 1,
+          "description": "Salutations formelles et informelles, alphabet allemand, prononciation et premiers dialogues.",
+          "lessons": [
+            {
+              "id": "les-de-1",
+              "moduleId": "mod-de-a1-1",
+              "title": "Dire bonjour & se présenter en allemand",
+              "order": 1,
+              "durationMinutes": 15,
+              "videoUrl": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+              "summary": "Découvrez les formules de salutation selon l'heure de la journée et la présentation personnelle.",
+              "vocabulary": [],
+              "quiz": [],
+              "passingScorePercent": 70,
+              "isUnlocked": true
+            },
+            {
+              "id": "les-de-2",
+              "moduleId": "mod-de-a1-1",
+              "title": "Les pronoms personnels et les verbes sein & haben",
+              "order": 2,
+              "durationMinutes": 20,
+              "videoUrl": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+              "summary": "Maîtrisez les deux verbes auxiliaires indispensables : sein et haben.",
+              "vocabulary": [],
+              "quiz": [],
+              "passingScorePercent": 70,
+              "isUnlocked": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "prog-it-a1",
+      "schoolId": "school-milano",
+      "language": "italian",
+      "title": "Italien A1 — Fondations Italiennes",
+      "level": "A1",
+      "description": "Immersion immédiate dans la langue et culture italienne.",
+      "startDate": "2026-08-01",
+      "endDate": "2026-11-30",
+      "isPublished": true,
+      "modules": [
+        {
+          "id": "mod-it-a1-1",
+          "programId": "prog-it-a1",
+          "title": "Modulo 1: Benvenuti in Italia",
+          "order": 1,
+          "description": "Saluti, presentazioni e primi dialoghi.",
+          "lessons": [
+            {
+              "id": "les-it-1",
+              "moduleId": "mod-it-a1-1",
+              "title": "Presentarsi in italiano",
+              "order": 1,
+              "durationMinutes": 15,
+              "videoUrl": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+              "summary": "Come presentarsi e salutare in italiano.",
+              "vocabulary": [],
+              "quiz": [],
+              "passingScorePercent": 70,
+              "isUnlocked": true
+            },
+            {
+              "id": "les-it-2",
+              "moduleId": "mod-it-a1-1",
+              "title": "Verbi Essere e Avere",
+              "order": 2,
+              "durationMinutes": 20,
+              "videoUrl": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+              "summary": "I verbi fondamentali della lingua italiana.",
+              "vocabulary": [],
+              "quiz": [],
+              "passingScorePercent": 70,
+              "isUnlocked": true
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "config": {
+    "superAdminWhatsapp": "https://wa.me/33612345678",
+    "platformName": "LinguaFlow Enterprise Suite",
+    "supportEmail": "linguaflowadmin@gmail.com",
+    "primaryBrandColor": "#6D5DFC",
+    "aiCorrectionStrictness": "standard",
+    "aiCorrectionTemperature": 0.3,
+    "maintenanceMode": false
+  },
+  "announcements": [
+    {
+      "id": "ann-global-1",
+      "title": "Bienvenue sur la plateforme LinguaFlow",
+      "titleFr": "Bienvenue sur la plateforme LinguaFlow",
+      "titleEn": "Welcome to LinguaFlow Platform",
+      "content": "L'ensemble des modules d'apprentissage et le tuteur IA sont maintenant synchronisés en temps réel.",
+      "contentFr": "L'ensemble des modules d'apprentissage et le tuteur IA sont maintenant synchronisés en temps réel.",
+      "contentEn": "All learning modules and AI tutor are now synchronized in real-time.",
+      "target": "all",
+      "priority": "normal",
+      "createdAt": "2026-11-09T19:34:29.966Z",
+      "authorName": "Super Admin",
+      "isActive": true,
+      "readCount": 12
+    },
+    {
+      "id": "ann-test-sync-1",
+      "title": "Test Announcement Synchronized",
+      "content": "Broadcasting across Super Admin and School Admin",
+      "target": "all",
+      "priority": "normal",
+      "isActive": true,
+      "createdAt": "2026-11-09T19:35:18.314Z"
+    }
+  ],
+  "logs": [
+    {
+      "id": "log-prog-1794252918309-jc8l",
+      "action": "Validation Leçon & Progression",
+      "details": "L'élève Romaric Hirsein a validé la leçon les-de-2 (67% complété).",
+      "actorRole": "student",
+      "actorName": "Romaric Hirsein",
+      "schoolId": "school-berlin",
+      "schoolName": "Berlin Sprachzentrum",
+      "entityType": "lesson",
+      "entityId": "les-de-2",
+      "targetId": "stu-romaric",
+      "timestamp": "2026-11-09T19:35:18.309Z",
+      "status": "success"
+    },
+    {
+      "id": "log-audit-srv-1",
+      "timestamp": "2026-11-09T19:19:29.968Z",
+      "actorRole": "school_admin",
+      "actorName": "Klaus Weber",
+      "schoolId": "school-berlin",
+      "schoolName": "Berlin Sprachzentrum",
+      "action": "Audit de conformité des licences élèves",
+      "details": "Contrôle de sécurité des 42 comptes élèves actifs. Quotas respectés.",
+      "ipAddress": "192.168.1.42",
+      "status": "success"
+    },
+    {
+      "id": "log-audit-srv-2",
+      "timestamp": "2026-11-09T18:34:29.968Z",
+      "actorRole": "super_admin",
+      "actorName": "Super Admin",
+      "schoolId": "school-berlin",
+      "schoolName": "Berlin Sprachzentrum",
+      "action": "Initialisation traçabilité École",
+      "details": "Vérification des registres RGPD et d'assiduité académique.",
+      "ipAddress": "127.0.0.1",
+      "status": "success"
+    }
+  ]
+}

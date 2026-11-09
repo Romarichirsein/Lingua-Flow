@@ -23,6 +23,9 @@ import {
   buildSuperAdminWhatsAppUrl,
   buildStudentSchoolWhatsAppUrl,
   checkAndGenerateSubscriptionExpiryAlerts,
+  broadcastRealtimeUpdate,
+  subscribeRealtimeSync,
+  mergeAppData,
 } from "./lib/syncEngine";
 import {
   parseCurrentRoute,
@@ -192,71 +195,67 @@ export default function App() {
     };
   }, [handleRouteChange]);
 
-  // Bidirectional synchronization of registered schools and students with backend server
+  // 1. Cross-tab & Cross-role real-time synchronization listener (0ms latency via BroadcastChannel + Storage events)
   useEffect(() => {
-    fetch("/api/users/sync")
-      .then((res) => res.json())
-      .then((resData) => {
-        if (resData.success && Array.isArray(resData.schools) && Array.isArray(resData.students)) {
-          setData((prev) => {
-            let changed = false;
-            const currentSchools = [...prev.schools];
-            resData.schools.forEach((s: any) => {
-              const idx = currentSchools.findIndex((cs) => cs.id === s.id);
-              if (idx === -1) {
-                currentSchools.push(s);
-                changed = true;
-              } else if (s.password && !currentSchools[idx].password) {
-                currentSchools[idx] = { ...currentSchools[idx], password: s.password };
-                changed = true;
-              }
-            });
-
-            const currentStudents = [...prev.students];
-            resData.students.forEach((st: any) => {
-              const idx = currentStudents.findIndex((cst) => cst.id === st.id);
-              if (idx === -1) {
-                currentStudents.push(st);
-                changed = true;
-              } else if (st.password && !currentStudents[idx].password) {
-                currentStudents[idx] = { ...currentStudents[idx], password: st.password };
-                changed = true;
-              }
-            });
-
-            if (changed) {
-              const next = { ...prev, schools: currentSchools, students: currentStudents };
-              saveStoredData(next);
-              return next;
-            }
-            return prev;
-          });
-        }
-      })
-      .catch((err) => console.debug("Initial user sync fetch:", err.message));
+    const unsubscribe = subscribeRealtimeSync((partial) => {
+      setData((prev) => {
+        const merged = mergeAppData(prev, partial);
+        return merged;
+      });
+    });
+    return unsubscribe;
   }, []);
 
+  // 2. Full unified server synchronization (initial on mount, tab focus, and periodic interval)
   useEffect(() => {
-    if (data.schools && data.students) {
-      fetch("/api/users/sync", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          schools: data.schools,
-          students: data.students,
-        }),
-      }).catch((err) => {
-        console.debug("Backend user sync notice:", err.message);
-      });
-    }
-  }, [data.schools, data.students]);
+    const syncWithServer = () => {
+      fetch("/api/data/sync")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((payload) => {
+          if (payload?.success && payload?.data) {
+            setData((prev) => {
+              const merged = mergeAppData(prev, payload.data);
+              saveStoredData(merged);
+              return merged;
+            });
+          }
+        })
+        .catch((err) => console.debug("[App] Background server sync notice:", err.message));
+    };
 
-  // Persistent save helper
+    // Initial hydration
+    syncWithServer();
+
+    // Re-sync when switching back to tab
+    window.addEventListener("focus", syncWithServer);
+
+    // Periodic synchronization check (every 8 seconds)
+    const interval = setInterval(syncWithServer, 8000);
+
+    return () => {
+      window.removeEventListener("focus", syncWithServer);
+      clearInterval(interval);
+    };
+  }, []);
+
+  // Persistent save, real-time broadcast and backend synchronization helper
   const updateData = (partial: Partial<typeof data>) => {
     setData((prev) => {
       const next = { ...prev, ...partial };
       saveStoredData(next);
       return next;
+    });
+
+    // 1. Broadcast instantaneously to all other open tabs / roles
+    broadcastRealtimeUpdate(partial, role);
+
+    // 2. Persist to unified backend database
+    fetch("/api/data/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(partial),
+    }).catch((err) => {
+      console.debug("[App] Backend data sync notice:", err.message);
     });
   };
 
@@ -441,11 +440,15 @@ export default function App() {
     navigateTo("/login");
   };
 
-  // Current active school & student entities
-  const currentSchool =
-    data.schools.find((s) => s.id === selectedSchoolId) || data.schools[0];
+  // Current active school & student entities with dynamic tenant isolation
   const currentStudent =
     data.students.find((s) => s.id === selectedStudentId) || data.students[0];
+  const currentSchool =
+    role === "student" && currentStudent
+      ? data.schools.find((s) => s.id === currentStudent.schoolId) ||
+        data.schools.find((s) => s.id === selectedSchoolId) ||
+        data.schools[0]
+      : data.schools.find((s) => s.id === selectedSchoolId) || data.schools[0];
 
   // Dynamic WhatsApp routing:
   // - Super Admin: No floating WhatsApp widget

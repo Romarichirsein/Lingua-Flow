@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import path from "path";
+import fs from "fs";
 import { GoogleGenAI } from "@google/genai";
 import { createClient } from "@sanity/client";
 
@@ -1005,19 +1006,370 @@ const DEFAULT_STUDENTS: any[] = [
   },
 ];
 
+const DEFAULT_CONFIG: any = {
+  superAdminWhatsapp: "https://wa.me/33612345678",
+  platformName: "LinguaFlow SaaS",
+  supportEmail: "linguaflowadmin@gmail.com",
+  primaryBrandColor: "#6D5DFC",
+  aiCorrectionStrictness: "standard",
+  aiCorrectionTemperature: 0.3,
+  maintenanceMode: false,
+};
+
+const DEFAULT_PROGRAMS: any[] = [
+  {
+    id: "prog-de-a1",
+    schoolId: "school-berlin",
+    language: "german",
+    title: "Allemand A1 — Débutant & Fondations",
+    level: "A1",
+    description: "Apprenez les bases de la communication quotidienne en allemand : se présenter, commander au restaurant, poser des questions et maîtriser la conjugaison de base.",
+    startDate: "2026-08-01",
+    endDate: "2026-10-31",
+    isPublished: true,
+    modules: [
+      {
+        id: "mod-de-a1-1",
+        programId: "prog-de-a1",
+        title: "Module 1 : Se présenter et saluer",
+        order: 1,
+        description: "Salutations formelles et informelles, alphabet allemand, prononciation et premiers dialogues.",
+        lessons: [
+          {
+            id: "les-de-1",
+            moduleId: "mod-de-a1-1",
+            title: "Dire bonjour & se présenter en allemand",
+            order: 1,
+            durationMinutes: 15,
+            videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+            summary: "Découvrez les formules de salutation selon l'heure de la journée et la présentation personnelle.",
+            vocabulary: [],
+            quiz: [],
+            passingScorePercent: 70,
+            isUnlocked: true,
+          },
+          {
+            id: "les-de-2",
+            moduleId: "mod-de-a1-1",
+            title: "Les pronoms personnels et les verbes sein & haben",
+            order: 2,
+            durationMinutes: 20,
+            videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+            summary: "Maîtrisez les deux verbes auxiliaires indispensables : sein et haben.",
+            vocabulary: [],
+            quiz: [],
+            passingScorePercent: 70,
+            isUnlocked: true,
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: "prog-it-a1",
+    schoolId: "school-milano",
+    language: "italian",
+    title: "Italien A1 — Fondations Italiennes",
+    level: "A1",
+    description: "Immersion immédiate dans la langue et culture italienne.",
+    startDate: "2026-08-01",
+    endDate: "2026-11-30",
+    isPublished: true,
+    modules: [
+      {
+        id: "mod-it-a1-1",
+        programId: "prog-it-a1",
+        title: "Modulo 1: Benvenuti in Italia",
+        order: 1,
+        description: "Saluti, presentazioni e primi dialoghi.",
+        lessons: [
+          {
+            id: "les-it-1",
+            moduleId: "mod-it-a1-1",
+            title: "Presentarsi in italiano",
+            order: 1,
+            durationMinutes: 15,
+            videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+            summary: "Come presentarsi e salutare in italiano.",
+            vocabulary: [],
+            quiz: [],
+            passingScorePercent: 70,
+            isUnlocked: true,
+          },
+          {
+            id: "les-it-2",
+            moduleId: "mod-it-a1-1",
+            title: "Verbi Essere e Avere",
+            order: 2,
+            durationMinutes: 20,
+            videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+            summary: "I verbi fondamentali della lingua italiana.",
+            vocabulary: [],
+            quiz: [],
+            passingScorePercent: 70,
+            isUnlocked: true,
+          }
+        ]
+      }
+    ]
+  }
+];
+
+const DEFAULT_ANNOUNCEMENTS: any[] = [
+  {
+    id: "ann-global-1",
+    title: "Bienvenue sur la plateforme LinguaFlow",
+    titleFr: "Bienvenue sur la plateforme LinguaFlow",
+    titleEn: "Welcome to LinguaFlow Platform",
+    content: "L'ensemble des modules d'apprentissage et le tuteur IA sont maintenant synchronisés en temps réel.",
+    contentFr: "L'ensemble des modules d'apprentissage et le tuteur IA sont maintenant synchronisés en temps réel.",
+    contentEn: "All learning modules and AI tutor are now synchronized in real-time.",
+    target: "all",
+    priority: "normal",
+    createdAt: new Date().toISOString(),
+    authorName: "Super Admin",
+    isActive: true,
+    readCount: 12,
+  }
+];
+
+const DB_FILE = path.join(process.cwd(), "data", "linguaflow_server_db.json");
+
 let serverSyncedSchools: any[] = [...DEFAULT_SCHOOLS];
 let serverSyncedStudents: any[] = [...DEFAULT_STUDENTS];
+let serverSyncedPrograms: any[] = [...DEFAULT_PROGRAMS];
+let serverSyncedConfig: any = { ...DEFAULT_CONFIG };
+let serverSyncedAnnouncements: any[] = [...DEFAULT_ANNOUNCEMENTS];
+let serverAuditLogs: any[] = [
+  {
+    id: "log-audit-srv-1",
+    timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
+    actorRole: "school_admin",
+    actorName: "Klaus Weber",
+    schoolId: "school-berlin",
+    schoolName: "Berlin Sprachzentrum",
+    action: "Audit de conformité des licences élèves",
+    details: "Contrôle de sécurité des 42 comptes élèves actifs. Quotas respectés.",
+    ipAddress: "192.168.1.42",
+    status: "success",
+  },
+  {
+    id: "log-audit-srv-2",
+    timestamp: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
+    actorRole: "super_admin",
+    actorName: "Super Admin",
+    schoolId: "school-berlin",
+    schoolName: "Berlin Sprachzentrum",
+    action: "Initialisation traçabilité École",
+    details: "Vérification des registres RGPD et d'assiduité académique.",
+    ipAddress: "127.0.0.1",
+    status: "success",
+  },
+];
+
+function loadServerDatabase() {
+  try {
+    if (fs.existsSync(DB_FILE)) {
+      const raw = fs.readFileSync(DB_FILE, "utf-8");
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed.schools) && parsed.schools.length > 0) serverSyncedSchools = parsed.schools;
+      if (Array.isArray(parsed.students) && parsed.students.length > 0) serverSyncedStudents = parsed.students;
+      if (Array.isArray(parsed.programs) && parsed.programs.length > 0) serverSyncedPrograms = parsed.programs;
+      if (parsed.config && typeof parsed.config === "object") serverSyncedConfig = { ...serverSyncedConfig, ...parsed.config };
+      if (Array.isArray(parsed.announcements)) serverSyncedAnnouncements = parsed.announcements;
+      if (Array.isArray(parsed.logs)) serverAuditLogs = parsed.logs;
+    } else {
+      saveServerDatabase();
+    }
+  } catch (err: any) {
+    console.warn("[Server DB] Could not read database file:", err.message);
+  }
+}
+
+function saveServerDatabase() {
+  try {
+    const dir = path.dirname(DB_FILE);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    const dataToSave = {
+      version: "3.0",
+      updatedAt: new Date().toISOString(),
+      schools: serverSyncedSchools,
+      students: serverSyncedStudents,
+      programs: serverSyncedPrograms,
+      config: serverSyncedConfig,
+      announcements: serverSyncedAnnouncements,
+      logs: serverAuditLogs,
+    };
+    fs.writeFileSync(DB_FILE, JSON.stringify(dataToSave, null, 2), "utf-8");
+  } catch (err: any) {
+    console.error("[Server DB] Error persisting database file:", err.message);
+  }
+}
+
+// Initial hydration from disk
+loadServerDatabase();
+
+// --------------------------------------------------------------------------
+// UNIFIED REAL-TIME DATA SYNC ENDPOINTS
+// --------------------------------------------------------------------------
+app.get("/api/data/sync", (_req, res) => {
+  return res.json({
+    success: true,
+    timestamp: new Date().toISOString(),
+    data: {
+      schools: serverSyncedSchools,
+      students: serverSyncedStudents,
+      programs: serverSyncedPrograms,
+      config: serverSyncedConfig,
+      announcements: serverSyncedAnnouncements,
+      logs: serverAuditLogs,
+    },
+  });
+});
+
+app.post("/api/data/sync", (req, res) => {
+  try {
+    const { schools, students, programs, config, announcements, logs } = req.body;
+    let modified = false;
+
+    if (Array.isArray(schools)) {
+      const schoolMap = new Map(serverSyncedSchools.map((s: any) => [s.id, s]));
+      for (const s of schools) {
+        if (s && s.id) {
+          const existing = schoolMap.get(s.id) || {};
+          schoolMap.set(s.id, { ...existing, ...s });
+        }
+      }
+      serverSyncedSchools = Array.from(schoolMap.values());
+      modified = true;
+    }
+
+    if (Array.isArray(students)) {
+      const studentMap = new Map(serverSyncedStudents.map((st: any) => [st.id, st]));
+      for (const st of students) {
+        if (st && st.id) {
+          const existing = studentMap.get(st.id) || {};
+          const mergedCompleted = Array.from(
+            new Set([...(existing.completedLessons || []), ...(st.completedLessons || [])])
+          );
+          studentMap.set(st.id, {
+            ...existing,
+            ...st,
+            completedLessons: mergedCompleted.length > 0 ? mergedCompleted : (st.completedLessons || existing.completedLessons || []),
+            progressPercent: st.progressPercent !== undefined ? st.progressPercent : existing.progressPercent,
+          });
+        }
+      }
+      serverSyncedStudents = Array.from(studentMap.values());
+      modified = true;
+    }
+
+    if (Array.isArray(programs)) {
+      const progMap = new Map(serverSyncedPrograms.map((p: any) => [p.id, p]));
+      for (const p of programs) {
+        if (p && p.id) {
+          const existing = progMap.get(p.id) || {};
+          progMap.set(p.id, { ...existing, ...p });
+        }
+      }
+      serverSyncedPrograms = Array.from(progMap.values());
+      modified = true;
+    }
+
+    if (config && typeof config === "object") {
+      serverSyncedConfig = { ...serverSyncedConfig, ...config };
+      modified = true;
+    }
+
+    if (Array.isArray(announcements)) {
+      const annMap = new Map(serverSyncedAnnouncements.map((a: any) => [a.id, a]));
+      for (const a of announcements) {
+        if (a && a.id) {
+          annMap.set(a.id, a);
+        }
+      }
+      serverSyncedAnnouncements = Array.from(annMap.values());
+      modified = true;
+    }
+
+    if (Array.isArray(logs)) {
+      const logMap = new Map(serverAuditLogs.map((l: any) => [l.id, l]));
+      for (const l of logs) {
+        if (l && l.id) {
+          logMap.set(l.id, l);
+        }
+      }
+      serverAuditLogs = Array.from(logMap.values())
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+        .slice(0, 500);
+      modified = true;
+    }
+
+    if (modified) {
+      saveServerDatabase();
+    }
+
+    return res.json({
+      success: true,
+      message: "Données unifiées synchronisées et persistées avec succès.",
+      timestamp: new Date().toISOString(),
+      counts: {
+        schools: serverSyncedSchools.length,
+        students: serverSyncedStudents.length,
+        programs: serverSyncedPrograms.length,
+        logs: serverAuditLogs.length,
+        announcements: serverSyncedAnnouncements.length,
+      },
+      data: {
+        schools: serverSyncedSchools,
+        students: serverSyncedStudents,
+        programs: serverSyncedPrograms,
+        config: serverSyncedConfig,
+        announcements: serverSyncedAnnouncements,
+        logs: serverAuditLogs,
+      },
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
 
 // Endpoint to sync users (schools, school directors, students)
 app.post("/api/users/sync", (req, res) => {
   try {
     const { schools, students } = req.body;
+    let modified = false;
+
     if (Array.isArray(schools)) {
-      serverSyncedSchools = schools;
+      const schoolMap = new Map(serverSyncedSchools.map((s: any) => [s.id, s]));
+      for (const s of schools) {
+        if (s && s.id) {
+          const existing = schoolMap.get(s.id) || {};
+          schoolMap.set(s.id, { ...existing, ...s });
+        }
+      }
+      serverSyncedSchools = Array.from(schoolMap.values());
+      modified = true;
     }
+
     if (Array.isArray(students)) {
-      serverSyncedStudents = students;
+      const studentMap = new Map(serverSyncedStudents.map((st: any) => [st.id, st]));
+      for (const st of students) {
+        if (st && st.id) {
+          const existing = studentMap.get(st.id) || {};
+          studentMap.set(st.id, { ...existing, ...st });
+        }
+      }
+      serverSyncedStudents = Array.from(studentMap.values());
+      modified = true;
     }
+
+    if (modified) {
+      saveServerDatabase();
+    }
+
     return res.json({
       success: true,
       message: "Utilisateurs synchronisés avec succès avec le système.",
@@ -1037,25 +1389,11 @@ app.get("/api/users/sync", (_req, res) => {
     success: true,
     schoolsCount: serverSyncedSchools.length,
     studentsCount: serverSyncedStudents.length,
-    schools: serverSyncedSchools.map((s) => ({
-      id: s.id,
-      name: s.name,
-      slug: s.slug,
-      language: s.language,
-      managerEmail: s.managerEmail,
-      username: s.username,
-      status: s.status,
-    })),
-    students: serverSyncedStudents.map((st) => ({
-      id: st.id,
-      name: st.name,
-      email: st.email,
-      schoolId: st.schoolId,
-      level: st.level,
-      status: st.status,
-    })),
+    schools: serverSyncedSchools,
+    students: serverSyncedStudents,
   });
 });
+
 
 // --------------------------------------------------------------------------
 // --------------------------------------------------------------------------
@@ -1186,6 +1524,7 @@ app.post("/api/schools", async (req, res) => {
     const id = school.id || `school-${Date.now()}`;
     const newSchool = { ...school, id, createdAt: school.createdAt || new Date().toISOString().split("T")[0] };
     serverSyncedSchools = [newSchool, ...serverSyncedSchools.filter((s: any) => s.id !== id)];
+    saveServerDatabase();
     return res.status(201).json({ success: true, school: newSchool });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
@@ -1199,9 +1538,11 @@ app.put("/api/schools/:id", async (req, res) => {
     const index = serverSyncedSchools.findIndex((s: any) => s.id === id);
     if (index === -1) {
       serverSyncedSchools.push({ ...updates, id });
+      saveServerDatabase();
       return res.json({ success: true, school: { ...updates, id } });
     }
     serverSyncedSchools[index] = { ...serverSyncedSchools[index], ...updates };
+    saveServerDatabase();
     return res.json({ success: true, school: serverSyncedSchools[index] });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
@@ -1212,6 +1553,7 @@ app.delete("/api/schools/:id", async (req, res) => {
   try {
     const { id } = req.params;
     serverSyncedSchools = serverSyncedSchools.filter((s: any) => s.id !== id);
+    saveServerDatabase();
     return res.json({ success: true, message: `School ${id} deleted successfully` });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
@@ -1233,6 +1575,7 @@ app.post("/api/students", async (req, res) => {
       status: student.status || "active",
     };
     serverSyncedStudents = [newStudent, ...serverSyncedStudents.filter((st: any) => st.id !== id)];
+    saveServerDatabase();
     return res.status(201).json({ success: true, student: newStudent });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
@@ -1246,9 +1589,11 @@ app.put("/api/students/:id", async (req, res) => {
     const index = serverSyncedStudents.findIndex((st: any) => st.id === id);
     if (index === -1) {
       serverSyncedStudents.push({ ...updates, id });
+      saveServerDatabase();
       return res.json({ success: true, student: { ...updates, id } });
     }
     serverSyncedStudents[index] = { ...serverSyncedStudents[index], ...updates };
+    saveServerDatabase();
     return res.json({ success: true, student: serverSyncedStudents[index] });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
@@ -1259,6 +1604,7 @@ app.delete("/api/students/:id", async (req, res) => {
   try {
     const { id } = req.params;
     serverSyncedStudents = serverSyncedStudents.filter((st: any) => st.id !== id);
+    saveServerDatabase();
     return res.json({ success: true, message: `Student ${id} deleted successfully` });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
@@ -1345,33 +1691,7 @@ app.post("/api/subscriptions/check-expiry", (req, res) => {
   }
 });
 
-// In-memory persistent store for server-persisted audit logs
-let serverAuditLogs: any[] = [
-  {
-    id: "log-audit-srv-1",
-    timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-    actorRole: "school_admin",
-    actorName: "Klaus Weber",
-    schoolId: "school-berlin",
-    schoolName: "Berlin Sprachzentrum",
-    action: "Audit de conformité des licences élèves",
-    details: "Contrôle de sécurité des 42 comptes élèves actifs. Quotas respectés.",
-    ipAddress: "192.168.1.42",
-    status: "success",
-  },
-  {
-    id: "log-audit-srv-2",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
-    actorRole: "super_admin",
-    actorName: "Super Admin",
-    schoolId: "school-berlin",
-    schoolName: "Berlin Sprachzentrum",
-    action: "Initialisation traçabilité École",
-    details: "Vérification des registres RGPD et d'assiduité académique.",
-    ipAddress: "127.0.0.1",
-    status: "success",
-  },
-];
+// Server-persisted audit logs (managed via unified database store)
 
 // GET /api/audit/logs - Fetch all logs or filter by school
 app.get("/api/audit/logs", (req, res) => {
@@ -1424,6 +1744,7 @@ app.post("/api/audit/logs", (req, res) => {
     if (serverAuditLogs.length > 500) {
       serverAuditLogs = serverAuditLogs.slice(0, 500);
     }
+    saveServerDatabase();
 
     return res.json({
       success: true,
@@ -1448,6 +1769,10 @@ app.post("/api/audit/sync", (req, res) => {
         }
       }
       serverAuditLogs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      if (serverAuditLogs.length > 500) {
+        serverAuditLogs = serverAuditLogs.slice(0, 500);
+      }
+      saveServerDatabase();
     }
     return res.json({
       success: true,
@@ -2800,12 +3125,47 @@ app.post("/api/progression/complete-lesson", async (req, res) => {
 
     const isProgramCompleted = newProgressPercent === 100;
 
+    // Update in serverSyncedStudents
+    const studentIdx = serverSyncedStudents.findIndex((st: any) => st.id === studentId);
+    let updatedStudent: any = null;
+    if (studentIdx !== -1) {
+      serverSyncedStudents[studentIdx] = {
+        ...serverSyncedStudents[studentIdx],
+        completedLessons: uniqueCompleted,
+        progressPercent: newProgressPercent,
+        lastActiveLessonId: lessonId,
+      };
+      updatedStudent = serverSyncedStudents[studentIdx];
+    }
+
+    // Add activity log to server audit logs
+    const progLog = {
+      id: `log-prog-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      action: "Validation Leçon & Progression",
+      details: `L'élève ${updatedStudent?.name || studentId} a validé la leçon ${lessonId} (${newProgressPercent}% complété).`,
+      actorRole: "student",
+      actorName: updatedStudent?.name || "Élève",
+      schoolId: schoolId || updatedStudent?.schoolId || "",
+      schoolName: updatedStudent?.schoolName || "",
+      entityType: "lesson",
+      entityId: lessonId,
+      targetId: studentId,
+      timestamp: new Date().toISOString(),
+      status: "success",
+    };
+    serverAuditLogs.unshift(progLog);
+    if (serverAuditLogs.length > 500) {
+      serverAuditLogs = serverAuditLogs.slice(0, 500);
+    }
+    saveServerDatabase();
+
     return res.json({
       success: true,
       lessonId,
       completedLessons: uniqueCompleted,
       progressPercent: newProgressPercent,
       isProgramCompleted,
+      student: updatedStudent,
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {

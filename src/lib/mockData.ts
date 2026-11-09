@@ -7,6 +7,7 @@ import {
   GlobalPlatformConfig,
   Announcement,
   NotificationTemplate,
+  AppData,
 } from "../types";
 
 export const INITIAL_PLATFORM_CONFIG: GlobalPlatformConfig = {
@@ -750,7 +751,7 @@ export const INITIAL_NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
 ];
 
 // LocalStorage helpers with automatic hydration
-const STORAGE_KEYS = {
+export const STORAGE_KEYS = {
   SCHOOLS: "linguaflow_schools_v3",
   STUDENTS: "linguaflow_students_v3",
   PROGRAMS: "linguaflow_programs_v3",
@@ -761,8 +762,20 @@ const STORAGE_KEYS = {
   TEMPLATES: "linguaflow_templates_v3",
 };
 
-export const getStoredData = () => {
+export const getStoredData = (): AppData => {
   try {
+    if (typeof window === "undefined" || typeof localStorage === "undefined") {
+      return {
+        schools: INITIAL_SCHOOLS,
+        students: INITIAL_STUDENTS,
+        programs: INITIAL_PROGRAMS,
+        logs: INITIAL_LOGS,
+        config: INITIAL_PLATFORM_CONFIG,
+        aiSubmissions: [],
+        announcements: INITIAL_ANNOUNCEMENTS,
+        templates: INITIAL_NOTIFICATION_TEMPLATES,
+      };
+    }
     const schools = localStorage.getItem(STORAGE_KEYS.SCHOOLS);
     const students = localStorage.getItem(STORAGE_KEYS.STUDENTS);
     const programs = localStorage.getItem(STORAGE_KEYS.PROGRAMS);
@@ -873,6 +886,7 @@ export const saveStoredData = (data: {
   templates?: NotificationTemplate[];
 }) => {
   try {
+    if (typeof window === "undefined" || typeof localStorage === "undefined") return;
     if (data.schools) localStorage.setItem(STORAGE_KEYS.SCHOOLS, JSON.stringify(data.schools));
     if (data.students) localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(data.students));
     if (data.programs) localStorage.setItem(STORAGE_KEYS.PROGRAMS, JSON.stringify(data.programs));

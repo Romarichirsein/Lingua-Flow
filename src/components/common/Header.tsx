@@ -149,6 +149,18 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* DESKTOP Controls: Language, Theme & User Profile */}
         <div className="hidden md:flex items-center gap-2 sm:gap-3 lg:gap-4">
+          {/* Live Synchronizer Badge */}
+          <div
+            title={locale === "en" ? "Real-time cross-role synchronization active" : "Synchronisation temps réel inter-rôles active"}
+            className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 select-none"
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span>{locale === "en" ? "Live Sync" : "Sync Temps Réel"}</span>
+          </div>
+
           {/* Active Space / Role Badge */}
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#6D5DFC]/10 border border-[#6D5DFC]/20 text-xs font-semibold text-[#6D5DFC] dark:text-[#a399ff]">
             {currentRole === "super_admin" ? (

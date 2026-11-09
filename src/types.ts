@@ -417,3 +417,23 @@ export interface Book {
   chapters: BookChapter[];
   totalWords: number;
 }
+
+export interface AppData {
+  schools: School[];
+  students: Student[];
+  programs: Program[];
+  logs: ActivityLog[];
+  config: GlobalPlatformConfig;
+  aiSubmissions: AIWritingSubmission[];
+  announcements: Announcement[];
+  templates: NotificationTemplate[];
+}
+
+export interface RealtimeSyncMessage {
+  type: "DATA_MUTATION" | "FORCE_REFRESH" | "HEARTBEAT";
+  senderRole?: UserRole;
+  senderId?: string;
+  partial?: Partial<AppData>;
+  timestamp: number;
+}
+

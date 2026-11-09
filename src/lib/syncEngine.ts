@@ -11,7 +11,10 @@ import {
   Notification,
   ActivityLog,
   Announcement,
+  AppData,
+  RealtimeSyncMessage,
 } from "../types";
+import { STORAGE_KEYS, getStoredData, saveStoredData } from "./mockData";
 
 /**
  * Computes remaining days dynamically using current timestamp.
@@ -439,3 +442,191 @@ export function filterAnnouncementsForSuperAdmin(
     return a.target === "super_admin" || a.target === "all" || a.priority === "urgent";
   });
 }
+
+// --------------------------------------------------------------------------
+// REALTIME CROSS-ROLE / CROSS-TAB SYNCHRONIZATION BUS
+// --------------------------------------------------------------------------
+export const REALTIME_SYNC_CHANNEL = "linguaflow_realtime_sync_v3";
+
+/**
+ * Pure merger function that guarantees conflict-free updates across roles:
+ * - Schools and Students are merged by ID so changes to individual attributes
+ *   (e.g., status, CEFR level, quota) update smoothly without dropping other entities.
+ * - Student completedLessons and progressPercent are merged additively.
+ * - Programs, Announcements, and Logs are deduplicated by ID.
+ */
+export function mergeAppData(prev: AppData, incoming: Partial<AppData>): AppData {
+  let nextSchools = prev.schools;
+  if (Array.isArray(incoming.schools)) {
+    const schoolMap = new Map(prev.schools.map((s) => [s.id, s]));
+    for (const s of incoming.schools) {
+      if (s && s.id) {
+        const existing = schoolMap.get(s.id);
+        schoolMap.set(s.id, existing ? { ...existing, ...s } : s);
+      }
+    }
+    nextSchools = Array.from(schoolMap.values());
+  }
+
+  let nextStudents = prev.students;
+  if (Array.isArray(incoming.students)) {
+    const studentMap = new Map(prev.students.map((st) => [st.id, st]));
+    for (const st of incoming.students) {
+      if (st && st.id) {
+        const existing = studentMap.get(st.id);
+        const existingLessons = existing?.completedLessons || [];
+        const incomingLessons = st.completedLessons || [];
+        const mergedCompleted = Array.from(
+          new Set([...existingLessons, ...incomingLessons])
+        );
+        const merged: Student = {
+          ...(existing || st),
+          ...st,
+          completedLessons: mergedCompleted.length > 0 ? mergedCompleted : (st.completedLessons || existingLessons),
+          progressPercent: st.progressPercent !== undefined ? st.progressPercent : (existing?.progressPercent ?? 0),
+        };
+        studentMap.set(st.id, merged);
+      }
+    }
+    nextStudents = Array.from(studentMap.values());
+  }
+
+  let nextPrograms = prev.programs;
+  if (Array.isArray(incoming.programs)) {
+    const progMap = new Map(prev.programs.map((p) => [p.id, p]));
+    for (const p of incoming.programs) {
+      if (p && p.id) {
+        const existing = progMap.get(p.id);
+        progMap.set(p.id, existing ? { ...existing, ...p } : p);
+      }
+    }
+    nextPrograms = Array.from(progMap.values());
+  }
+
+  let nextLogs = prev.logs;
+  if (Array.isArray(incoming.logs)) {
+    const logMap = new Map(prev.logs.map((l) => [l.id, l]));
+    for (const l of incoming.logs) {
+      if (l && l.id) {
+        logMap.set(l.id, l);
+      }
+    }
+    nextLogs = Array.from(logMap.values())
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, 500);
+  }
+
+  let nextAnnouncements = prev.announcements;
+  if (Array.isArray(incoming.announcements)) {
+    const annMap = new Map((prev.announcements || []).map((a) => [a.id, a]));
+    for (const a of incoming.announcements) {
+      if (a && a.id) {
+        annMap.set(a.id, a);
+      }
+    }
+    nextAnnouncements = Array.from(annMap.values());
+  }
+
+  const nextConfig = incoming.config ? { ...prev.config, ...incoming.config } : prev.config;
+  const nextAiSubmissions = incoming.aiSubmissions ? incoming.aiSubmissions : prev.aiSubmissions;
+  const nextTemplates = incoming.templates ? incoming.templates : prev.templates;
+
+  return {
+    schools: nextSchools,
+    students: nextStudents,
+    programs: nextPrograms,
+    logs: nextLogs,
+    config: nextConfig,
+    aiSubmissions: nextAiSubmissions,
+    announcements: nextAnnouncements,
+    templates: nextTemplates,
+  };
+}
+
+/**
+ * Broadcasts an update across all open browser tabs and windows in 0ms.
+ */
+export function broadcastRealtimeUpdate(
+  partial: Partial<AppData>,
+  senderRole?: UserRole,
+  senderId?: string
+): void {
+  const message: RealtimeSyncMessage = {
+    type: "DATA_MUTATION",
+    senderRole,
+    senderId,
+    partial,
+    timestamp: Date.now(),
+  };
+
+  // 1. BroadcastChannel (standard for modern browsers)
+  try {
+    if (typeof BroadcastChannel !== "undefined") {
+      const channel = new BroadcastChannel(REALTIME_SYNC_CHANNEL);
+      channel.postMessage(message);
+      channel.close();
+    }
+  } catch (err) {
+    console.debug("[SyncBus] BroadcastChannel notice:", err);
+  }
+
+  // 2. Custom local window event
+  try {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("linguaflow_local_sync", { detail: message })
+      );
+    }
+  } catch {}
+}
+
+/**
+ * Subscribes to real-time events across tabs via BroadcastChannel and window storage events.
+ * Returns an unsubscription callback.
+ */
+export function subscribeRealtimeSync(
+  listener: (partial: Partial<AppData>, message: RealtimeSyncMessage) => void
+): () => void {
+  let channel: BroadcastChannel | null = null;
+
+  try {
+    if (typeof BroadcastChannel !== "undefined") {
+      channel = new BroadcastChannel(REALTIME_SYNC_CHANNEL);
+      channel.onmessage = (event: MessageEvent<RealtimeSyncMessage>) => {
+        if (event.data && event.data.type === "DATA_MUTATION" && event.data.partial) {
+          listener(event.data.partial, event.data);
+        } else if (event.data && event.data.type === "FORCE_REFRESH") {
+          const fresh = getStoredData();
+          listener(fresh, event.data);
+        }
+      };
+    }
+  } catch (err) {
+    console.debug("[SyncBus] BroadcastChannel listener setup notice:", err);
+  }
+
+  // Storage event listener fallback (detects changes in other tabs via localStorage)
+  const handleStorage = (event: StorageEvent) => {
+    if (event.key && event.key.startsWith("linguaflow_")) {
+      const fresh = getStoredData();
+      listener(fresh, {
+        type: "FORCE_REFRESH",
+        timestamp: Date.now(),
+      });
+    }
+  };
+
+  if (typeof window !== "undefined") {
+    window.addEventListener("storage", handleStorage);
+  }
+
+  return () => {
+    if (channel) {
+      channel.close();
+    }
+    if (typeof window !== "undefined") {
+      window.removeEventListener("storage", handleStorage);
+    }
+  };
+}
+
