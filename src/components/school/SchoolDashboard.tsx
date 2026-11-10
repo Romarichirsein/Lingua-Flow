@@ -59,7 +59,7 @@ export const SchoolDashboard: React.FC<SchoolDashboardProps> = ({
 }) => {
   const effectiveStatus = getEffectiveStatus(school);
   const isEn = locale === "en";
-  const isSchoolRestricted = effectiveStatus !== "active";
+  const isSchoolRestricted = effectiveStatus === "suspended" || effectiveStatus === "blocked" || effectiveStatus === "expired";
 
   // Dedicated School Logger guaranteeing schoolId and schoolName
   const handleSchoolAddLog = (
@@ -75,28 +75,31 @@ export const SchoolDashboard: React.FC<SchoolDashboardProps> = ({
     });
   };
 
-  // Active School Tab state
+  // Helper to normalize tab names and French aliases
+  const normalizeSchoolTab = (
+    subpath?: string
+  ): "dashboard" | "students" | "programs" | "courses" | "evaluations" | "pedagogy" | "audit" | "settings" => {
+    if (!subpath) return "dashboard";
+    const s = subpath.toLowerCase().trim();
+    if (["students", "eleves", "apprenants", "student", "eleve"].includes(s)) return "students";
+    if (["programs", "programmes", "program", "programme"].includes(s)) return "programs";
+    if (["courses", "cours", "lecons", "lessons", "builder"].includes(s)) return "courses";
+    if (["evaluations", "quizzes", "examens", "tests", "prufung"].includes(s)) return "evaluations";
+    if (["pedagogy", "pedagogie", "analytics", "statistiques"].includes(s)) return "pedagogy";
+    if (["audit", "logs", "tracabilite"].includes(s)) return "audit";
+    if (["settings", "parametres", "config", "configuration"].includes(s)) return "settings";
+    return "dashboard";
+  };
+
+  // Active School Tab state initialized synchronously from router subpath
   const [activeTab, setActiveTab] = useState<
     "dashboard" | "students" | "programs" | "courses" | "evaluations" | "pedagogy" | "audit" | "settings"
-  >(
-    activeSubpath === "students" ||
-    activeSubpath === "programs" ||
-    activeSubpath === "courses" ||
-    activeSubpath === "evaluations" ||
-    activeSubpath === "pedagogy" ||
-    activeSubpath === "audit" ||
-    activeSubpath === "settings"
-      ? (activeSubpath as any)
-      : "dashboard"
-  );
+  >(() => normalizeSchoolTab(activeSubpath));
 
   // Sync when activeSubpath prop changes from router
   useEffect(() => {
-    if (
-      activeSubpath &&
-      ["dashboard", "students", "programs", "courses", "evaluations", "pedagogy", "audit", "settings"].includes(activeSubpath)
-    ) {
-      setActiveTab(activeSubpath as any);
+    if (activeSubpath) {
+      setActiveTab(normalizeSchoolTab(activeSubpath));
     }
   }, [activeSubpath]);
 

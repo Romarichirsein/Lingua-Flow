@@ -23,7 +23,7 @@ app.use((req, res, next) => {
   if (req.url && !req.url.startsWith("/api") && !req.url.startsWith("/@") && !req.url.startsWith("/src") && !req.url.startsWith("/node_modules")) {
     const rawPath = req.url.split("?")[0];
     const query = req.url.includes("?") ? req.url.substring(req.url.indexOf("?")) : "";
-    if (["/health", "/sanity", "/ai", "/progression", "/auth"].some((prefix) => rawPath.startsWith(prefix))) {
+    if (["/health", "/sanity", "/ai", "/progression", "/auth", "/data", "/users", "/schools", "/students", "/audit", "/prufung", "/subscriptions", "/superadmin"].some((prefix) => rawPath.startsWith(prefix))) {
       req.url = `/api${rawPath}${query}`;
     }
   }
@@ -1133,7 +1133,9 @@ const DEFAULT_ANNOUNCEMENTS: any[] = [
   }
 ];
 
-const DB_FILE = path.join(process.cwd(), "data", "linguaflow_server_db.json");
+const DB_FILE = process.env.VERCEL
+  ? path.join(path.sep === "/" ? "/tmp" : process.cwd(), "linguaflow_server_db.json")
+  : path.join(process.cwd(), "data", "linguaflow_server_db.json");
 
 let serverSyncedSchools: any[] = [...DEFAULT_SCHOOLS];
 let serverSyncedStudents: any[] = [...DEFAULT_STUDENTS];
@@ -1169,8 +1171,16 @@ let serverAuditLogs: any[] = [
 
 function loadServerDatabase() {
   try {
+    let raw = "";
     if (fs.existsSync(DB_FILE)) {
-      const raw = fs.readFileSync(DB_FILE, "utf-8");
+      raw = fs.readFileSync(DB_FILE, "utf-8");
+    } else {
+      const fallbackFile = path.join(process.cwd(), "data", "linguaflow_server_db.json");
+      if (fs.existsSync(fallbackFile)) {
+        raw = fs.readFileSync(fallbackFile, "utf-8");
+      }
+    }
+    if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed.schools) && parsed.schools.length > 0) serverSyncedSchools = parsed.schools;
       if (Array.isArray(parsed.students) && parsed.students.length > 0) serverSyncedStudents = parsed.students;
@@ -1204,7 +1214,7 @@ function saveServerDatabase() {
     };
     fs.writeFileSync(DB_FILE, JSON.stringify(dataToSave, null, 2), "utf-8");
   } catch (err: any) {
-    console.error("[Server DB] Error persisting database file:", err.message);
+    console.debug("[Server DB] Database write notice (handled):", err.message);
   }
 }
 

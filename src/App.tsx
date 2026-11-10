@@ -48,25 +48,83 @@ export default function App() {
   // Persistence initialization
   const [data, setData] = useState(() => getStoredData());
 
-  // App Lifecycle States: 10-second circular loading intro -> Login / Dashboard
-  const [showSplash, setShowSplash] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    const route = parseCurrentRoute();
-    return route.type !== "login" && route.type !== "splash";
-  });
-  const [currentUserName, setCurrentUserName] = useState<string>("Romaric Hirsein");
-  const [isTranslatorOpen, setIsTranslatorOpen] = useState(false);
+  // Parse initial route immediately for synchronous state alignment
+  const initialRoute = parseCurrentRoute();
 
-  const [role, setRole] = useState<UserRole>("student");
+  // App Lifecycle States: only show splash on raw root '/' visit once per session
+  const [showSplash, setShowSplash] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const hash = window.location.hash;
+    // Skip splash immediately for direct deep links (e.g. #/ecole/..., #/superadmin/..., #/eleve/...)
+    if (hash && hash !== "#/" && hash !== "#/login" && hash !== "#/splash") {
+      return false;
+    }
+    try {
+      if (sessionStorage.getItem("linguaflow_splash_shown")) return false;
+    } catch {}
+    return true;
+  });
+
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return initialRoute.type !== "login" && initialRoute.type !== "splash";
+  });
+
+  // Resolve initial school and student based on current URL
+  const initialMatchedSchool =
+    initialRoute.type === "school" && initialRoute.slug
+      ? data.schools.find(
+          (s) =>
+            (s.slug && s.slug.toLowerCase() === initialRoute.slug!.toLowerCase()) ||
+            (s.id && s.id.toLowerCase() === initialRoute.slug!.toLowerCase()) ||
+            (s.name && getSchoolSlug(s.name) === initialRoute.slug!.toLowerCase())
+        ) || data.schools[0]
+      : data.schools[0];
+
+  const initialMatchedStudent =
+    initialRoute.type === "student" && initialRoute.slug
+      ? data.students.find(
+          (st) =>
+            (st.name && getStudentSlug(st.name) === initialRoute.slug!.toLowerCase()) ||
+            (st.id && st.id.toLowerCase() === initialRoute.slug!.toLowerCase())
+        ) || data.students[0]
+      : data.students[0];
+
+  const initialRole: UserRole =
+    initialRoute.type === "superadmin"
+      ? "super_admin"
+      : initialRoute.type === "school"
+      ? "school_admin"
+      : initialRoute.type === "student"
+      ? "student"
+      : "school_admin";
+
+  const [role, setRole] = useState<UserRole>(initialRole);
+  const [selectedSchoolId, setSelectedSchoolId] = useState<string>(
+    initialMatchedSchool?.id || data.schools[0]?.id || ""
+  );
+  const [selectedStudentId, setSelectedStudentId] = useState<string>(
+    initialMatchedStudent?.id || data.students[0]?.id || ""
+  );
+  const [currentUserName, setCurrentUserName] = useState<string>(() => {
+    if (initialRole === "super_admin") return "Super Admin LinguaFlow";
+    if (initialRole === "school_admin" && initialMatchedSchool) {
+      return initialMatchedSchool.managerName || `Directeur ${initialMatchedSchool.name}`;
+    }
+    if (initialRole === "student" && initialMatchedStudent) {
+      return initialMatchedStudent.name;
+    }
+    return "Romaric Hirsein";
+  });
+  const [isTranslatorOpen, setIsTranslatorOpen] = useState(false);
+  const [currentRoute, setCurrentRoute] = useState<AppRoute>(initialRoute);
+
   const [locale, setLocale] = useState<UILocale>(() => {
     try {
       const saved = localStorage.getItem("linguaflow_locale_preference") as UILocale;
       if (saved === "fr" || saved === "en") {
         return saved;
       }
-    } catch {
-      // fallback
-    }
+    } catch {}
     return "fr";
   });
 
@@ -74,19 +132,16 @@ export default function App() {
   useEffect(() => {
     try {
       localStorage.setItem("linguaflow_locale_preference", locale);
-    } catch {
-      // ignore
-    }
+    } catch {}
   }, [locale]);
+
   const [theme, setTheme] = useState<ThemeMode>(() => {
     try {
       const saved = localStorage.getItem("linguaflow_theme_preference") as ThemeMode;
       if (saved === "light" || saved === "dark" || saved === "system") {
         return saved;
       }
-    } catch {
-      // fallback
-    }
+    } catch {}
     return "dark";
   });
 
@@ -94,21 +149,8 @@ export default function App() {
     setTheme(newTheme);
     try {
       localStorage.setItem("linguaflow_theme_preference", newTheme);
-    } catch {
-      // ignore
-    }
+    } catch {}
   }, []);
-
-  // Selected School & Student for testing isolation
-  const [selectedSchoolId, setSelectedSchoolId] = useState<string>(
-    data.schools[0]?.id || ""
-  );
-  const [selectedStudentId, setSelectedStudentId] = useState<string>(
-    data.students[0]?.id || ""
-  );
-
-  // Active subpath for tabs
-  const [currentRoute, setCurrentRoute] = useState<AppRoute>(() => parseCurrentRoute());
 
   // Sync theme to DOM <html> class
   useEffect(() => {
@@ -156,20 +198,31 @@ export default function App() {
       setRole("super_admin");
       setIsAuthenticated(true);
       setCurrentUserName("Super Admin LinguaFlow");
-    } else if (route.type === "school" && route.slug) {
-      const matchedSchool = data.schools.find(
-        (s) => s.slug === route.slug || getSchoolSlug(s.name) === route.slug
-      );
+    } else if (route.type === "school") {
+      const targetSlug = (route.slug || "").toLowerCase().trim();
+      const matchedSchool =
+        data.schools.find(
+          (s) =>
+            (s.slug && s.slug.toLowerCase() === targetSlug) ||
+            (s.id && s.id.toLowerCase() === targetSlug) ||
+            (s.name && getSchoolSlug(s.name) === targetSlug)
+        ) || data.schools[0];
+
       if (matchedSchool) {
         setSelectedSchoolId(matchedSchool.id);
         setRole("school_admin");
         setIsAuthenticated(true);
         setCurrentUserName(matchedSchool.managerName || `Directeur ${matchedSchool.name}`);
       }
-    } else if (route.type === "student" && route.slug) {
-      const matchedStudent = data.students.find(
-        (st) => getStudentSlug(st.name) === route.slug || st.id === route.slug
-      );
+    } else if (route.type === "student") {
+      const targetSlug = (route.slug || "").toLowerCase().trim();
+      const matchedStudent =
+        data.students.find(
+          (st) =>
+            (st.name && getStudentSlug(st.name) === targetSlug) ||
+            (st.id && st.id.toLowerCase() === targetSlug)
+        ) || data.students[0];
+
       if (matchedStudent) {
         setSelectedStudentId(matchedStudent.id);
         setSelectedSchoolId(matchedStudent.schoolId);
@@ -448,7 +501,15 @@ export default function App() {
       ? data.schools.find((s) => s.id === currentStudent.schoolId) ||
         data.schools.find((s) => s.id === selectedSchoolId) ||
         data.schools[0]
-      : data.schools.find((s) => s.id === selectedSchoolId) || data.schools[0];
+      : data.schools.find((s) => s.id === selectedSchoolId) ||
+        (currentRoute.slug
+          ? data.schools.find(
+              (s) =>
+                s.slug.toLowerCase() === currentRoute.slug!.toLowerCase() ||
+                s.id.toLowerCase() === currentRoute.slug!.toLowerCase()
+            )
+          : null) ||
+        data.schools[0];
 
   // Dynamic WhatsApp routing:
   // - Super Admin: No floating WhatsApp widget

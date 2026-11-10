@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "updatedAt": "2026-11-09T19:35:18.316Z",
+  "updatedAt": "2026-11-10T09:43:34.268Z",
   "schools": [
     {
       "id": "school-berlin",
@@ -364,10 +364,24 @@
       "target": "all",
       "priority": "normal",
       "isActive": true,
-      "createdAt": "2026-11-09T19:35:18.314Z"
+      "createdAt": "2026-11-10T09:43:34.267Z"
     }
   ],
   "logs": [
+    {
+      "id": "log-prog-1794303814265-yrrm",
+      "action": "Validation Leçon & Progression",
+      "details": "L'élève Romaric Hirsein a validé la leçon les-de-2 (67% complété).",
+      "actorRole": "student",
+      "actorName": "Romaric Hirsein",
+      "schoolId": "school-berlin",
+      "schoolName": "Berlin Sprachzentrum",
+      "entityType": "lesson",
+      "entityId": "les-de-2",
+      "targetId": "stu-romaric",
+      "timestamp": "2026-11-10T09:43:34.265Z",
+      "status": "success"
+    },
     {
       "id": "log-prog-1794252918309-jc8l",
       "action": "Validation Leçon & Progression",
